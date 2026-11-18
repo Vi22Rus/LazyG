@@ -181,6 +181,15 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="cooldown" or cmd=="cd" then
+    if not LazyGCooldownAudit or type(LazyGCooldownAudit.Inspect)~="function" then
+      log("CooldownAudit module missing")
+    else
+      local id=arg=="" and 1130 or tonumber(arg)
+      for _,line in ipairs(LazyGCooldownAudit.Inspect(id)) do log(line) end
+      log("GCD comparison: SpellID 61304 (may be unavailable on Forever)")
+      for _,line in ipairs(LazyGCooldownAudit.Inspect(61304)) do log(line) end
+    end
   elseif cmd=="rgb" and (arg=="on" or arg=="off") then
     if LazyGSpellDiagnostic and LazyGSpellDiagnostic.SetEnabled then
       LazyGSpellDiagnostic.SetEnabled(arg=="on")
@@ -201,6 +210,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | target | aura [player|target] | rgb on/off | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
   end
 end
