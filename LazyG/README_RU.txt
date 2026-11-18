@@ -1,21 +1,20 @@
-LazyG 0.2.5-dev — Forever bilingual ability icons and 1.5s Overlay GCD demo
+LazyG 0.2.6-dev — GameState engine foundation and complete Sonah/RoseSlayer matrix
 
-This is a development build, not a verified release.
-512 catalog entries from LazyG_Icons.7z, with Russian and English spell names.
-395 authentic WEBP ability images embedded into one offline sprite atlas.
-8 class-specific Attack icon files (SpellID 6603) absent from archive; use a labelled generic Attack icon fallback.
-4 missing English names are filled: Perception, Will to Survive, Berserking, Rapid Regeneration.
-Identity uses game client + class + SpellID (not bare SpellID). General abilities are shared.
-No download, remote API, or per-image file operations are needed at runtime.
+Status: DEV / awaiting final GitHub Actions CI and user testing. NOT a release.
 
-Overlay:
-- Click Overlay ON. The big icon is a REAL ability icon from the embedded Forever catalog, with its source EN name beside it.
-- NEXT cycles through archived abilities of the last selected class. Use a different specialization and revisit Overlay to preview a different class.
-- Ring is a VISUAL DEMO: full gold circular sweep each 1.5 seconds, roughly 30 fps; it is not the real GCD from WoW.
-- DEMO ONLY / no XML engine and PAUSE remain explicit. Nothing will automatically activate spells.
-- Future display API accepts a verified class+SpellID and language 'en' or 'ru'; front-end is English now, Russian localization is future work.
+- Research and condition matrix: LazyG/ROTATION_DATA_MATRIX.md
+  9 class condition inventories, full condition domains, 25 RGB data groups,
+  current coverage/limitations and development order.
+- New typed engine model: LazyG/Avalonia/Engine/GameState.cs
+  Knowledge: Unknown / Known / Protected / Stale.
+  Boolean gate: True / False / Unknown. Unknown NEVER allows a cast.
+- ForeverGameStateBridge maps only verified current RGB v2 class, race, level,
+  spec where known, combat and target states; protected health/GCD/cooldowns remain unknown.
+- Support diagnostics show this provisional GameState snapshot.
+- .NET 8 regression tests prove stale/unknown-safe behavior; CI runs them.
+- Existing WoW Lua addon, RGB v2/v3 and legacy WPF sources unchanged.
+- Overlay real spell preview and 1.5s demonstration GCD remain in the previous mode.
+- NO XML rotation evaluation, live cooldown/auras, key pressing, or automated rotation yet.
 
-CI validates catalog translation and image mapping; this does not replace a WoW user test.
-
-PowerShell from repository root (single EXE):
+PowerShell, single EXE from repository root:
 dotnet publish LazyG/Avalonia/LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None
