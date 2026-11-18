@@ -23,6 +23,17 @@
 
 ---
 
+## 2026-11-19 — 0.2.15-dev: JustAC-inspired cooldown/GCD state probe [DEV / CI PENDING / GAME-UNTESTED]
+
+**Source review (user-provided archives):** `JustAC.zip/JustAC/BlizzardAPI/CooldownTracking.lua` (lines 140–164, 255–261, 597–649) documents using C_Spell.GetSpellCooldownDuration with ignoreGCD, a hidden Cooldown widget and `IsShown()` as an explicitly unintended/experimental workaround; `JustAC/UI/UIRenderer.lua` lines 542–608 uses action-slot duration object, then spell duration object, and separate GCD status for macro/off-bar cases. `Sonah.zip/Sonah/Core/Atoms/Curves.lua` 249–274 uses duration object for direct swipes; `NAG-6.0.6.zip/NAG/handlers/APLValues_GCD.lua` covers client-dependent GCD heuristics. **Selected design: original implementation inspired by JustAC with an authoritative plain-state observation path and strictly isolated visual widget experiment**, not copied source.
+
+**Code:**
+- `Diagnostics/LazyGForeverProbe/CooldownStateProbe.lua` (new): protected/unknown-aware extraction of plain `C_Spell.GetSpellCooldown(spellID).isActive/isOnGCD`, with explicit five-code `Unknown/False/True/Protected/ApiMissing` quality. Separate `WidgetExperiment` passes a duration object from `C_Spell.GetSpellCooldownDuration(id,true)` to a scratch Cooldown widget and reads `IsShown()`; the result is **not** used by the RGB channel or engine, as this workaround is undocumented and its semantics must be tested in the actual client.
+- Optional standalone `LazyGForeverProbe` now supports `/lgprobe cdcompare <spellID>`; reports 1130 or chosen ID, candidate 61304, and candidate 29515 together, comparing plain flags vs experimental widget state. Both GCD IDs are hypotheses until verified in WoW Forever. TOC bumped to `0.2.15-dev` and loads new module before LGD.
+- `SpellDiagnosticRgb.lua`: existing **unchanged six-cell LGD v1 wire format** sources its CooldownActive/GcdActive bytes only from the safe plain states in the new module; experimental widget outcomes never enter RGB. **Crucially Windows GameState cooldown ms and GCD ms remain Unknown, no auto-input or recommendation unlocked**; changes affect optional diagnostic status only.
+- Added `Tests/forever_cooldown_state_test.lua` Lua 5.1 mock cases for readable, secret, absent, throwing API, and shown/hidden widget; GitHub Actions Lua job checks module syntax and runs test. Workflow artifact name changed to `LazyGForeverProbe-0.2.15-dev`. Windows UI remains `0.2.13-dev`, not a release.
+- Real in-game Forever behavior unverified, especially the meaning of `IsShown()` with a hidden parent; compare output with actual icon shading. No full-game cast validation and no extraction of secret numeric cooldown values.
+
 ## 2026-11-19 — 0.2.14-dev two-artifact Actions run confirmed [CI-PASSED / GAME-UNTESTED]
 
 - Confirmed **SUCCESS** for https://github.com/Vi22Rus/LazyG/actions/runs/44363220974 , commit `d1c09214fcacd57068c8ee3db6c795cc8f1382bd`. Windows build: RGB v3 tests, GameState/XML regression, spell assets, EXE single-file publish, Windows startup smoke, EXE artifact and install-ready addon artifact all SUCCESS. Lua 5.1 diagnostic syntax and `forever_cooldown_audit_test.lua` all SUCCESS.
