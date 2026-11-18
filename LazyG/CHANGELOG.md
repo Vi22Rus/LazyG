@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-18 — 0.2.6-dev CI syntax fix + SpellProbe v1 scaffold [DEV / GAME-UNTESTED]
+
+- Fixed literal \\n in `Avalonia/ForeverGameStateBridge.cs` that swallowed `return empty with` inside a C# comment, causing CS1002/CS1513. Fix commit `02586f55ce8cfd32731a5c80af06c9708d43c81d`. The RGB v2/v3/Curve source was not modified.
+- Added `Avalonia/Diagnostics/ForeverSpellProbeCodec.cs`: independent six-cell (18-byte) diagnostic protocol version 1 with marker `LGD`, sequence, SpellID, explicit learned/usable/cooldown/GCD probe outcomes, additive integrity check, strict decoder and fail-closed SpellState mapping. This is **not** CRC v3 and is not an authorization to cast.
+- Added `AddonTemplate/SpellDiagnosticProbe.lua`: manual opt-in experimental strip, not installed/bundled by default; API existence checks, guarded calls, secret checking when supported, and status signaling. Uses example Hunter's Mark SpellID 1130; user must validate ID/API against Forever. No changes to installed Lua modules or RGB v2/v3.
+- Linked decoder to `Tests/GameStateTests.csproj` and added synthetic test for integrity, malformed statuses and Unknown cooldown semantics. No actual spell cooldown time is read or transmitted; GCD remains experimental.
+- Pending: run GitHub Actions on latest `main`, examine build/test results, then connect diagnostic capture and quality-aware GameState integration behind an explicit dev opt-in. No in-game test; do not declare CI or gameplay passed until confirmed. Rollback: `02586f55` is syntax-only; prior 0.2.5-dev successfully built.
+
 ## 2026-11-18 — JustAC + Sonah Secret Data Audit uploaded [DOCS-ONLY]
 
 **[USER REQUEST]** Persistent handoff to new development chat. The exact 126-line `LazyG_JustAC_Sonah_Secret_Data_Audit.md` attached in the preceding chat is now stored in `LazyG/SECRET_DATA_AUDIT.md` on `main` with its 45 source-linked data/state categories, limitations and experimental transport recommendations. No application, Lua, XML or RGB code modified in this docs-only update.
