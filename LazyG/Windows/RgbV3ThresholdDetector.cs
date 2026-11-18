@@ -16,7 +16,7 @@ internal static class RgbV3ThresholdDetector
         Math.Abs(c.B - b) <= tolerance;
 
     // First 4 pixels of curve probe act as a unique marker: cyan / dark-green.
-    // Groups contain one availability cell and 9 threshold cells each.
+    // Groups contain one availability cell and 19 threshold cells each.
     public static bool FindPanel(Bitmap image, out RgbThresholdProbe? result)
     {
         result = null;
@@ -30,7 +30,7 @@ internal static class RgbV3ThresholdDetector
             // location is disambiguated by y-offset from the v3 marker.
             for (int pitch = 3; pitch <= 10; pitch++)
             {
-                if (x + pitch * 31 >= image.Width)
+                if (x + pitch * 61 >= image.Width)
                     break;
                 if (!Near(image.GetPixel(x, y), 0, 255, 255) ||
                     !Near(image.GetPixel(x + pitch, y), 255, 0, 255))
@@ -42,14 +42,14 @@ internal static class RgbV3ThresholdDetector
                 var bands = new string[3];
                 for (int g = 0; g < 3 && good; g++)
                 {
-                    Color marker = image.GetPixel(x + (2 + g * 10) * pitch, y);
+                    Color marker = image.GetPixel(x + (2 + g * 20) * pitch, y);
                     if (Near(marker, 0, 255, 0)) status[g] = true;
                     else if (Near(marker, 255, 0, 0)) status[g] = false;
                     else { good = false; break; }
                     if (!status[g]) { bands[g] = "unavailable"; continue; }
                     int last = 0;
                     bool seenOffAfterOn = false;
-                    for (int i = 1; i <= 9; i++)
+                    for (int i = 1; i <= 19; i++)
                     {
                         var pixel = image.GetPixel(x + (2 + g * 10 + i) * pitch, y);
                         bool on = Near(pixel, 255, 255, 255, 30);
@@ -63,7 +63,7 @@ internal static class RgbV3ThresholdDetector
                         else if (last > 0)
                             seenOffAfterOn = true;
                     }
-                    bands[g] = last == 0 ? "0–9%" : last == 9 ? "90–100%" :
+                    bands[g] = last == 0 ? "0–4%" : last == 19 ? "95–100%" :
                         $"{last * 10}–{last * 10 + 9}%";
                 }
                 if (!good || !status[0]) continue;
