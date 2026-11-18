@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.15-dev JustAC-inspired diagnostic verification [CI-PASSED / GAME-UNTESTED]
+
+- GitHub Actions https://github.com/Vi22Rus/LazyG/actions/runs/44365955551 completed **SUCCESS** for source commit `67ebaea8a081580be46b945ee9bcae3b54dee4ca`. Lua 5.1 syntax checks and both cooldown diagnostic mocked tests passed; Windows RGB v3, GameState/XML safety, EXE publish, Windows startup smoke test, and both artifact uploads passed.
+- Downloadable artifacts verified: `LazyG-Windows-x64` artifact id `14455739685`, 77,716,274 bytes; `LazyGForeverProbe-0.2.15-dev` artifact id `14455654638`, 7,782 bytes. The latter is the addon requiring installation; Windows EXE interface remains 0.2.13-dev.
+- In-game truth of isActive/isOnGCD, GCD IDs 61304/29515 and hidden cooldown widget state not verified; leave XML cooldown/GCD numeric data Unknown. Command for evidence: `/lgprobe cdcompare 1130` followed by `/reload` and review SavedVariables.
+- Revert option: previously CI-passed diagnostic addon 0.2.14-dev, run https://github.com/Vi22Rus/LazyG/actions/runs/44363220974 . No gameplay release was authorized.
+
 ## 2026-11-19 — 0.2.15-dev: JustAC-inspired cooldown/GCD state probe [DEV / CI PENDING / GAME-UNTESTED]
 
 **Source review (user-provided archives):** `JustAC.zip/JustAC/BlizzardAPI/CooldownTracking.lua` (lines 140–164, 255–261, 597–649) documents using C_Spell.GetSpellCooldownDuration with ignoreGCD, a hidden Cooldown widget and `IsShown()` as an explicitly unintended/experimental workaround; `JustAC/UI/UIRenderer.lua` lines 542–608 uses action-slot duration object, then spell duration object, and separate GCD status for macro/off-bar cases. `Sonah.zip/Sonah/Core/Atoms/Curves.lua` 249–274 uses duration object for direct swipes; `NAG-6.0.6.zip/NAG/handlers/APLValues_GCD.lua` covers client-dependent GCD heuristics. **Selected design: original implementation inspired by JustAC with an authoritative plain-state observation path and strictly isolated visual widget experiment**, not copied source.
