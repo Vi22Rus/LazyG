@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.1.18-dev` (точность UI Curve порогов 5% при прежних v2/CRC v3) — [DEV / USER-UNTESTED], CI автоматически по push; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,16 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — 0.1.19-dev: исправление Curve 5% [DEV / USER-UNTESTED]
+
+**[USER-TESTED, 0.1.18-dev]:** третья полоска выросла, зелёные status cells и фиолетовый marker видны; при выборе цели её цвета меняются, но в Overview `UI Curve Thresholds unavailable`.
+
+**[ROOT CAUSE / VERIFIED IN CODE]:** в `RgbV3ThresholdDetector.cs` после перехода с 10% на 5% обновился размер группы до 20 ячеек, но индекс пикселя остался `g * 10` вместо `g * 20`, из-за чего второй и третий показатели читались из неверных ячеек. Расчёт отображаемых диапазонов также остался `last * 10` вместо `last * 5`. `WowRgbBridge.cs` захватывал только 350px, тогда как 62 клетки при физическом pitch=6 занимают до ~372px.
+
+**[FIXED IN CODE]:** заменены индексы/формула на 20 cells и 5%, диапазоны 0–4 ... 95–100%, ширина захвата до 800px; физический pitch 3–12px. В тестовом `RgbV3CodecTests.csproj` подключён Windows/GDI тест `RgbV3ThresholdDetector.cs`; `Tests/Program.cs` генерирует Bitmap с 62 ячейками при pitch=6 и проверяет независимые диапазоны 95–100% / 50–54% / 20–24%. Новый тег EXE/TOC `0.1.19-dev`. RGB v2 и CRC v3 **не менялись**.
+
+**[TEST PENDING]:** CI и тест новой версии в WoW ещё не зафиксированы; показать точную ссылку на GitHub Actions сразу после коммита. Проверить воспроизводимость показаний цели при 100%, 50% и 20%, а также отсутствие ошибок CRC v3. Откат `0.1.17-dev` для Curve 10%.
 
 ## 2026-11-18 — 0.1.18-dev: шаг порогов Curve 5% [DEV / GAME-UNTESTED]
 
