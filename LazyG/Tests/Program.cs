@@ -106,6 +106,36 @@ badStep[15] = 1;
 Check.That(!RgbV3Codec.TryDecode(badStep, 0, 0xBEEF, out _, out err)
     && err.Contains("step 17"), "reject invalid 4-bit color");
 
+// Synthetic 62-cell Curve strip: verify all three group offsets and 5% math
+// at scaled physical pitch 6px, i.e. beyond the old 350px screenshot crop.
+using (var image = new System.Drawing.Bitmap(800, 45))
+{
+    using (var graphics = System.Drawing.Graphics.FromImage(image))
+        graphics.Clear(System.Drawing.Color.Black);
+    const int startX = 2, startY = 18, pitch = 6;
+    void Cell(int index, System.Drawing.Color color)
+    {
+        for (int dy = 0; dy < 3; ++dy)
+        for (int dx = 0; dx < 3; ++dx)
+            image.SetPixel(startX + index * pitch + dx, startY + dy, color);
+    }
+    Cell(0, System.Drawing.Color.Cyan);
+    Cell(1, System.Drawing.Color.Magenta);
+    int[] on = { 19, 10, 4 }; // 95-100%, 50-54%, 20-24%
+    for (int group = 0; group < 3; ++group)
+    {
+        Cell(2 + group * 20, System.Drawing.Color.Lime);
+        for (int i = 1; i <= 19; i++)
+            Cell(2 + group * 20 + i, i <= on[group]
+                ? System.Drawing.Color.White : System.Drawing.Color.Black);
+    }
+    Check.That(RgbV3ThresholdDetector.FindPanel(image, out var bands) && bands is not null,
+        "62-cell curve strip located at scaled pitch");
+    Check.That(bands!.PlayerHp == "95–100%" && bands.TargetHp == "50–54%"
+        && bands.Resource == "20–24%", "3 independent 5% groups decoded");
+}
+Console.WriteLine("RGB 5% Curve synthetic pixel regression: PASS");
+
 Console.WriteLine("RGB v3 codec regression: PASS (CRC, direct8, stepped4, markers, profile and corruption)");
     }
 }
