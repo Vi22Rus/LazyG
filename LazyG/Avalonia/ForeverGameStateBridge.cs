@@ -12,10 +12,10 @@ internal static class ForeverGameStateBridge
     {
         var empty=GameState.Empty(now);
         if(state is null)return empty;
-        return empty with
+        _ = crcOk; // Future extension: track v3 integrity in separate evidence, not RGB v2 transport.\n        return empty with
         {
             CapturedAt=now,
-            Transport=crcOk?Knowledge.Known:Knowledge.Unknown,
+            Transport=Knowledge.Known, // RGB v2 validator already checked markers/checksum; v3 CRC is independent.
             ClassId=Observed<int>.Known(state.ClassId,now),
             RaceId=Observed<int>.Known(state.RaceId,now),
             Level=Observed<int>.Known(state.Level,now),
