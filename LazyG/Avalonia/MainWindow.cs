@@ -141,7 +141,7 @@ public sealed class MainWindow : Window
         contentStack.Children.Add(Text(title,30,"#F6ECDD",FontWeight.Bold));
         contentStack.Children.Add(Text(subtitle,13,"#B6A296"));
         contentStack.Children.Add(content);
-        return new Border { MaxWidth=1120,HorizontalAlignment=HAlign.Center,
+        return new Border { MaxWidth=1600,HorizontalAlignment=HAlign.Center,
             Child=contentStack,Width=double.NaN };
     }
     private void Go(Control page) => rootBody.Child=page;
@@ -180,7 +180,7 @@ public sealed class MainWindow : Window
             Grid.SetColumn(tile,i<5?i:i-5);Grid.SetRow(tile,i<5?0:1);
             board.Children.Add(tile);
         }
-        var scaler=new Viewbox { Child=board,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,
+        var scaler=new Viewbox { Child=board,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.Both,
             HorizontalAlignment=HAlign.Stretch };
         wrap.Children.Add(scaler);
         Go(Page("CLASSES & SPECS","WoW Forever · 9 classes · Select a class to explore its specializations",wrap));
@@ -222,7 +222,7 @@ public sealed class MainWindow : Window
             var box=Pane(p,"#2D1F18",12,"#624631",new Thickness(24,26));
             Grid.SetColumn(box,i);grid.Children.Add(box);
         }
-        body.Children.Add(grid);
+        body.Children.Add(new Viewbox { Child=grid, Stretch=Stretch.Uniform, StretchDirection=StretchDirection.Both, HorizontalAlignment=HAlign.Stretch });
         Go(Page(cls.Name.ToUpperInvariant()+" SPECIALIZATIONS","Forever · Class library",body,"Classes",ShowClasses));
     }
     private void ShowSpec(GameClass cls,Specialization spec)
