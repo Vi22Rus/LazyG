@@ -1,4 +1,6 @@
 -- LazyG Forever diagnostics-only RGB spell probe v1 (manual opt-in).
+-- Cooldown/GCD bytes retain 0/1/2/3/4 states; experimental widget outcome
+-- never feeds the RGB strip or Windows GameState.
 -- Not shipped/installed by default. No effect on existing v2/v3/Curve strips.
 -- Select a spell ID for the current client/profile before testing.
 local SPELL_ID = 1130 -- Hunter's Mark only for the Hunter test profile.
@@ -42,21 +44,19 @@ local function usable(spell)
   if type(result)~="table" then return 0 end
   return probe(function() return result.isUsable end)
 end
-local function cooldown(spell)
-  if not (C_Spell and type(C_Spell.GetSpellCooldown)=="function") then return 4 end
-  local ok,result=pcall(C_Spell.GetSpellCooldown,spell)
-  if not ok then return 3 end
-  if type(result)~="table" then return 0 end
-  -- isActive can differ across client builds; unknown if not boolean/plain.
-  return probe(function() return result.isActive end)
-end
 local seq=0
 local function paint()
   seq=(seq+1)%256
   local learned=probe(IsPlayerSpell,SPELL_ID)
   local canUse=usable(SPELL_ID)
-  local onCooldown=cooldown(SPELL_ID)
-  local gcd=cooldown(61304)
+  local onCooldown,gcd
+  if LazyGCooldownStateProbe and LazyGCooldownStateProbe.Flags then
+    onCooldown=select(1,LazyGCooldownStateProbe.Flags(SPELL_ID))
+    gcd=LazyGCooldownStateProbe.Gcd()
+  else
+    -- An absent diagnostic module is never evidence of a ready spell.
+    onCooldown,gcd=0,0
+  end
   local id=SPELL_ID
   local b={0x4C,0x47,0x44,1,seq,0,math.floor(id/65536)%256,
     math.floor(id/256)%256,id%256,learned,canUse,onCooldown,gcd,0,0,0xA5}
