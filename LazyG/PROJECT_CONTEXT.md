@@ -199,7 +199,9 @@ XML должен уметь выразить:
 
 **[IMPLEMENTED / NOT IN-GAME] 18.11.2026:** в `0.1.14-dev` добавлены отдельные `LazyG/AddonTemplate/RgbV3Encoder.lua`, `LazyG/Windows/RgbV3Codec.cs` и `LazyG/Tests/` со схемой Sertyrew (23 базовые ячейки + профильно-зависимые расширения + CRC16 + direct8/stepped4). До включения будущей RGB v3 в WoW/Windows остаётся рабочий v2. В workflow добавлены тесты C# и Lua 5.1 (`LazyG/Tests/rgb_v3_encoder_test.lua`); их успешный CI-run ещё не подтверждён через подключение GitHub. Контрольные CRC независимо пересчитаны Python и совпали с тестовыми векторами.
 
-**Следующая конкретная задача:** подтвердить успешный GitHub Actions на последнем SHA 0.1.15-dev, передать пользователю EXE и выполнить тест двух полосок: v2 PASS + v3 CRC PASS, HP игрока/цели, ресурсы, фокус окна и UI Scale. Если v3 Unknown/CRC error — диагностировать, не ломая v2. Ранее проверенная 0.1.13-dev сохранена для отката.
+**[CI-PASSED]** `0.1.15-dev`: https://github.com/Vi22Rus/LazyG/actions/runs/44295449598 (SUCCESS: C# regression, Lua 5.1 regression и синтаксис, Windows EXE publish и startup smoke test; артефакт `LazyG-Windows-x64` ID `14423277903`; исходный SHA `3b3366b97b2d8e82c90246f0464edc430f06bb49`). Документы менялись после этого SHA без изменения исходного кода.
+
+**Следующая конкретная задача:** пользовательский тест двух полосок в CI-сборке 0.1.15-dev: v2 PASS + v3 CRC PASS, HP игрока/цели, ресурсы, фокус окна и UI Scale. Если v3 Unknown/CRC error — диагностировать, не ломая v2. Ранее проверенная 0.1.13-dev сохранена для отката.
 
 ## История изменений (CHANGELOG)
 
