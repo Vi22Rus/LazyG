@@ -1,26 +1,74 @@
--- LazyG Hunter Forever (Camelot) profile selection, 0.1.9-dev.
--- Independent implementation; no NAG runtime or commercial rotation code.
--- Stage 1: read class, race, level and Classic-style talent distribution.
--- Does not cast spells, press keys, or modify the calibrated RGB pixels.
+-- LazyG Hunter Forever (Camelot) profile detection, 0.1.10-dev.
+-- Diagnostic only: no rotation actions, key presses, or RGB-pixel changes.
+-- Forever uses C_Traits (CamelotCombat), not the removed GetTalentTabInfo.
 LazyGHunter = LazyGHunter or {}
 local hunter = LazyGHunter
-
 local trees = { "Beast Mastery", "Marksmanship", "Survival" }
-local function TalentPoints()
-  if type(GetTalentTabInfo) ~= "function" then return nil end
-  local points = {}
-  local any = false
-  for i = 1, 3 do
-    local ok, _, _, spent = pcall(GetTalentTabInfo, i)
-    if ok and type(spent) == "number" then
-      points[i] = spent
-      any = true
-    else
-      points[i] = 0
+
+local function ReadTalentPoints()
+  if not (C_Traits and C_Traits.GetConfigInfo and
+          C_Traits.GetGroupDisplayInfoByTreeID and
+          C_Traits.GetGroupCurrencyInfo and
+          C_ClassTalents and C_ClassTalents.GetActiveConfigID) then
+    return nil, "C_Traits API unavailable"
+  end
+
+  local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
+  if not ok or not configID then return nil, "no active talent config" end
+
+  local configOk, config = pcall(C_Traits.GetConfigInfo, configID)
+  if not configOk or type(config) ~= "table" or
+      type(config.treeIDs) ~= "table" or not config.treeIDs[1] then
+    return nil, "no talent tree in config"
+  end
+
+  local groupsOk, displayGroups = pcall(
+    C_Traits.GetGroupDisplayInfoByTreeID, config.treeIDs[1])
+  if not groupsOk or type(displayGroups) ~= "table" then
+    return nil, "talent groups unavailable"
+  end
+
+  local ordered = {}
+  for _, info in pairs(displayGroups) do
+    if type(info) == "table" and type(info.groupID) == "number" then
+      ordered[#ordered + 1] = info
     end
   end
-  if not any then return nil end
-  return points
+  table.sort(ordered, function(left, right)
+    return (left.orderIndex or 0) < (right.orderIndex or 0)
+  end)
+  if #ordered ~= 3 then
+    return nil, "expected 3 talent groups, got " .. #ordered
+  end
+
+  local groupIDs, totals = {}, {}
+  for i = 1, 3 do
+    groupIDs[i] = ordered[i].groupID
+    totals[i] = 0
+  end
+
+  local currencyOk, result = pcall(C_Traits.GetGroupCurrencyInfo, configID, groupIDs)
+  if not currencyOk or type(result) ~= "table" then
+    return nil, "talent currency unavailable"
+  end
+
+  -- The API omits groups with zero spent points. Do not mistake missing
+  -- groups for missing API; the initialized zeroes above are intentional.
+  for _, group in pairs(result) do
+    if type(group) == "table" then
+      local id = group.traitNodeGroupID
+      for i = 1, 3 do
+        if id == groupIDs[i] then
+          for _, currency in pairs(group.currencyInfos or {}) do
+            if type(currency) == "table" and type(currency.spent) == "number" then
+              totals[i] = totals[i] + currency.spent
+            end
+          end
+        end
+      end
+    end
+  end
+  return totals
 end
 
 local function DetectSpec(points)
@@ -40,8 +88,7 @@ end
 function hunter.Refresh()
   local _, class = UnitClass("player")
   if class ~= "HUNTER" then
-    hunter.active = false
-    hunter.profile = nil
+    hunter.active, hunter.profile = false, nil
     return
   end
 
@@ -50,25 +97,27 @@ function hunter.Refresh()
   local _, race = UnitRace("player")
   hunter.race = race or "UNKNOWN"
   hunter.level = UnitLevel("player") or 0
-  hunter.talents = TalentPoints()
+  hunter.talents, hunter.talentError = ReadTalentPoints()
   hunter.specIndex = DetectSpec(hunter.talents)
+  hunter.spec = hunter.specIndex and trees[hunter.specIndex] or "undetermined"
 
-  -- The NAG Camelot archive provides Generic plus three Starter (1-20)
-  -- profiles. Never pretend a level-60 specialist profile was imported.
+  -- NAG archive contains Generic and only three Starter (1-20) definitions.
+  -- Talent detection continues above level 20; no advanced rotation implied.
   if hunter.level <= 20 and hunter.specIndex then
     hunter.profile = trees[hunter.specIndex] .. " Starter (1-20)"
   else
-    hunter.profile = "Generic"
+    hunter.profile = "Generic (no advanced rotation installed)"
   end
 end
 
-local e = CreateFrame("Frame")
-e:RegisterEvent("PLAYER_LOGIN")
-e:RegisterEvent("PLAYER_ENTERING_WORLD")
-e:RegisterEvent("PLAYER_LEVEL_UP")
-e:RegisterEvent("PLAYER_TALENT_UPDATE")
-e:RegisterEvent("CHARACTER_POINTS_CHANGED")
-e:SetScript("OnEvent", function() hunter.Refresh() end)
+local events = CreateFrame("Frame")
+events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("PLAYER_ENTERING_WORLD")
+events:RegisterEvent("PLAYER_LEVEL_UP")
+events:RegisterEvent("PLAYER_TALENT_UPDATE")
+events:RegisterEvent("TRAIT_CONFIG_UPDATED")
+events:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+events:SetScript("OnEvent", function() hunter.Refresh() end)
 
 SLASH_LAZYG_HUNTER_STATUS1 = "/lazyg"
 SlashCmdList.LAZYG_HUNTER_STATUS = function()
@@ -78,9 +127,11 @@ SlashCmdList.LAZYG_HUNTER_STATUS = function()
     return
   end
   local p = hunter.talents
-  local distribution = p and (p[1] .. "/" .. p[2] .. "/" .. p[3]) or "unavailable"
+  local distribution = p and (p[1] .. "/" .. p[2] .. "/" .. p[3]) or
+    ("unavailable (" .. (hunter.talentError or "unknown") .. ")")
   print("LazyG Hunter Forever | race: " .. hunter.race
     .. " | level: " .. hunter.level
     .. " | talents BM/MM/SV: " .. distribution
+    .. " | spec: " .. hunter.spec
     .. " | profile: " .. hunter.profile)
 end
