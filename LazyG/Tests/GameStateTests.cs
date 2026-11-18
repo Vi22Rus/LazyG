@@ -79,5 +79,44 @@ probeBytes[16]=(byte)checksum;
 probeBytes[17]=(byte)(255-checksum);
 Assert(!ForeverSpellProbeCodec.TryDecode(probeBytes,out _)); // invalid status
 
-Console.WriteLine("GameState and isolated SpellProbe v1 regression: PASS");
+
+// Target epoch and event hints; a UNIT_AURA notification is never proof
+// that any specific buff/debuff exists.
+var tracker=new ForeverCombatTracker();
+Assert(tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.TargetCastStarted,now,12345)));
+var cast=tracker.Snapshot(now,TimeSpan.FromSeconds(2));
+Assert(cast.TargetCasting.Is(x=>x)==Truth.True);
+Assert(cast.TargetCastSpellId.Value==12345);
+Assert(tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.TargetAuraChanged,now.AddMilliseconds(100))));
+Assert(tracker.Snapshot(now.AddMilliseconds(100),TimeSpan.FromSeconds(2))
+    .TargetAuraChangedAt.HasValue);
+Assert(tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.TargetChanged,now.AddMilliseconds(200))));
+var changed=tracker.Snapshot(now.AddMilliseconds(200),TimeSpan.FromSeconds(2));
+Assert(changed.TargetEpoch==1);
+Assert(changed.TargetCasting.Quality==Knowledge.Unknown);
+Assert(changed.TargetCastSpellId.Quality==Knowledge.Unknown);
+Assert(changed.TargetAuraChangedAt is null);
+Assert(!tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.TargetCastStarted,now.AddMilliseconds(100),12345)));
+Assert(tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.TargetCastStarted,now.AddMilliseconds(300))));
+Assert(tracker.Snapshot(now.AddMilliseconds(300),TimeSpan.FromSeconds(2))
+    .TargetCastSpellId.Quality==Knowledge.Unknown);
+Assert(tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.TargetCastStopped,now.AddMilliseconds(400))));
+Assert(tracker.Snapshot(now.AddMilliseconds(400),TimeSpan.FromSeconds(2))
+    .TargetCasting.Is(x=>x)==Truth.False);
+Assert(tracker.Apply(new ForeverCombatEvent(
+    ForeverCombatEventKind.PlayerCastSucceeded,now.AddMilliseconds(500),1130)));
+var afterSuccess=tracker.Snapshot(now.AddMilliseconds(500),TimeSpan.FromSeconds(2));
+Assert(afterSuccess.PlayerLastSucceededSpellId.Value==1130);
+Assert(tracker.Snapshot(now.AddSeconds(4),TimeSpan.FromSeconds(2))
+    .PlayerLastSucceededSpellId.Quality==Knowledge.Stale);
+Assert(!tracker.Snapshot(now.AddSeconds(4),TimeSpan.FromSeconds(2))
+    .PlayerLastSucceededAt.HasValue);
+
+Console.WriteLine("GameState, SpellProbe and Forever event tracking regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
