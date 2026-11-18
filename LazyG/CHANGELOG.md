@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — 0.2.10-dev: copyable Support diagnostics [DEV / CI-UNCONFIRMED]
+
+- User screenshot shows the RGB v3 CRC and Curve diagnostic results are present, while Support log could not be selected because it used `TextBlock`. Kept the existing RGB implementation unchanged.
+- In `Avalonia/MainWindow.cs` replaced log display with a read-only multiline Avalonia `TextBox` (select lines with mouse, Ctrl+C); enabled native horizontal/vertical scrolling and added **Copy all** clipboard button. **Refresh** manually updates log. Automatic live refresh pauses while log is keyboard-focused so new 400ms timer updates do not destroy text selection. Events continue accumulating in existing `RuntimeDiagnostics` buffer (150-line cap) during selection; log resumes when focus moves away.
+- UI build label advanced to `0.2.10-dev` (not release). No changes to production Lua, RGB v2/v3/Curve, rotation or data decoding. User gameplay verification and latest Actions status still pending. Roll back to `2b7c891d` if needed.
+
 ## 2026-11-18 — 0.2.9-dev: optional LGD RGB SpellProbe end-to-end diagnostic wiring [DEV / CI-UNCONFIRMED / GAME-UNTESTED]
 
 - New `Windows/RgbSpellProbeDetector.cs` scans a separate 6-cell `LGD` strip with existing `ForeverSpellProbeCodec`; integrity validated independently and only when opted-in. `WowRgbBridge` retains original `TryReadCombined` signature for all legacy callers; new overload samples optional LGD from the **same visible screen capture** without modifying v2/v3/Curve detectors.
