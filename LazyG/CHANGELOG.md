@@ -29,7 +29,7 @@
 
 **Изменения:** в `RgbV3Panel.lua` добавлены раздельные статусы чтения UnitHealth/UnitHealthMax (player/target) и UnitPower/UnitPowerMax/UnitPowerType в зарезервированной ячейке 22, без изменения геометрии или checksum. Состояния: 0 OK, 1 API отсутствует, 2 нечисловой тип, 3 защищённый API/ошибка, 4 некорректный max, 5 нет цели. В `MainWindow.xaml.cs` причины показаны рядом с HP/ресурсом. Метки EXE/TOC 0.1.16-dev. Никакие способности не нажимаются.
 
-**Тест:** CI и игровой тест новой версии ожидаются; приёмка — CRC PASS, прежние данные v2 сохранены, три отдельных кода причин на живой цели и без неё.
+**[CI-PASSED]:** https://github.com/Vi22Rus/LazyG/actions/runs/44297583123 — SUCCESS, обе задачи прошли: C# кодек, сборка single EXE и smoke test Windows; Lua 5.1 syntax + regression. Артефакт `LazyG-Windows-x64`, ID `14423214506`, SHA тестовой сборки `ed28fa195a7009acb4ca2813a73f06cfe2222bf2`. **[USER-UNTESTED]:** новый код причин пока не проверен в WoW; приёмка — CRC PASS, прежние данные v2 сохранены, три отдельных кода причин на живой цели и без неё.
 
 ## 2026-11-18 — 0.1.15-dev: диагностика RGB v3 из живого WoW [USER-TESTED / PARTIAL]
 
