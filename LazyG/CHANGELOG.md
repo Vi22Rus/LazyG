@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.2.2-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.2.3-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,22 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — 0.2.3-dev: Midnight Blue + Cyan UI with new class/spec artwork
+
+**[USER DIRECTIVE]** User selected the generated Midnight Blue + Cyan concept for actual Avalonia code. Requested **the same 9 illustrated class icons from the generated picture**, 27 specialization icons in a matching generated style, a 5 narrow + 4 slightly wider responsive grid, class-colored captions, and full blue/cyan styling throughout the EXE.
+
+**[IMPLEMENTED / UI-UNTESTED]**:
+- Generated illustrations were prepared as two offline embedded WEBP atlases, 9 class icons **cropped directly from the user-approved rendered UI picture** and 27 original matching fantasy specialization illustrations. `IconPack.cs` now uses 64x64 tile geometry and existing stable keys. Class/spec ordering verified against `ClientCatalog.Forever`.
+- Added an atmospheric cyan-lit landscape from the same generated UI as `Assets/midnight-backdrop.txt`, loaded by `ThemeArtwork.cs`. All three atlases are resources in `LazyG.Avalonia.csproj`, no web requests during UI launch.
+- `Palette.cs`, `MainWindow.cs`, `SetupDialog.cs` and `OverlayWindow.cs` use midnight navy/graphite backgrounds and cyan accents instead of brown/gold; existing Warcraft class-name colors retained.
+- Main class grid changed from 5+4 equal-width cells to two independently sized rows: 5 × 166px above, 4 × 211px below, centered, with 12px gaps and Viewbox **DownOnly**, so the design does not grow dramatically on maximizing. Specialization cards stay compact 176px; same-page Back and placeholder XML settings preserved.
+- Active top tab has highlighted cyan border; class/spec cards get bright cyan hover borders. Overlay uses cyan-themed border/ring, retains no-fake-spell and no-fake-GCD behavior.
+- Project documentation `Avalonia/THEME_MIDNIGHT_CYAN.md` captures the source and mapping; previous 0.2.2-dev and WPF source preserved for rollback.
+
+**[IMPORTANT]** Icons are **AI-generated thematic artwork**, not authoritative Blizzard class/spec icons. Validate recognizable mappings and approve in-game appearance before a release. No Lua, RGB protocol, rotation engine, activation, license backend or automatic input changes. Other game clients remain unimplemented.
+
+**[CI]** Pushed to `main` and GitHub Actions launched on source changes. Initial intermediate builds failed on C# Avalonia-vs-WinForms `Bitmap` ambiguity in ThemeArtwork and an incorrect Avalonia.Shapes namespace; both corrected in later commits. The current most recent *code-affecting* workflow run is https://github.com/Vi22Rus/LazyG/actions/runs/44326332578 at SHA 7d9ca4e794487e26cefb1999c186be50df9edbf2 (in_progress at documentation update). `0.2.3-dev` is not a confirmed release; do not assert final CI success or WoW test. User prefers immediate run link rather than waiting for compilation.
 
 ## 2026-11-18 — 0.2.2-dev: compact class/spec cards, redesigned overlay [DEV / GAME-UNTESTED]
 
