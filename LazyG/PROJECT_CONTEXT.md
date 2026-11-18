@@ -25,6 +25,8 @@
 
 ClientCatalog.cs declares 4 client IDs (forever, wotlk, mop, retail), but ONLY FOREVER is installable and has a real Lua adapter. The other IDs are structural placeholders, not functional WoW support. Setup installs embedded Forever Lua modules in a fresh directory and requires an RGB test before Finish. UserSession remembers last client/class/spec and the configured Forever folder in LocalAppData. License key validation requires a future server and is NOT implemented (no fake validation). Existing v2/v3/Curve RGB source classes are linked to the new Avalonia EXE. No DXGI capture, macOS build, enabled XML actions, or other client compatibility is claimed. CI and in-game verification must be separately recorded.
 
+[CI] First Avalonia UI code build/smoke/Lua tests SUCCESS: https://github.com/Vi22Rus/LazyG/actions/runs/44315053310 (artifact LazyG-Windows-x64 ID 14432073065). Subsequent change 8fbddfdbf23d scales class/spec icon grids up and down with window size. Current new run https://github.com/Vi22Rus/LazyG/actions/runs/44315585748 was queued at reporting; use this run for the most recent EXE after success. The Avalonia UI is not yet user-tested in WoW; no release declared.
+
 **Архитектура RGB v3:** [RGB_PROTOCOL_V3_PLAN.md](RGB_PROTOCOL_V3_PLAN.md). **Актуальная wire-спецификация кодера/декодера, CRC16 и тестовых векторов:** [RGB_PROTOCOL_V3_SPEC_DRAFT.md](RGB_PROTOCOL_V3_SPEC_DRAFT.md). Оба документа — планирование по модели WarMate/Sertyrew, **не реализация**. Перед кодированием читать оба.
 
 ## 1. Назначение и главный выбор архитектуры
