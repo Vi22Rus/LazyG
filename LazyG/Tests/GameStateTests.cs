@@ -59,14 +59,14 @@ var baseline=empty with {
     Client="forever",Transport=Knowledge.Known,
     ClassId=Observed<int>.Known(3,now)
 };
-var accepted=ForeverSpellProbeCodec.ApplyDiagnostic(baseline,spellProbe,now,now,
+var accepted=ForeverSpellProbeCodec.ApplyDiagnostic(baseline,spellProbe!,now,now,
     TimeSpan.FromSeconds(1));
 Assert(accepted.Spells.ContainsKey(1130));
 Assert(ConditionEvaluator.SpellReady(accepted,1130)==Truth.Unknown);
-var expired=ForeverSpellProbeCodec.ApplyDiagnostic(baseline,spellProbe,
+var expired=ForeverSpellProbeCodec.ApplyDiagnostic(baseline,spellProbe!,
     now.AddSeconds(-3),now,TimeSpan.FromSeconds(1));
 Assert(!expired.Spells.ContainsKey(1130));
-Assert(!ForeverSpellProbeCodec.ApplyDiagnostic(empty,spellProbe,now,now,
+Assert(!ForeverSpellProbeCodec.ApplyDiagnostic(empty,spellProbe!,now,now,
     TimeSpan.FromSeconds(1)).Spells.ContainsKey(1130));
 probeBytes[10]=3;
 Assert(!ForeverSpellProbeCodec.TryDecode(probeBytes,out _)); // CRC failure
