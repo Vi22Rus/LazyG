@@ -65,8 +65,37 @@ internal sealed record GameState(
         PlayerHealthPercent=PlayerHealthPercent.At(now,maxAge),
         TargetHealthPercent=TargetHealthPercent.At(now,maxAge),
         PowerPercent=PowerPercent.At(now,maxAge),Moving=Moving.At(now,maxAge),
-        Casting=Casting.At(now,maxAge),GcdRemainingMilliseconds=GcdRemainingMilliseconds.At(now,maxAge)
+        Casting=Casting.At(now,maxAge),GcdRemainingMilliseconds=GcdRemainingMilliseconds.At(now,maxAge),
+        Spells=AgeSpells(Spells,now,maxAge), Auras=AgeAuras(Auras,now,maxAge)
     };
+    private static IReadOnlyDictionary<int,SpellState> AgeSpells(
+        IReadOnlyDictionary<int,SpellState> source,DateTimeOffset now,TimeSpan ttl)
+    {
+        var result=new Dictionary<int,SpellState>();
+        foreach(var pair in source)
+            result[pair.Key]=pair.Value with
+            {
+                Learned=pair.Value.Learned.At(now,ttl),
+                Usable=pair.Value.Usable.At(now,ttl),
+                InRange=pair.Value.InRange.At(now,ttl),
+                CooldownMs=pair.Value.CooldownMs.At(now,ttl),
+                Charges=pair.Value.Charges.At(now,ttl)
+            };
+        return result;
+    }
+    private static IReadOnlyDictionary<AuraKey,AuraState> AgeAuras(
+        IReadOnlyDictionary<AuraKey,AuraState> source,DateTimeOffset now,TimeSpan ttl)
+    {
+        var result=new Dictionary<AuraKey,AuraState>();
+        foreach(var pair in source)
+            result[pair.Key]=pair.Value with
+            {
+                Present=pair.Value.Present.At(now,ttl),
+                Stacks=pair.Value.Stacks.At(now,ttl),
+                RemainingMs=pair.Value.RemainingMs.At(now,ttl)
+            };
+        return result;
+    }
 }
 internal sealed record SpellState(
     Observed<bool> Learned,
