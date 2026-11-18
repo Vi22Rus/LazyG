@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>LazyG</AssemblyName>
@@ -19,6 +21,12 @@
     <EmbeddedResource Include="../AddonTemplate/RgbV3Thresholds.lua" LogicalName="LazyG.RgbV3Thresholds.lua" />
     <EmbeddedResource Include="../AddonTemplate/Panel.lua" LogicalName="LazyG.Panel.lua" />
     <EmbeddedResource Include="../AddonTemplate/HunterProfile.lua" LogicalName="LazyG.HunterProfile.lua" />
-    <AvaloniaResource Include="Assets/*.png" />
+    <EmbeddedResource Include="Assets/icon-pack.txt" LogicalName="LazyG.IconPack" />
+    <Compile Include="../Windows/AddonTemplate.cs" Link="Bridge/AddonTemplate.cs" />
+    <Compile Include="../Windows/RgbPanelDetector.cs" Link="Bridge/RgbPanelDetector.cs" />
+    <Compile Include="../Windows/RgbV3Codec.cs" Link="Bridge/RgbV3Codec.cs" />
+    <Compile Include="../Windows/RgbV3PanelDetector.cs" Link="Bridge/RgbV3PanelDetector.cs" />
+    <Compile Include="../Windows/RgbV3ThresholdDetector.cs" Link="Bridge/RgbV3ThresholdDetector.cs" />
+    <Compile Include="../Windows/WowRgbBridge.cs" Link="Bridge/WowRgbBridge.cs" />
   </ItemGroup>
 </Project>
