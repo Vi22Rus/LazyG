@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-18 — 0.2.9-dev: optional LGD RGB SpellProbe end-to-end diagnostic wiring [DEV / CI-UNCONFIRMED / GAME-UNTESTED]
+
+- New `Windows/RgbSpellProbeDetector.cs` scans a separate 6-cell `LGD` strip with existing `ForeverSpellProbeCodec`; integrity validated independently and only when opted-in. `WowRgbBridge` retains original `TryReadCombined` signature for all legacy callers; new overload samples optional LGD from the **same visible screen capture** without modifying v2/v3/Curve detectors.
+- `Avalonia/MainWindow.cs` version 0.2.9-dev adds Support **LGD SpellProbe ON/OFF** toggle, samples optional packet while active, tracks sequence and rejects frozen evidence after a 1.5-second TTL. Diagnostic status is printed to Support; `ForeverSpellProbeCodec.ApplyDiagnostic` maps Learned/Usable only with trusted v2 identity. Remaining cooldown milliseconds, charges, actual GCD and aura details remain Unknown; no rotation or automatic input.
+- Standalone `Diagnostics/LazyGForeverProbe/SpellDiagnosticRgb.lua` now supplies the six-cell strip, disabled/hidden by default and switched with `/lgprobe rgb on/off`. TOC updated; old production addon assets untouched. Current sample is SpellID 1130 (Hunter only).
+- Note: live LGD scan **not** yet user-tested. The additive checksum/marker + 1.5s source-frame TTL validate the experiment but do not establish API truthfulness or guarantee resistance to all pixel artifacts. Existing GameState unit tests cover decode and Unknown safety, but local dotnet SDK was unavailable and current GitHub Actions result could not be verified. No CI-PASSED claim. Rollback available via previous main commit `1586fef4` (0.2.8-dev docs) and older user-tested v2.
+
 ## 2026-11-18 — 0.2.8-dev: Forever combat event and aura diagnostic foundation [DEV / UNTESTED]
 
 **Game evidence received from user (second SavedVariables log):** `UNIT_SPELLCAST_SUCCEEDED` for player; `UNIT_SPELLCAST_START/STOP/SUCCEEDED` for target; `UNIT_AURA` for player and target; `SPELL_UPDATE_COOLDOWN`; `PLAYER_TARGET_CHANGED` all observed during combat. Target `UnitExists=True` and GUID return type StringReadable, while HP and power were Protected. Learned/usable of SpellID 1130 True, cooldown `isActive=False` at sampled instant; duration and startTime numeric type, not measured values; GCD 61304 Unknown. These events do NOT by themselves verify cast SpellID, aura stacks, aura presence, CD timings or GCD measurement.
