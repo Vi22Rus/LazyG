@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.2.12-dev: guarded Forever XML rotation dispatcher [DEV / CI-UNCONFIRMED / GAME-UNTESTED]
+
+- New `Avalonia/Engine/XmlRotationDispatcher.cs` supports a minimal, strictly parsed `<Rotation client="forever" version="1">` format with ordered `Attack` and `Execute` rules (SpellID, unique priority; Execute requires a target HP upper-bound threshold). It rejects unsupported tags/attributes, wrong client, duplicate priorities, invalid IDs, malformed or oversized XML, DTD and external entity resolution. This is a **suggestion-only calculation**, NOT input automation or enabled rotation gameplay.
+- **Mandatory dispatch boundary:** client must be Forever; GameState capture must be <=900 ms old; transport Known; target exists/hostile/positively alive; GCD measured ready; spell Learned, Usable and measured CooldownMs ready. Execute additionally requires a fresh valid Curve `HealthBand` with entire interval strictly below `targetHpBelow`. No XML rule can disable these guards. If any state is Unknown/Protected/Stale, no recommendation. A living target in `0–4%` may pass a 20% threshold, but a corpse or unknown target cannot.
+- `Tests/GameStateTests.csproj` links new parser. `Tests/GameStateTests.cs` adds synthetic cases: living/corpse/no target, unknown hostility, GCD Unknown or active, stale data, 20% cutoff, invalid XML, wrong client, DTD. The test suite is not yet run by .NET in this environment.
+- Added `Rotations/Forever/Examples/diagnostic-hunter.xml` and `Rotations/Forever/README.md` documenting intended syntax. Example SpellID 1130 is only a parser fixture, not a valid Hunter rotation. Production RGB v2/v3/Curve, Lua, overlay and automated key input not modified. **Current live LGD packet has no verified numeric remaining cooldown/GCD, so this dispatcher must return no recommendation for real game state.**
+- **Version classification:** 0.2.12-dev logical engine stage, **not a published Windows release**; window EXE still advertises 0.2.11-dev because no user-visible functionality or compiled release is activated. Preserve previous commit state for rollback; next: obtain live verified GCD/cooldown measurements, wire read-only diagnostic preview, then only consider enabled rotation after game and CI validation.
+
 ## 2026-11-19 — 0.2.11-dev: fail-closed corpse/execute safety [DEV / CI-UNCONFIRMED / GAME-UNTESTED]
 
 **Motivation:** User showed live CRC-valid v3 + changing 5% Curve bands, including `0–4%`, and correctly noted that the same band may include both a living target and a corpse. A 5% band is not an exact zero value and cannot decide whether the target is dead.
