@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.2.3-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.2.4-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,12 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — 0.2.4-dev: Midnight theme continuity / seamless panorama [DEV / USER-UNTESTED]
+
+**[USER-TESTED ISSUE 0.2.3-dev]** Screenshot_7.jpg shows Paladin specialization page: header titlebar looks like an unrelated black strip and the scenic artwork occupies only the right-lower corner with a visible rectangular boundary, leaving most of the page uniform dark blue. The user explicitly requested a single coherent midnight-blue theme and atmospheric art that gently fades into the surrounding gradient, rather than a stretched/distorted picture.
+
+**[FIXED IN CODE]** Rebuilt existing reference-based landscape as a **1440×800 WebP full-width seamless composition** with feathered artwork at the left/top/right/bottom into the navy base gradient, instead of anchoring the original 780×445 illustration to bottom-right. The new `Assets/midnight-backdrop.txt` asset remains embedded locally in the same EXE. `MainWindow.cs` now uses a full-viewport `Image` in its existing `Grid`, with aspect-preserving `Stretch.UniformToFill`, no fixed Width/Height, clipped by the viewport border and overlaid by ScrollViewer as before. It preserves proportions at changing window sizes rather than distorting the landscape. At nonmatching aspect ratios this may crop the feathered border, never leaving a rectangular exposed edge. Header now uses a coordinated navy-to-ink gradient (#082A43 → #061B2D), a subdued cyan separator, and matching Windows control button backgrounds; footer tint aligns to navy. Label/controls, nine class cards, 27 spec icons, navigation, Overlay, Setup, Lua and RGB protocol remain untouched functionally. Version in the UI updated to **0.2.4-dev**, no release declared. GitHub Actions from the code change was queued: https://github.com/Vi22Rus/LazyG/actions/runs/44330348139 (source SHA 8ef2d38637b62724d3f66c9c3112d6a2681d3c1e). **CI/gametest are not yet confirmed.** Previous `0.2.3-dev` has successful Actions and serves as rollback.
 
 ## 2026-11-18 — 0.2.3-dev: Midnight Blue + Cyan UI with new class/spec artwork
 
