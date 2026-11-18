@@ -27,7 +27,9 @@
 
 Добавлены `LazyG/AddonTemplate/RgbV3Panel.lua` (24 ячейки direct8 под исходным v2-рядом, обновление примерно раз в 100 мс), `LazyG/Windows/RgbV3PanelDetector.cs` (чтение CRC кадра из небольшой области), совместный `WowRgbBridge.TryReadCombined`, вывод HP, ресурса и CRC PASS в `MainWindow.xaml.cs`. Lua v3 включается в создаваемую Setup-папку аддона через embedded resource в едином EXE. `RgbV3Encoder.lua` исправлен для стабильной упаковки флагов с nil-значениями. Версия интерфейса и TOC `0.1.15-dev`, в CI добавлена проверка синтаксиса Lua 5.1. v2 не изменён; при отсутствии v3 продолжает работать. Предыдущая папка аддона не перезаписывается; тестовая установка — с новым именем, прежний аддон отключить в игре.
 
-**Статус:** CI интегрированной версии требует отдельного подтверждения, в WoW не проверено. HP/Powers могут стать Unknown из-за защищённого API. Без XML-ротаций/нажатий, только телеметрия. Контрольная пользовательская точка — `0.1.13-dev`.
+**[CI-PASSED]** GitHub Actions https://github.com/Vi22Rus/LazyG/actions/runs/44295449598 — workflow завершился SUCCESS. Оба job успешны: Windows .NET8 RGB v3 regression, single-file publish, Windows smoke test, artifact upload; Ubuntu Lua 5.1 syntax и encoder regression. Артефакт `LazyG-Windows-x64`, ID `14423277903` (download в разделе Artifacts указанного запуска), SHA исходного push `3b3366b97b2d8e82c90246f0464edc430f06bb49`. Это только CI, пользовательский тест в WoW v3 пока отсутствует.
+
+**Статус:** в WoW новая диагностика ещё не проверена. HP/Powers могут стать Unknown из-за защищённого API. Без XML-ротаций/нажатий, только телеметрия. Контрольная пользовательская точка — `0.1.13-dev`.
 
 ## 2026-11-18 — 0.1.14-dev: кодер Lua и декодер C# по модели Sertyrew [DEV / TEST-PENDING]
 
@@ -171,4 +173,4 @@ dotnet publish LazyG/Windows/LazyG.csproj -c Release -r win-x64 --self-contained
 - найденные проблемы, исправления, возможность отката;
 - следующая одна конкретная задача.
 
-**Ближайшая задача:** подтвердить финальный CI и артефакт версии `0.1.15-dev`, затем пользовательский тест v2 PASS/v3 CRC PASS, HP/ресурсов в WoW Forever. При сбое анализировать строку диагностики и UI Scale; откат — `0.1.13-dev`.
+**Ближайшая задача:** пользовательский тест скачанной CI-сборки `0.1.15-dev` (run `44295449598`): v2 PASS, v3 CRC PASS, HP/ресурсы в WoW Forever. При сбое анализировать строку диагностики и UI Scale; откат — `0.1.13-dev`.
