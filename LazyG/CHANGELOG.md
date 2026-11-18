@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.13-dev XML preview Windows build verified [CI-PASSED / GAME-UNTESTED]
+
+- **Successful workflow run** https://github.com/Vi22Rus/LazyG/actions/runs/44361341115 at preview/test commit `665520bc18e5dd509bf381105d28de509a5719dc`. Both Windows build and Lua 5.1 regression jobs concluded success.
+- Windows steps passed: RGB v3 reference tests, GameState and XML dispatcher/preview regression, spell asset validation, single-file EXE publish, Windows application startup smoke test, and artifact upload.
+- **Exact artifact:** `LazyG-Windows-x64` GitHub artifact ID `14455365830` size 77,716,268 bytes, unexpired when verified. Click the artifact in the above workflow run. This is a compiled / startup-tested EXE, **not** a validated in-WoW rotation.
+- Current frontend advertises `0.2.13-dev`, features selectable Support log, opt-in LGD, opt-in read-only XML preview and no keyboard automation. Gameplay verification still required. Do not call this a release without user confirmation.
+
 ## 2026-11-19 — 0.2.13-dev: opt-in read-only Forever XML preview [DEV / CI PENDING / GAME-UNTESTED]
 
 - Following verified build run `44360433065`, added `Avalonia/Engine/XmlRotationPreview.cs`: a read-only explanation layer reporting absent profile, wrong client, stale capture, unknown target-life/hostility, GCD gate, no eligible rule or a suggestion without taking any action. This layer **does not authorize casts** and always delegates actual suggestion eligibility to `XmlRotationDispatcher.Evaluate`.
