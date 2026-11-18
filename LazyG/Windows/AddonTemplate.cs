@@ -142,25 +142,24 @@ end
 """;
 
     public const string PanelLua = """
--- LazyG RGB Bridge protocol v1, 0.1.11-dev.
--- Fixed top-left 4x2 cell grid. No interaction, flashing or rotation logic.
--- Layout: G M W K / class-race-level spec-points-version checksum M.
-local COLS, SIZE, GAP = 4, 7, 2
+-- LazyG RGB Bridge protocol v2, 0.1.12-dev.
+-- Single 9-cell horizontal strip, 4x4 UI cells and 1 UI gap.
+-- Markers | identity | spec | combat flags | checksum | end marker.
+local COLS, SIZE, GAP = 9, 4, 1
 local STEP = SIZE + GAP
 local f = CreateFrame("Frame", "LazyGBridgePixelFrame", UIParent)
-f:SetSize(COLS * STEP - GAP, 2 * STEP - GAP)
+f:SetSize(COLS * STEP - GAP, SIZE)
 f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
 f:SetFrameStrata("TOOLTIP")
 f:SetFrameLevel(100)
 f:EnableMouse(false)
 
 local cells = {}
-for i = 1, 8 do
+for i = 1, COLS do
   local t = f:CreateTexture(nil, "ARTWORK")
   t:SetTexture("Interface\\Buttons\\WHITE8X8")
   t:SetSize(SIZE, SIZE)
-  local col, row = (i - 1) % COLS, math.floor((i - 1) / COLS)
-  t:SetPoint("TOPLEFT", f, "TOPLEFT", col * STEP, -row * STEP)
+  t:SetPoint("TOPLEFT", f, "TOPLEFT", (i - 1) * STEP, 0)
   cells[i] = t
 end
 
@@ -172,7 +171,7 @@ SetColor(1, 0, 255, 0)
 SetColor(2, 255, 0, 255)
 SetColor(3, 255, 255, 255)
 SetColor(4, 0, 0, 0)
-SetColor(8, 255, 0, 255)
+SetColor(9, 255, 0, 255)
 
 -- Stable numeric wire IDs; never localize them.
 local classes = {
@@ -248,6 +247,27 @@ local function OtherClassSpec()
   return highest, best
 end
 
+-- Bit mask: 1=target exists, 2=hostile, 4=target alive,
+-- 8=player in combat. Unknown or secret results are not converted.
+local function SafeBoolean(fn, ...)
+  if not fn then return nil end
+  local ok, value = pcall(fn, ...)
+  if ok and type(value) == "boolean" then return value end
+  return nil
+end
+
+local function CombatFlags()
+  local flags = 0
+  local exists = SafeBoolean(UnitExists, "target")
+  if exists == true then
+    flags = flags + 1
+    if SafeBoolean(UnitCanAttack, "player", "target") == true then flags = flags + 2 end
+    if SafeBoolean(UnitIsDeadOrGhost, "target") == false then flags = flags + 4 end
+  end
+  if SafeBoolean(UnitAffectingCombat, "player") == true then flags = flags + 8 end
+  return flags
+end
+
 local lastPayload
 local function Refresh()
   local _, class = UnitClass("player")
@@ -269,15 +289,17 @@ local function Refresh()
     local tree, spent = OtherClassSpec()
     spec, points = Byte(tree), Byte(spent)
   end
-  local version = 1
+  local version = 2
+  local flags = CombatFlags()
   local check = (classID * 17 + raceID * 11 + level * 7
-     + spec * 19 + points * 3 + version * 13) % 256
-  local payload = table.concat({classID, raceID, level, spec, points}, ":")
+     + spec * 19 + points * 3 + version * 13 + flags * 23) % 256
+  local payload = table.concat({classID, raceID, level, spec, points, flags}, ":")
   if payload == lastPayload then return end
   lastPayload = payload
   SetColor(5, classID, raceID, level)
   SetColor(6, spec, points, version)
-  SetColor(7, check, 255 - check, 77)
+  SetColor(7, flags, 0, 0)
+  SetColor(8, check, 255 - check, 77)
 end
 
 local events = CreateFrame("Frame")
@@ -287,7 +309,15 @@ events:RegisterEvent("PLAYER_LEVEL_UP")
 events:RegisterEvent("PLAYER_TALENT_UPDATE")
 events:RegisterEvent("TRAIT_CONFIG_UPDATED")
 events:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-events:SetScript("OnEvent", Refresh)
+events:RegisterEvent("PLAYER_TARGET_CHANGED")
+events:RegisterEvent("PLAYER_REGEN_DISABLED")
+events:RegisterEvent("PLAYER_REGEN_ENABLED")
+events:RegisterEvent("UNIT_FLAGS")
+events:RegisterEvent("UNIT_HEALTH")
+events:SetScript("OnEvent", function(_, event, unit)
+  if (event == "UNIT_FLAGS" or event == "UNIT_HEALTH") and unit ~= "target" then return end
+  Refresh()
+end)
 Refresh()
 """;
 }
