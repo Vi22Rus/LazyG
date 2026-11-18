@@ -24,7 +24,8 @@ internal static class ForeverGameStateBridge
             SpecIndex=state.SpecIndex>0
                 ?Observed<int>.Known(state.SpecIndex,now):Observed<int>.Missing(),
             InCombat=Observed<bool>.Known(state.InCombat,now),
-            TargetExists=Observed<bool>.Known(state.TargetExists,now),
+            TargetExists=state.TargetExists
+                ?Observed<bool>.Known(true,now):Observed<bool>.Missing(),
             TargetHostile=state.TargetExists && state.TargetHostile
                 ?Observed<bool>.Known(true,now):Observed<bool>.Missing(),
             TargetAlive=TargetLifeDecoder.Alive(state.TargetExists,state.TargetAlive,
