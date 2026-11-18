@@ -10,7 +10,9 @@ CreateFrame=function()
   end}
 end
 local phase=0
-LazyGCooldownStateProbe={Flags=function(id)
+LazyGCooldownStateProbe={WidgetExperiment=function(id)
+  return phase==1 and "Shown" or "Hidden"
+end,Flags=function(id)
   if id==1130 then return phase==0 and 1 or phase==1 and 2 or 1,1 end
   if id==61304 then return phase==1 and 2 or 1,0 end
   if id==29515 then return 0,0 end
@@ -32,6 +34,7 @@ local started,reason=watch.Start(1130,save)
 assert(started and reason=="Started" and watch.IsRunning())
 assert(linesContaining("CDWATCH START")==1)
 assert(linesContaining("gcd29515")==1)
+assert(linesContaining("widget61304")==1)
 for i=1,10 do
   clock=clock+0.05
   script()
@@ -44,6 +47,7 @@ assert(linesContaining("spell spell=1130")==2)
 phase=2
 clock=clock+0.1;script()
 assert(linesContaining("gcd61304")==3)
+assert(linesContaining("widget61304")>=2) -- experimental state sampled independently
 clock=130.01;script()
 assert(not watch.IsRunning() and script==nil)
 assert(linesContaining("reason=completed")==1)
