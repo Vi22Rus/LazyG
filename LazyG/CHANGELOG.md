@@ -25,11 +25,11 @@
 
 ## 2026-11-18 — 0.1.14-dev: кодер Lua и декодер C# по модели Sertyrew [DEV / TEST-PENDING]
 
-По прямому запросу пользователя черновой TLV-формат заменён спецификацией по реальному Sertyrew: 23 базовые ячейки (плюс контрольная), профильные расширения, wire version=1, CRC16/CCITT-FALSE, direct8 и stepped4. Добавлены `LazyG/AddonTemplate/RgbV3Encoder.lua`, `LazyG/Windows/RgbV3Codec.cs`, `LazyG/Tests/RgbV3CodecTests.csproj` и `Program.cs`; в `.github/workflows/build-windows.yml` перед сборкой EXE добавлен регрессионный тест CRC и форматов. Спецификация — [RGB_PROTOCOL_V3_SPEC_DRAFT.md](RGB_PROTOCOL_V3_SPEC_DRAFT.md).
+По прямому запросу пользователя черновой TLV-формат заменён спецификацией по реальному Sertyrew: 23 базовые ячейки (плюс контрольная), профильные расширения, wire version=1, CRC16/CCITT-FALSE, direct8 и stepped4. Добавлены `LazyG/AddonTemplate/RgbV3Encoder.lua`, `LazyG/Windows/RgbV3Codec.cs`, `LazyG/Tests/RgbV3CodecTests.csproj`, `Program.cs` и `rgb_v3_encoder_test.lua`; в `.github/workflows/build-windows.yml` предусмотрены отдельные Windows/.NET и Ubuntu/Lua 5.1 регрессионные проверки CRC и форматов. Спецификация — [RGB_PROTOCOL_V3_SPEC_DRAFT.md](RGB_PROTOCOL_V3_SPEC_DRAFT.md).
 
 **Граница:** действующий RGB v2, существующий TOC, Setup и Lua Panel.lua не менялись. Внешний encoder v3 ещё не включён в WoW, а decoder v3 не подключен к захвату. Это не подтверждение работы игровых телеметрических полей и не готовый XML-движок. Версия EXE: `0.1.14-dev`.
 
-**Тест:** CI-статус уточняется после записи; в WoW эта dev-версия ещё не проверена. Сохранять `0.1.13-dev` как точку отката. Следующий этап — клиентский профиль/полоска v3 Forever и реальный тест.
+**Тест:** независимый расчёт CRC16/CCITT-FALSE в Python (`binascii.crc_hqx`) подтвердил контрольные суммы 0x8B22, 0xD79A и стандартный 0x29B1. Автоматический CI через доступный GitHub-коннектор пока не удалось подтвердить: поиск связанных workflow-запусков/коммит-статусов вернул пустые ответы, которые **не доказывают ни PASS, ни FAIL**. В WoW dev-версия ещё не проверена. Сохранять `0.1.13-dev` как точку отката. Следующий этап — клиентский профиль/полоска v3 Forever и реальный тест.
 
 ## 2026-11-18 — RGB v3: точная спецификация пакета и CRC16 test vectors [DOCS-ONLY / DRAFT]
 
