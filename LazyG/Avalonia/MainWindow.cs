@@ -28,10 +28,17 @@ public sealed class MainWindow : Window
     private Specialization? selectedSpec;
     private string view = "classes";
     private bool scanning;
+    private bool setupOpen;
+    private OverlayWindow? overlay;
+    private Button? overlayButton;
+    private TextBlock? diagnosticsOutput;
+    private string lastBridgeState = "";
+    private string lastProbeState = "";
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.0-dev";
+        Title = "LazyG · 0.2.1-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.1-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -40,11 +47,11 @@ public sealed class MainWindow : Window
         ShowClasses();
         timer.Tick += async (_, _) => await PollBridgeAsync();
         timer.Start();
-        Closed += (_, _) => { finished = true; timer.Stop(); };
-        Opened += async (_, _) =>
+        Closed += (_, _) => { finished = true; timer.Stop(); overlay?.Close(); };
+        Opened += (_, _) =>
         {
             if (!session.ForeverConfigured)
-                await ShowSetupAsync();
+                Dispatcher.UIThread.Post(ShowSetup);
         };
     }
     private static TextBlock Text(string text, double size = 14, string foreground = "#F7EDE4", FontWeight? weight = null) =>
@@ -69,7 +76,7 @@ public sealed class MainWindow : Window
     private Control CreateShell()
     {
         var shell = new Grid { RowDefinitions=new RowDefinitions("58,*,34") };
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto,Auto"), Background=Palette.Brush("#1B120F") };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto,Auto,Auto"), Background=Palette.Brush("#1B120F") };
         header.PointerPressed += (_,e) => { if (e.GetCurrentPoint(header).Properties.IsLeftButtonPressed && e.Source is not Button) BeginMoveDrag(e); };
         var brand = Stack(Orientation.Horizontal,11);
         brand.VerticalAlignment=VerticalAlignment.Center;
@@ -89,13 +96,16 @@ public sealed class MainWindow : Window
         game.Margin=new Thickness(8);
         game.Children.Add(clientText);game.Children.Add(Text("●",12,"#5DC78C"));game.Children.Add(statusText);
         Grid.SetColumn(game,3);header.Children.Add(game);
-        var setup=Action("Setup",()=> _ = ShowSetupAsync());
-        setup.Margin=new Thickness(8,0,12,0);Grid.SetColumn(setup,4);header.Children.Add(setup);
+        overlayButton=Action("Overlay OFF",ToggleOverlay);
+        overlayButton.Margin=new Thickness(5,0,5,0);
+        Grid.SetColumn(overlayButton,4);header.Children.Add(overlayButton);
+        var setup=Action("Setup",ShowSetup);
+        setup.Margin=new Thickness(8,0,12,0);Grid.SetColumn(setup,5);header.Children.Add(setup);
         var wins=Stack(Orientation.Horizontal,0); wins.VerticalAlignment=VerticalAlignment.Stretch;
         wins.Children.Add(WindowAction("—",()=>WindowState=WindowState.Minimized));
         wins.Children.Add(WindowAction("□",()=>WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized));
         wins.Children.Add(WindowAction("×",Close,true));
-        Grid.SetColumn(wins,5);header.Children.Add(wins);
+        Grid.SetColumn(wins,6);header.Children.Add(wins);
         Grid.SetRow(header,0);shell.Children.Add(header);
         var bodyWrap = new Border { Background=new LinearGradientBrush { StartPoint=new RelativePoint(0,0,RelativeUnit.Relative),
             EndPoint=new RelativePoint(1,1,RelativeUnit.Relative),
@@ -108,7 +118,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#15100E"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.0-dev  ·  Forever profile  ·  Local desktop application",11,"#8F7A6D"));
+        footer.Children.Add(Text("  LazyG 0.2.1-dev  ·  Forever profile  ·  Local desktop application",11,"#8F7A6D"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#8F7A6D");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -157,9 +167,10 @@ public sealed class MainWindow : Window
             last.Children.Add(SpellIcon(lastSpec.Icon,59));
             var labels=Stack(spacing:3);labels.Children.Add(Text("LAST USED",11,"#EFAE56",FontWeight.Bold));
             labels.Children.Add(Text(lastSpec.Name+"  ·  "+selection.Name,20,"#FFFFFF",FontWeight.SemiBold));
-            labels.Children.Add(Text("Your previous specialization · Settings are not configured yet",12,"#C8ADA0"));
+            labels.Children.Add(Text("Your previous specialization · Start requires an installed XML rotation",12,"#C8ADA0"));
             Grid.SetColumn(labels,1);last.Children.Add(labels);
-            var b=Action("Open",()=>ShowSpec(selection,lastSpec),true);b.VerticalAlignment=VerticalAlignment.Center;
+            var b=Action("Start",()=>RequestStart(selection,lastSpec),true);b.VerticalAlignment=VerticalAlignment.Center;
+
             Grid.SetColumn(b,2);last.Children.Add(b);
             wrap.Children.Add(Pane(last,"#332319"));
         }
@@ -270,37 +281,128 @@ public sealed class MainWindow : Window
         view="support";
         var b=Stack(spacing:12);
         b.Children.Add(Text("SUPPORT",15,"#EFB56B",FontWeight.Bold));
-        b.Children.Add(Text("This section is reserved for future support and diagnostics.",16,"#F7EDE4"));
-        b.Children.Add(Text("No license server, external support service or telemetry is connected in this dev build.",12,"#BDAA9D"));
-        Go(Page("SUPPORT","Information and diagnostics",Pane(b)));
+        b.Children.Add(Text("LIVE RGB & APPLICATION DIAGNOSTICS",18,"#F7EDE4",FontWeight.Bold));
+        b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#BDAA9D"));
+        var actions=Stack(Orientation.Horizontal,9);
+        actions.Children.Add(Action("Clear events",()=>{ RuntimeDiagnostics.Clear();RefreshDiagnosticsView(); }));
+        actions.Children.Add(Action("Refresh",RefreshDiagnosticsView));
+        b.Children.Add(actions);
+        diagnosticsOutput=Text(RuntimeDiagnostics.Snapshot(),12,"#D8C6B9");
+        diagnosticsOutput.FontFamily=new FontFamily("Consolas");
+        var diagnosticPanel=new ScrollViewer { Content=diagnosticsOutput, MaxHeight=440,
+            VerticalScrollBarVisibility=ScrollBarVisibility.Auto };
+        b.Children.Add(Pane(diagnosticPanel,"#171110",8,"#5F4232",new Thickness(16)));
+        b.Children.Add(Text("RGB v2 / v3 CRC / Curve, window visibility, Setup and Overlay events appear here. Automatic rotation is not implemented.",12,"#BDAA9D"));
+        Go(Page("SUPPORT","Local live status and event history",Pane(b)));
+        RefreshDiagnosticsView();
     }
-    private async Task ShowSetupAsync()
+    private void RefreshDiagnosticsView()
     {
-        var dialog=new SetupDialog(session);
-        var ok=await dialog.ShowDialog<bool>(this);
-        if (ok)
+        if (view == "support" && diagnosticsOutput is not null)
+            diagnosticsOutput.Text=RuntimeDiagnostics.Snapshot();
+    }
+    private void RequestStart(GameClass cls, Specialization spec)
+    {
+        RuntimeDiagnostics.Add("ROTATION", $"Start requested: {cls.Name} / {spec.Name}; XML rotation engine is not installed");
+        RefreshDiagnosticsView();
+        var notice=new Window {
+            Title="LazyG · Start",
+            Width=430,Height=175,CanResize=false,
+            WindowStartupLocation=WindowStartupLocation.CenterOwner,
+            Background=Palette.Surface,Foreground=Palette.White
+        };
+        var content=Stack(spacing:15);
+        content.Margin=new Thickness(24);
+        content.Children.Add(Text("ROTATION NOT AVAILABLE",17,"#EAB36F",FontWeight.Bold));
+        content.Children.Add(Text("The Start control is reserved for running your selected XML rotation. No rotation engine is implemented in this dev build.",13));
+        content.Children.Add(Action("OK",notice.Close,true));
+        notice.Content=content;
+        notice.ShowDialog(this);
+    }
+    private void ToggleOverlay()
+    {
+        if (overlay is not null)
         {
-            clientText.Text="WOW FOREVER";
-            ShowClasses();
+            var toClose=overlay;
+            overlay=null;
+            toClose.Close();
+            if(overlayButton is not null)overlayButton.Content="Overlay OFF";
+            RuntimeDiagnostics.Add("OVERLAY","Closed");
+            return;
         }
+        overlay=new OverlayWindow(()=>{
+            var current=overlay;overlay=null;current?.Close();
+            if(overlayButton is not null)overlayButton.Content="Overlay OFF";
+            RuntimeDiagnostics.Add("OVERLAY","Closed by user");
+        });
+        overlay.Closed+=(_,_)=> {
+            overlay=null;
+            if(overlayButton is not null)overlayButton.Content="Overlay OFF";
+        };
+        overlay.Show();
+        if(overlayButton is not null)overlayButton.Content="Overlay ON";
+        RuntimeDiagnostics.Add("OVERLAY","Shown · topmost compact status window");
+    }
+    private void ShowSetup()
+    {
+        if(setupOpen || finished)return;
+        setupOpen=true;
+        RuntimeDiagnostics.Add("SETUP","Opened; main window hidden");
+        var dialog=new SetupDialog(session);
+        // The main window is hidden for the *entire* Setup session.
+        dialog.WindowStartupLocation=WindowStartupLocation.CenterScreen;
+        dialog.Closed+=(_,_)=>{
+            setupOpen=false;
+            if(dialog.SetupCompleted)
+            {
+                clientText.Text="WOW FOREVER";
+                ShowClasses();
+                RuntimeDiagnostics.Add("SETUP","Finished · Forever client active");
+            }
+            else RuntimeDiagnostics.Add("SETUP","Closed without completing RGB setup");
+            if(!finished){Show();Activate();}
+        };
+        dialog.Show();
+        Hide();
     }
     private async Task PollBridgeAsync()
     {
-        if (scanning || finished) return;
+        if (scanning || finished || setupOpen) return;
         scanning=true;
         try
         {
             var result=await Task.Run(() => {
                 bool ok=WowRgbBridge.TryReadCombined(out var state,out var packet,out var detail,out var v3,out var thresholds);
-                return (ok,state,packet,thresholds);
+                return (ok,state,packet,detail,v3,thresholds);
             });
             if(finished)return;
-            if(result.ok && result.state is not null)
-                statusText.Text = result.thresholds is not null ? "RGB CONNECTED · CURVE" :
-                    result.packet is not null ? "RGB CONNECTED · CRC PASS" : "RGB CONNECTED";
-            else statusText.Text="GAME NOT CONNECTED";
+            var connected=result.ok && result.state is not null;
+            var crc=result.packet is not null;
+            var curve=result.thresholds is not null;
+            string now=connected?(curve?"RGB CONNECTED · CURVE":crc?"RGB CONNECTED · CRC PASS":"RGB CONNECTED"):"GAME NOT CONNECTED";
+            statusText.Text=now;
+            if(now != lastBridgeState)
+            {
+                RuntimeDiagnostics.Add("RGB",now+(connected?"":(" · "+result.detail)));
+                lastBridgeState=now;
+            }
+            string probe=connected?(crc?result.v3:"No RGB v3 packet")+
+                (curve?" · "+result.thresholds:" · Curve unavailable"):"No live game data";
+            if(probe!=lastProbeState)
+            {
+                RuntimeDiagnostics.Add("PROBE",probe);
+                lastProbeState=probe;
+            }
+            overlay?.SetConnection(connected,crc,curve);
+            RefreshDiagnosticsView();
         }
-        catch (Exception) { statusText.Text="RGB CAPTURE ERROR"; }
-        finally { scanning=false; }
+        catch(Exception e)
+        {
+            statusText.Text="RGB CAPTURE ERROR";
+            if(lastBridgeState!="RGB CAPTURE ERROR")
+                RuntimeDiagnostics.Add("ERROR","RGB capture: "+e.GetType().Name);
+            lastBridgeState="RGB CAPTURE ERROR";
+        }
+        finally{scanning=false;}
     }
 }
