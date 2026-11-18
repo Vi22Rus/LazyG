@@ -2,5 +2,6 @@
  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
  <ItemGroup><Compile Include="GameStateTests.cs" />
     <Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" />
-    <Compile Include="../Avalonia/Diagnostics/ForeverSpellProbeCodec.cs" Link="ForeverSpellProbeCodec.cs" /></ItemGroup>
+    <Compile Include="../Avalonia/Diagnostics/ForeverSpellProbeCodec.cs" Link="ForeverSpellProbeCodec.cs" />
+    <Compile Include="../Avalonia/Diagnostics/ForeverCombatTracker.cs" Link="ForeverCombatTracker.cs" /></ItemGroup>
 </Project>
