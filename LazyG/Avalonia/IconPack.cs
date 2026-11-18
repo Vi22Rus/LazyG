@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Control = Avalonia.Controls.Control;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
+using Image = Avalonia.Controls.Image;
 
 namespace LazyG.Desktop;
 internal static class IconPack
