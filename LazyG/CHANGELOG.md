@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.16-dev automatic CDWATCH confirmed [CI-PASSED / GAME-UNTESTED]
+
+- Verified GitHub Actions run https://github.com/Vi22Rus/LazyG/actions/runs/44367660366 at source commit `43c90a62924f21e5e171f28e116aa06ca8b821b0`: SUCCESS. Lua 5.1 syntax, RGB reference tests, cooldown audit/state and new automatic CDWATCH 30-second simulated regression all passed. Windows RGB/GameState/XML regression, publish single EXE, startup smoke test and both artifact uploads passed.
+- Confirmed artifacts: `LazyG-Windows-x64` ID `14457202471` (77,716,265 bytes); `LazyGForeverProbe-0.2.16-dev` ID `14457072646` (9,807 bytes). Both unexpired when checked. Download from the **exact** workflow page above.
+- New command `/lgprobe cdwatch 1130` starts a hands-free 30-second diagnostic (50ms plain flags; separate 200ms experimental widget). On completion `/reload` saves the capped state-transition journal. The optional addon must be installed; the Windows EXE does not need to run for this test.
+- This is **CI-PASSED only**; no actual WoW Forever client run has yet validated the signals. Base RGB v2/v3/Curve and XML automation are unchanged. Rollback remains successful 0.2.15-dev run https://github.com/Vi22Rus/LazyG/actions/runs/44365955551 .
+
 ## 2026-11-19 — 0.2.16-dev: automatic cooldown/GCD 30-second recorder [DEV / CI PENDING / GAME-UNTESTED]
 
 - In response to user feedback that manual slash commands during a 1.5-second GCD are impractical, implemented an automatic `/lgprobe cdwatch [SpellID]` command in standalone `LazyGForeverProbe`. The command starts a single, read-only 30-second capture and stops automatically. `/lgprobe cdwatch status` and `/lgprobe cdwatch stop` are available. It does NOT require the user to paste a command while GCD is active.
