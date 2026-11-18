@@ -63,11 +63,21 @@ internal static class WowRgbBridge
         return TryReadCombined(out player, out _, out detail, out _, out _);
     }
 
-    // One physical capture for both independent RGB protocols.
+    // Legacy RGB callers preserve the old signature.
     public static bool TryReadCombined(out RgbPlayerState? player,
         out RgbV3Packet? telemetry, out string detail, out string v3Detail,
         out RgbThresholdProbe? thresholds)
+        => TryReadCombined(out player,out telemetry,out detail,out v3Detail,
+            out thresholds,false,out _);
+
+    // Optional LGD is read from the same bitmap, never changing v2/v3 return.
+
+    public static bool TryReadCombined(out RgbPlayerState? player,
+        out RgbV3Packet? telemetry, out string detail, out string v3Detail,
+        out RgbThresholdProbe? thresholds, bool readSpellProbe,
+        out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe)
     {
+        spellProbe=null;
         player = null;
         telemetry = null;
         thresholds = null;
@@ -116,6 +126,8 @@ internal static class WowRgbBridge
             RgbV3PanelDetector.FindPanel(bitmap, out telemetry, out v3Detail);
             if (telemetry != null)
                 RgbV3ThresholdDetector.FindPanel(bitmap, out thresholds);
+            if (readSpellProbe)
+                RgbSpellProbeDetector.FindPanel(bitmap,out spellProbe);
             return v2;
         }
         catch (Exception ex)
