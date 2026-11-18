@@ -37,5 +37,33 @@ var known=state with {
 Assert(ConditionEvaluator.HealthBelow(known,70)==Truth.True);
 Assert(ConditionEvaluator.GcdReady(known)==Truth.True);
 Assert(ConditionEvaluator.HealthBelow(known,30)==Truth.False);
-Console.WriteLine("GameState tri-state / unknown / staleness / safe gates: PASS");
+
+// Independent v1 diagnostic packet: version, sequence, spell id, four quality codes.
+var probeBytes=new byte[] {
+    0x4C,0x47,0x44,1,7,0,0,4,106,2,2,0,0,0,0,0xA5,0,0
+}; // SpellID 1130
+int checksum=0;
+for(int i=0;i<15;i++)checksum=(checksum+probeBytes[i])&255;
+probeBytes[16]=(byte)checksum;
+probeBytes[17]=(byte)(255-checksum);
+Assert(ForeverSpellProbeCodec.TryDecode(probeBytes,out var spellProbe));
+Assert(spellProbe!.SpellId==1130);
+var spellObserved=ForeverSpellProbeCodec.ToSpellState(spellProbe,now);
+Assert(spellObserved.Learned.Is(x=>x)==Truth.True);
+Assert(spellObserved.Usable.Is(x=>x)==Truth.True);
+Assert(spellObserved.CooldownMs.Quality==Knowledge.Unknown);
+Assert(!ConditionEvaluator.CanRecommend(
+    (empty with { Spells=new System.Collections.Generic.Dictionary<int,SpellState>
+    { [1130]=spellObserved } }).Spells[1130].CooldownMs.Is(x=>x==0)));
+probeBytes[10]=3;
+Assert(!ForeverSpellProbeCodec.TryDecode(probeBytes,out _)); // CRC failure
+probeBytes[10]=2;
+probeBytes[9]=7;
+checksum=0;
+for(int i=0;i<15;i++)checksum=(checksum+probeBytes[i])&255;
+probeBytes[16]=(byte)checksum;
+probeBytes[17]=(byte)(255-checksum);
+Assert(!ForeverSpellProbeCodec.TryDecode(probeBytes,out _)); // invalid status
+
+Console.WriteLine("GameState and isolated SpellProbe v1 regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
