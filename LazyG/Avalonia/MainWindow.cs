@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Linq;
+using LazyG.Desktop.Engine;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -41,6 +43,9 @@ public sealed class MainWindow : Window
     private string lastProbeState = "";
     private string lastGameStateDiagnostic = "";
     private bool spellDiagnosticEnabled;
+    private bool xmlPreviewEnabled;
+    private XmlRotationProfile? xmlPreviewProfile;
+    private string lastXmlPreview = "";
     private string lastSpellDiagnostic = "";
     private byte? lastSpellSequence;
     private DateTimeOffset lastSpellPacketAt;
@@ -49,8 +54,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.11-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.11-dev started · Forever UI");
+        Title = "LazyG · 0.2.13-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.13-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -168,7 +173,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#031524"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.11-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
+        footer.Children.Add(Text("  LazyG 0.2.13-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#719BB2");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -365,6 +370,34 @@ public sealed class MainWindow : Window
             if(clipboard is not null)
                 await clipboard.SetTextAsync(RuntimeDiagnostics.Snapshot());
         }));
+        actions.Children.Add(Action("XML preview ON/OFF",()=>{
+            xmlPreviewEnabled=!xmlPreviewEnabled;
+            lastXmlPreview="";
+            if(xmlPreviewEnabled)
+            {
+                try
+                {
+                    using var stream=typeof(MainWindow).Assembly.GetManifestResourceStream(
+                        "LazyG.ForeverXmlDiagnosticExample");
+                    if(stream is null)throw new InvalidDataException("Embedded XML missing");
+                    using var reader=new StreamReader(stream);
+                    xmlPreviewProfile=XmlRotationDispatcher.Parse(reader.ReadToEnd());
+                    RuntimeDiagnostics.Add("XML","Read-only Forever preview enabled (example only, NO INPUT)");
+                }
+                catch(Exception ex)
+                {
+                    xmlPreviewEnabled=false;
+                    xmlPreviewProfile=null;
+                    RuntimeDiagnostics.Add("XML","Preview unavailable: "+ex.GetType().Name);
+                }
+            }
+            else
+            {
+                xmlPreviewProfile=null;
+                RuntimeDiagnostics.Add("XML","Preview disabled");
+            }
+            RefreshDiagnosticsView();
+        }));
         actions.Children.Add(Action("LGD SpellProbe ON/OFF",()=>{
             spellDiagnosticEnabled=!spellDiagnosticEnabled;
             lastSpellPacket=null;lastSpellSequence=null;
@@ -527,6 +560,22 @@ public sealed class MainWindow : Window
             {
                 RuntimeDiagnostics.Add("LGD",lgdStatus);
                 lastSpellDiagnostic=lgdStatus;
+            }
+            if(xmlPreviewEnabled && xmlPreviewProfile is not null)
+            {
+                // The sample's Curve band comes from the SAME captured bitmap,
+                // never from a previous target. It does not imply target alive.
+                var hpBand=Observed<HealthBand>.Missing();
+                if(connected && curve && HealthBand.TryParse(result.thresholds!.TargetHp,
+                    out var parsedBand))
+                    hpBand=Observed<HealthBand>.Known(parsedBand,result.capturedAt);
+                string preview=XmlRotationPreview.Describe(xmlPreviewProfile,latestGameState,
+                    hpBand,result.capturedAt);
+                if(preview!=lastXmlPreview)
+                {
+                    RuntimeDiagnostics.Add("XML",preview);
+                    lastXmlPreview=preview;
+                }
             }
             var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
             if(engineDiagnostic!=lastGameStateDiagnostic)
