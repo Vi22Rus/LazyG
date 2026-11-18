@@ -1,25 +1,26 @@
-LazyG 0.2.0-dev — Avalonia UI, WoW Forever
+LazyG 0.2.1-dev — Avalonia WoW Forever interface update
 
-DEV only. Not yet confirmed inside WoW. Windows x64.
-The legacy WPF sources remain in LazyG/Windows.
+User-confirmed 0.2.0-dev UI fixes:
+* Setup opens without main window visible behind it; when Setup closes the main window returns.
+* Setup footer row and buttons enlarged, legible labels, even if Test RGB and Finish are disabled.
+* Last Used button renamed to Start. Until a real XML rotation engine exists, clicking Start displays an honest "Rotation not available" message; NO automatic inputs occur.
+* Top bar Overlay ON/OFF toggles a small movable topmost RGB connection window. It shows connectivity/CRC, not simulated rotation.
+* Support shows live in-memory event diagnostics (150 latest status changes), including RGB v2/v3/Curve, Setup, Overlay and Start attempts. Clear/Refresh, no screenshot/log upload.
+* Main navigation/9 classes/27 specs and icons stay unchanged. Only WoW Forever supported.
 
-UI:
-- Dark custom frameless titlebar; minimize / maximize / close buttons.
-- Nine Forever classes in 5+4 layout; separate matching class icons.
-- Each class opens its three specializations, each with own icon.
-- Open a spec -> intentionally empty rotation settings screen; Back returns to specs and classes.
-- A last-used specialization panel appears when one has been selected.
-- Racials & Consumables category placeholders; Support placeholder.
-- Setup button opens a modal wizard, installs only the Forever Lua adapter, and verifies RGB before Finish.
-- Client catalog has future profiles for 3.3.5 / MoP / Retail marked unavailable.
-- License server, key verification, XML rotation engine and Mac builds are not implemented.
-- Artwork is embedded offline. Legal distribution should be reviewed before a public release.
+Reference study: user-supplied 0hara Aster addon 2.4.2 supports WoW Forever Interface 16001, uses UI-scale-aware origin pixel patch, separate interrupt overlay, optional integration with Hekili/MaxDps/Ovale/etc., and per-session diagnostic counters. These are architecture references, not copied code. PE32+ EXE inspected statically, no claim about its capture API.
 
-Test: wait for successful GitHub Actions run -> Artifacts -> LazyG-Windows-x64.
-Open Mage -> Arcane / Fire / Frost -> empty page -> Back.
-Open Setup -> choose AddOns directory -> new unique addon name -> Install.
-Enable that addon in WoW, disable previous test addons, /reload -> Test RGB -> Finish.
-Report screenshots and any error messages.
+Setup test:
+1. Run the new EXE. If no Forever setup exists, ONLY the Setup dialog should be visible.
+2. Verify the bottom Install AddOn / Test RGB / Finish button captions are fully legible.
+3. Cancel Setup -> main window reappears.
+4. On main, open a class/spec, return to Classes, observe Last Used > Start.
+5. Press Start -> "Rotation not available" (future XML engine placeholder).
+6. Toggle Overlay ON -> compact draggable topmost status panel; toggle OFF.
+7. Open Support and check live RGB/Setup/Overlay event log.
+8. Install Forever addon under new unused name if needed, /reload and Test RGB.
 
-POWERSHELL:
+DEV status, not a user-tested release. Older WPF and Avalonia builds retained for rollback.
+
+Build a single EXE in PowerShell at repository root:
 dotnet publish LazyG/Avalonia/LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None
