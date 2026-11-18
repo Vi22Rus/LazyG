@@ -16,6 +16,7 @@ using Button = Avalonia.Controls.Button;
 using TextBox = Avalonia.Controls.TextBox;
 using ComboBox = Avalonia.Controls.ComboBox;
 using Orientation = Avalonia.Layout.Orientation;
+using HAlign = Avalonia.Layout.HorizontalAlignment;
 
 namespace LazyG.Desktop;
 
@@ -88,7 +89,7 @@ internal sealed class SetupDialog : Window
         Grid.SetRow(scroller,1);
         root.Children.Add(scroller);
         var actions=new StackPanel { Orientation=Orientation.Horizontal,Spacing=12,
-            HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(20) };
+            HorizontalAlignment=HAlign.Right,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(20) };
         actions.Children.Add(install);actions.Children.Add(test);actions.Children.Add(finish);
         Grid.SetRow(actions,2);root.Children.Add(actions);
         return root;
