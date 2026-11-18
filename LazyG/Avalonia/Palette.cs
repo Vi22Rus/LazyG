@@ -1,4 +1,5 @@
 using Avalonia.Media;
+using Color = Avalonia.Media.Color;
 namespace LazyG.Desktop;
 internal static class Palette
 {
