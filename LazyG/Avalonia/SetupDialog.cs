@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using LazyGPrototype;
 
 namespace LazyG.Desktop;
@@ -78,8 +79,9 @@ public sealed class SetupDialog : Window
         status.Text="Select WoW Forever, choose its AddOns folder, and install.";
         status.Foreground=Palette.Brush("#CFB09B");
         Grid.SetRow(form,1);
-        root.Children.Add(new ScrollViewer { Content=form,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto, });
-        Grid.SetRow(root.Children[^1],1);
+        var scroller=new ScrollViewer { Content=form,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto };
+        Grid.SetRow(scroller,1);
+        root.Children.Add(scroller);
         var actions=new StackPanel { Orientation=Orientation.Horizontal,Spacing=12,
             HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(20) };
         actions.Children.Add(install);actions.Children.Add(test);actions.Children.Add(finish);
