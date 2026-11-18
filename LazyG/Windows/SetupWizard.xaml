@@ -1,6 +1,6 @@
 <Window x:Class="LazyGPrototype.SetupWizard" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="LazyG · Setup" Width="660" Height="480" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#191513" Foreground="#F8EEE8" FontFamily="Segoe UI">
  <Grid Margin="26"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <StackPanel><TextBlock x:Name="StepLabel" Text="Step 1 / 6" Foreground="#F5AD6B" FontSize="13"/>
+  <StackPanel><TextBlock x:Name="StepLabel" Text="Step 1 / 5" Foreground="#F5AD6B" FontSize="13"/>
    <TextBlock x:Name="StepTitle" Text="Choose AddOns directory" FontSize="25" FontWeight="SemiBold" Margin="0,5,0,9"/>
    <Border Background="#604333" Height="1" Margin="0,0,0,16"/>
   </StackPanel>
@@ -30,7 +30,7 @@
     <TextBlock Text="Client versions may change after updates; check the .toc version in-game if the addon is marked out-of-date." TextWrapping="Wrap" Foreground="#B6A49A" Margin="0,11,0,0"/>
    </StackPanel>
    <StackPanel x:Name="InstallPanel" Visibility="Collapsed">
-    <TextBlock Text="Ready to install your RGB calibration addon." Margin="0,0,0,12"/>
+    <TextBlock Text="Ready to install your automatic RGB bridge addon." Margin="0,0,0,12"/>
     <TextBlock x:Name="InstallSummary" Foreground="#B6A49A" Margin="0,0,0,16"/>
     <TextBlock Text="Existing addon folders are never overwritten. Change the addon name to create a separate installation." Foreground="#F6BA78"/>
    </StackPanel>
@@ -40,21 +40,11 @@
     <TextBlock Text="Click Next to check that a WoW client process is running. No PID or executable path is stored." TextWrapping="Wrap"/>
     <TextBlock x:Name="GameCheckText" Text="Waiting for game check" Foreground="#F6BA78" Margin="0,15,0,0"/>
    </StackPanel>
-   <StackPanel x:Name="DragPanel" Visibility="Collapsed">
-    <TextBlock Text="In WoW, hold Shift and drag the RGB bar with the left mouse button to the desired position." Margin="0,0,0,15"/>
-    <Button Content="Show WoW to position panel" Click="ShowGame_Click" HorizontalAlignment="Left" Margin="0,0,0,12"/>
-    <TextBlock Text="Keep the compact RGB bar unobstructed. Include the first and last marker when selecting the region." Foreground="#B6A49A" Margin="0,0,0,15"/>
-    <Button Content="Select RGB region on screen" Click="SelectRegion_Click" HorizontalAlignment="Left"/>
-    <TextBlock x:Name="RegionText" Text="No region selected" Foreground="#F6BA78" Margin="0,13,0,0"/>
-   </StackPanel>
    <StackPanel x:Name="TestPanel" Visibility="Collapsed">
-    <TextBlock Text="Connection Test minimizes Setup and searches for the complete three-row RGB calibration pattern anywhere in the selected region." TextWrapping="Wrap" Margin="0,0,0,14"/>
-    <WrapPanel>
-     <Button Content="Run Connection Test" Click="Test_Click" Margin="0,0,10,0"/>
-     <Button Content="Reselect RGB region" Click="Reselect_Click"/>
-    </WrapPanel>
-    <TextBlock x:Name="TestResult" Text="Not tested" Foreground="#F6BA78" FontWeight="SemiBold" Margin="0,15,0,0"/>
-    <TextBlock Text="This tests screen capture only. It does not verify game actions or rotation calculations." Foreground="#B6A49A" Margin="0,15,0,0"/>
+    <TextBlock Text="LazyG automatically reads the tiny RGB bridge near the top-left corner of the WoW game window. Nothing needs to be selected or positioned." TextWrapping="Wrap" Margin="0,0,0,14"/>
+    <Button Content="Retry connection test" Click="Test_Click" HorizontalAlignment="Left"/>
+    <TextBlock x:Name="TestResult" Text="Checking connection..." Foreground="#F6BA78" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,16,0,0"/>
+    <TextBlock Text="This checks class, race, level and (for Hunter) specialization. Rotation recommendations and game actions are not tested." TextWrapping="Wrap" Foreground="#B6A49A" Margin="0,15,0,0"/>
    </StackPanel>
   </Grid>
   <DockPanel Grid.Row="2" LastChildFill="False">
