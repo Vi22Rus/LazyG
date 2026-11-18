@@ -181,6 +181,31 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="cdwatch" then
+    if not LazyGCooldownWatch then
+      log("CDWATCH unavailable: module missing")
+    elseif arg=="stop" then
+      LazyGCooldownWatch.Stop()
+      log("CDWATCH manually stopped; /reload saves the journal")
+    elseif arg=="status" then
+      log(LazyGCooldownWatch.IsRunning() and "CDWATCH running" or "CDWATCH idle")
+    else
+      local id=arg=="" and 1130 or tonumber(arg)
+      -- Store transitions without printing hundreds of lines to chat.
+      -- The existing SavedVariables journal has a fixed 400-line cap.
+      local function journal(line)
+        if not saved then return end
+        saved.lines[#saved.lines+1]=line
+        while #saved.lines>400 do table.remove(saved.lines,1) end
+        if string.find(line,"CDWATCH START",1,true) or
+           string.find(line,"CDWATCH STOP",1,true) then
+          print("LazyGProbe "..line)
+        end
+      end
+      local started,reason=LazyGCooldownWatch.Start(id,journal)
+      if not started then log("CDWATCH not started: "..reason)
+      else log("CDWATCH sampling automatically for 30 seconds. Play normally; /reload afterward.") end
+    end
   elseif cmd=="cdcompare" then
     if not LazyGCooldownStateProbe then
       log("CooldownStateProbe module missing")
@@ -226,6 +251,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
   end
 end
