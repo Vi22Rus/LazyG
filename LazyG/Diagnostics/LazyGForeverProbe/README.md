@@ -1,4 +1,4 @@
-# LazyGForeverProbe — WoW Forever manual API audit (0.2.14-dev)
+# LazyGForeverProbe — WoW Forever manual API audit (0.2.15-dev)
 
 This is an isolated optional diagnostic addon, **not** installed by LazyG.exe. Its only purpose is to identify which Blizzard functions are present, return ordinary values, expose protected/unknown results, and which cast/aura events arrive in the exact user's Forever build. It does **not** bypass secret values, access their content, or drive rotations.
 
@@ -11,6 +11,7 @@ Copy the entire `LazyGForeverProbe` folder (containing the TOC, CooldownAudit.lu
 - `/lgprobe api` — presence and selected C_Secrets result **types**.
 - `/lgprobe spell 1130` — spell learned/usable/cooldown/charges and GCD probe; change spell ID for class/spec as appropriate.
 - `/lgprobe cooldown 1130` (or `/lgprobe cd 1130`) — manual GCD/cooldown timing audit. Prints startTime, duration, modRate, isActive/isOnGCD availability and a **diagnostic-only estimated** remaining time when plain numeric inputs are readable; repeats the query for GCD SpellID 61304. Neither is evidence of combat readiness and values are never forwarded to RGB or XML. Test inside and outside combat after using a spell.\n- `/lgprobe target` — player and target health/power/GUID/cast **readability**, not their values.
+- `/lgprobe cdcompare 1130` — experimental JustAC-inspired two-channel observation: plain `isActive` and `isOnGCD` flags plus a **separate, non-authoritative** hidden Cooldown widget test using `GetSpellCooldownDuration(spellID, true)`. It samples 1130, GCD candidate 61304 and alternative candidate 29515. `Shown/Hidden` is **only** a widget experiment, NOT proof of a cooldown, and never reaches RGB or the rotation engine.
 - `/lgprobe aura player` or `/lgprobe aura target` — manually enumerate up to 20 aura slots and report whether spell ID, stacks, duration and instance-ID fields are readable. Absence or unsupported API is never reported as a confirmed missing aura.
 - `/lgprobe events on` and `/lgprobe events off` — event hints for player and target, including only safe plain numeric SpellID when supplied, target epoch and no names/GUIDs. Events are capped (400 lines) and do not confirm specific aura presence.
 - `/lgprobe rgb on` / `/lgprobe rgb off` — show/hide the six-cell LGD pixel strip (Hunter SpellID 1130 only in this test module), default OFF; Windows Support must also enable opt-in LGD capture. Never changes RGB v2/v3/Curve.\n- `/lgprobe show`, `/lgprobe clear` — last 20 entries or clear the log.
@@ -28,3 +29,7 @@ Open LazyG 0.2.9-dev > Support > **LGD SpellProbe ON/OFF**, then in game `/lgpro
 ## Cooldown audit in 0.2.14-dev
 
 The manual command `/lgprobe cooldown 1130` writes two groups (`1130` and `61304`) to SavedVariables when `/reload` is used. Compare before-cast, just-after-cast and after-cooldown snapshots. `Protected`, `ApiMissing`, `Unknown` and `ProtectedOrError` are deliberate outcomes, not numbers. A numeric `remainingEstimateMs` is diagnostic and **not** a validated formula for secret or modified cooldown semantics; `modRate` is reported separately and not applied. No GCD or cooldown value is copied into GameState. CI now syntax-checks the entire diagnostic addon and runs a mocked Lua 5.1 cooldown-audit test. Until client results are observed and the wire protocol independently designed/tested, XML preview stays fail-closed.
+
+## JustAC-inspired probe (0.2.15-dev)
+
+`CooldownStateProbe.lua` is loaded before `SpellDiagnosticRgb.lua`. The latter keeps wire version 1 and the same six cells, but sources `CooldownActive` and `GcdActive` diagnostic bytes from the new guarded **plain boolean** probes. These values are `False/True/Unknown/Protected/ApiMissing`, are **not** time values and **never** turn a real spell or GCD into `Known 0 ms` in Windows GameState. `WidgetExperiment` tests an engine-driven Cooldown visual on a hidden frame, but the result is only printed by `/lgprobe cdcompare <SpellID>`; it is NOT copied into the RGB bytes. This intentionally isolates the unsupported `IsShown()` inference described by JustAC. Test before and after using a spell, during and outside combat, and after swapping targets. Do not assume either 61304 or 29515 is the correct Forever GCD until the actual client establishes that.
