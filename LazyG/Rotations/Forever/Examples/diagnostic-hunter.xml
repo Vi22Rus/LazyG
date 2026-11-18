@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diagnostic-only example, NOT a valid production rotation.
+     Spell 1130 is a Hunter's Mark demonstration. Actual readiness and
+     GCD remain Unknown with the present LGD transport, so this XML will
+     NOT produce live recommendations until verified inputs exist. -->
+<Rotation client="forever" version="1">
+  <Rule priority="1" spellId="1130" kind="Execute" targetHpBelow="20" />
+  <Rule priority="2" spellId="1130" kind="Attack" />
+</Rotation>
