@@ -1,7 +1,7 @@
 # LazyG — PROJECT_CONTEXT
 Последнее обновление: 2026-11-18. Источник истины для следующих чатов проекта Lazy.
 **Статус документа: решения из обсуждений + проверка исходников репозитория и локальных референсных архивов.**
-**Актуальное направление: Avalonia 0.2.1-dev (Setup isolation, Start/Overlay/Support diagnostics, CI/game test pending).** Старый WPF 0.1.19-dev сохранён как точка отката. `0.1.18-dev` [USER-TESTED / REPORTED ISSUE] — третья полоска видна, но Overview показывает `UI Curve Thresholds unavailable`. `0.1.17-dev` [USER-TESTED] показала корректное изменение диапазона HP цели с ~50–60% до ~20–29% и отображение 90–100% при полных HP/ресурсе. `0.1.16-dev` [CI-PASSED/USER-TESTED] показала `protected/API error` для HP и ресурса; RGB v2 и CRC v3 работают. Пользователь подтвердил в 0.1.15-dev v2 корректные данные и v3 CRC PASS/frame 196, но HP игрока/цели и ресурс = Unknown. Пользователь подтвердил быстрый RGB v2 в 0.1.13-dev. Никакой новый релиз этой записью не объявляется.
+**Актуальное направление: Avalonia 0.2.2-dev (compact UI + new Overlay design; CI/game test pending).** Старый WPF 0.1.19-dev сохранён как точка отката. `0.1.18-dev` [USER-TESTED / REPORTED ISSUE] — третья полоска видна, но Overview показывает `UI Curve Thresholds unavailable`. `0.1.17-dev` [USER-TESTED] показала корректное изменение диапазона HP цели с ~50–60% до ~20–29% и отображение 90–100% при полных HP/ресурсе. `0.1.16-dev` [CI-PASSED/USER-TESTED] показала `protected/API error` для HP и ресурса; RGB v2 и CRC v3 работают. Пользователь подтвердил в 0.1.15-dev v2 корректные данные и v3 CRC PASS/frame 196, но HP игрока/цели и ресурс = Unknown. Пользователь подтвердил быстрый RGB v2 в 0.1.13-dev. Никакой новый релиз этой записью не объявляется.
 
 > ОБЯЗАТЕЛЬНО В НОВОМ ЧАТЕ: прочитать ЭТОТ файл и актуальные исходники в `Vi22Rus/LazyG`, прежде чем планировать правки. Не считать краткую историю чата точной заменой коду. Всегда отличать проверенное пользователем от собранного в CI и от планируемого.
 
@@ -37,6 +37,14 @@ ClientCatalog.cs declares 4 client IDs (forever, wotlk, mop, retail), but ONLY F
 
 [CI at handoff]: https://github.com/Vi22Rus/LazyG/actions/runs/44318972180 was running when checked, SHA f21bae21e58d014f7b8140c8d193bf54834874d8. User preference: provide run link immediately; wait for success before claiming a downloadable artifact. Legacy WPF 0.1.19-dev and Avalonia 0.2.0-dev successful run remain rollback options.
 
+
+## 2026-11-18 — 0.2.2-dev: compact class/spec cards, redesigned overlay [DEV / GAME-UNTESTED]
+
+[USER REQUEST] Based on supplied Screenshot_6.jpg (WarMate floating overlay): keep the spell icon as the focal point with a golden GCD circular border, show the spell name, retain AoE and CD switches, show combat and signal readiness, and put pause state/reason below. Omit rows of future abilities and GCD/mana horizontal bars. Keep class and specialization cards at the compact normal-window size when app maximizes, instead of scaling up.
+
+[IMPLEMENTED] `Avalonia/MainWindow.cs` Viewbox for five+four class cards and three spec cards is now StretchDirection.DownOnly and centered. Class/spec tiles use matching 180px nominal width; spec icon 73px and compact padding matching class cards. `Avalonia/OverlayWindow.cs` is a self-authored dark draggable topmost 420×260 panel: visual gold GCD ring around a placeholder unknown-spell icon, NEXT SPELL label, explicit NOT AVAILABLE while XML rotation is absent; functional visual AoE/CD toggles (UI preference only, no rotation action), combat state from decoded RGB v2, signal READY only for v2 plus v3 CRC, an independent PAUSE reason row and specialization label where available. No fabricated real spell, no GCD timing, no simulated combat readiness. Actual rotation-driven icon, GCD progress and use of AoE/CD in priority logic are deferred to the XML engine and appropriate telemetry. Maintained previous Setup, Support diagnostics and RGB protocol unchanged; old WPF and 0.2.1-dev remain rollback options.
+
+[TEST REQUIRED] UI correctness at both normal and maximized Windows sizes, overlay on top of WoW, moving overlay, real RGB connectivity and COMBAT signal; test toggles. No in-game proof yet.
 
 **Архитектура RGB v3:** [RGB_PROTOCOL_V3_PLAN.md](RGB_PROTOCOL_V3_PLAN.md). **Актуальная wire-спецификация кодера/декодера, CRC16 и тестовых векторов:** [RGB_PROTOCOL_V3_SPEC_DRAFT.md](RGB_PROTOCOL_V3_SPEC_DRAFT.md). Оба документа — планирование по модели WarMate/Sertyrew, **не реализация**. Перед кодированием читать оба.
 
