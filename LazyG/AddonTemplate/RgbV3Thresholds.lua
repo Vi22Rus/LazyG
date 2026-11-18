@@ -12,7 +12,7 @@ frame:EnableMouse(false)
 local groups = {}
 for i = 1, 2 do
   local marker = frame:CreateTexture(nil, "ARTWORK")
-  marker:SetTexture("Interface\\\\Buttons\\\\WHITE8X8")
+  marker:SetTexture("Interface\\Buttons\\WHITE8X8")
   marker:SetSize(size, size)
   marker:SetPoint("TOPLEFT", frame, "TOPLEFT", (i - 1) * (size + gap), 0)
   if i == 1 then marker:SetVertexColor(0, 1, 1, 1)
