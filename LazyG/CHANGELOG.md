@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — CI follow-up: invalid TextBox scrollbar properties [DEV / CI PENDING]
+
+- Run https://github.com/Vi22Rus/LazyG/actions/runs/44359900108 passed RGB v3, GameState/XML safety, spell atlas and Lua tests; Windows publish failed only on `MainWindow.cs(389,390) CS0117`: Avalonia TextBox has no properties `HorizontalScrollBarVisibility` or `VerticalScrollBarVisibility`. These were introduced with the Support read-only selectable text control.
+- Removed the two unsupported property assignments in `MainWindow.cs`, retained native TextBox selection, Ctrl+C and `Copy all`; no changes to transport or automation. Commit `497201145071c3edb19ef8e4343ec91ad3f5b71c`.
+- Fresh Windows Actions run: https://github.com/Vi22Rus/LazyG/actions/runs/44360433065 . Final status and EXE artifact must be verified; do not state success until completed. Last verified older artifact: run `44352315570`.
+
 ## 2026-11-19 — 0.2.12-dev CI recovery: Support TextBox ambiguity [DEV / CI PENDING]
 
 - Investigated actual GitHub Actions Windows publish job logs: runs `44356050987` and `44358796498` failed during `Publish self-contained single EXE` with `CS0104` at `LazyG/Avalonia/MainWindow.cs(38,13)`: `TextBox` ambiguous between `Avalonia.Controls.TextBox` and `System.Windows.Forms.TextBox`. This was introduced when the Support diagnostics log became selectable in 0.2.10-dev. There is no evidence in these logs that RGB decoding or XML parser code caused the build failure.
