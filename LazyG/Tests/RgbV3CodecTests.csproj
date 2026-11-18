@@ -5,8 +5,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Program.cs" />
     <Compile Include="../Windows/RgbV3Codec.cs" Link="RgbV3Codec.cs" />
     <Compile Include="../Windows/RgbV3ThresholdDetector.cs" Link="RgbV3ThresholdDetector.cs" />
   </ItemGroup>
