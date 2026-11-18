@@ -75,7 +75,7 @@ public partial class SetupWizard : Window
             Directory.CreateDirectory(dir);
             try
             {
-                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB panel for setup and connection diagnostics\n## Version: 0.1.11-dev\nHunterProfile.lua\nPanel.lua\n",new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB Bridge v2 for WoW Forever\n## Version: 0.1.12-dev\nHunterProfile.lua\nPanel.lua\n",new UTF8Encoding(false));
                 // Embedded addon is maintained as our own source, no WarMate assets.
                 File.WriteAllText(Path.Combine(dir,"Panel.lua"),AddonTemplate.PanelLua,new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(dir,"HunterProfile.lua"),AddonTemplate.HunterProfileLua,new UTF8Encoding(false));
@@ -128,7 +128,7 @@ public partial class SetupWizard : Window
             System.Windows.MessageBox.Show(this,"WoW window not found. Launch a client and try again. No process ID is saved.", "Setup", MessageBoxButton.OK, MessageBoxImage.Information);
             return false;
         }
-        GameCheckText.Text = "WoW found. Continue to panel placement.";
+        GameCheckText.Text = "WoW found. Continue to automatic RGB verification.";
         return true;
     }
     [DllImport("user32.dll")]
