@@ -12,6 +12,7 @@ using LazyGPrototype;
 using Control = Avalonia.Controls.Control;
 using Button = Avalonia.Controls.Button;
 using Orientation = Avalonia.Layout.Orientation;
+using HAlign = Avalonia.Layout.HorizontalAlignment;
 
 namespace LazyG.Desktop;
 
@@ -58,7 +59,7 @@ public sealed class MainWindow : Window
     private static Button Action(string label, Action click, bool primary=false, double minWidth=0)
     {
         var b = new Button { Content=label, Padding=new Thickness(19,9), MinWidth=minWidth,
-            HorizontalContentAlignment=HorizontalAlignment.Center, VerticalContentAlignment=VerticalAlignment.Center,
+            HorizontalContentAlignment=HAlign.Center, VerticalContentAlignment=VerticalAlignment.Center,
             Background=Palette.Brush(primary?"#E3A143":"#32231A"), Foreground=Palette.Brush(primary?"#25170B":"#F8E9DB"),
             BorderBrush=Palette.Brush(primary?"#FBC675":"#69472A"), BorderThickness=new Thickness(1),
             CornerRadius=new CornerRadius(9), FontWeight=FontWeight.SemiBold };
@@ -84,7 +85,7 @@ public sealed class MainWindow : Window
         Grid.SetColumn(tabs,1);header.Children.Add(tabs);
         var game = Stack(Orientation.Horizontal,9);
         game.VerticalAlignment=VerticalAlignment.Center;
-        game.HorizontalAlignment=HorizontalAlignment.Right;
+        game.HorizontalAlignment=HAlign.Right;
         game.Margin=new Thickness(8);
         game.Children.Add(clientText);game.Children.Add(Text("●",12,"#5DC78C"));game.Children.Add(statusText);
         Grid.SetColumn(game,3);header.Children.Add(game);
@@ -117,7 +118,7 @@ public sealed class MainWindow : Window
     {
         var b=new Button { Content=label,Width=45,Padding=new Thickness(0),
             Background=Palette.Brush("#1B120F"), Foreground=Palette.White, BorderThickness=new Thickness(0),
-            FontSize=17,VerticalContentAlignment=VerticalAlignment.Center,HorizontalContentAlignment=HorizontalAlignment.Center };
+            FontSize=17,VerticalContentAlignment=VerticalAlignment.Center,HorizontalContentAlignment=HAlign.Center };
         b.Click+=(_,_)=>action();
         if (close) b.PointerEntered+=(_,_)=>b.Background=Palette.Brush("#903F31");
         if (close) b.PointerExited+=(_,_)=>b.Background=Palette.Brush("#1B120F");
@@ -140,7 +141,7 @@ public sealed class MainWindow : Window
         contentStack.Children.Add(Text(title,30,"#F6ECDD",FontWeight.Bold));
         contentStack.Children.Add(Text(subtitle,13,"#B6A296"));
         contentStack.Children.Add(content);
-        return new Border { MaxWidth=1120,HorizontalAlignment=HorizontalAlignment.Center,
+        return new Border { MaxWidth=1120,HorizontalAlignment=HAlign.Center,
             Child=contentStack,Width=double.NaN };
     }
     private void Go(Control page) => rootBody.Child=page;
@@ -180,19 +181,19 @@ public sealed class MainWindow : Window
             board.Children.Add(tile);
         }
         var scaler=new Viewbox { Child=board,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,
-            HorizontalAlignment=HorizontalAlignment.Stretch };
+            HorizontalAlignment=HAlign.Stretch };
         wrap.Children.Add(scaler);
         Go(Page("CLASSES & SPECS","WoW Forever · 9 classes · Select a class to explore its specializations",wrap));
     }
     private Control ClassTile(GameClass cls)
     {
         var body=Stack(spacing:10);
-        body.HorizontalAlignment=HorizontalAlignment.Center;
+        body.HorizontalAlignment=HAlign.Center;
         body.Children.Add(SpellIcon(cls.Icon,73));
         body.Children.Add(Text(cls.Name,17,cls.Accent,FontWeight.Bold));
         body.Children.Add(Text("3 specializations",11,"#BBA699"));
         var open=Action("View specs",()=>ShowClass(cls),true);
-        open.HorizontalAlignment=HorizontalAlignment.Stretch;
+        open.HorizontalAlignment=HAlign.Stretch;
         body.Children.Add(open);
         var pane=Pane(body,"#302219",12,"#654631",new Thickness(18,19));
         pane.Width=180;pane.MinHeight=180;
@@ -213,7 +214,7 @@ public sealed class MainWindow : Window
         for(int i=0;i<cls.Specs.Length;i++)
         {
             var spec=cls.Specs[i];
-            var p=Stack(spacing:16);p.HorizontalAlignment=HorizontalAlignment.Center;
+            var p=Stack(spacing:16);p.HorizontalAlignment=HAlign.Center;
             p.Children.Add(SpellIcon(spec.Icon,90));
             p.Children.Add(Text(spec.Name,18,"#FFFFFF",FontWeight.Bold));
             p.Children.Add(Text("Rotation not installed",12,"#B9A399"));
