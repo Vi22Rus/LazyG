@@ -138,5 +138,49 @@ Assert(tracker.Snapshot(now.AddSeconds(4),TimeSpan.FromSeconds(2))
 Assert(!tracker.Snapshot(now.AddSeconds(4),TimeSpan.FromSeconds(2))
     .PlayerLastSucceededAt.HasValue);
 
-Console.WriteLine("GameState, SpellProbe and Forever event tracking regression: PASS");
+
+// Safety regression: 0-4% is not evidence of life or exactly zero HP.
+Assert(HealthBand.TryParse("0–4%",out var nearZero));
+Assert(nearZero.Lower==0 && nearZero.Upper==4);
+Assert(!HealthBand.TryParse("unavailable",out _));
+Assert(!HealthBand.TryParse("4–0%",out _));
+Assert(ConditionEvaluator.TargetBelowBand(
+    Observed<HealthBand>.Known(nearZero,now),5)==Truth.True);
+Assert(ConditionEvaluator.TargetBelowBand(
+    Observed<HealthBand>.Known(nearZero,now),4)==Truth.False);
+Assert(ConditionEvaluator.TargetBelowBand(Observed<HealthBand>.Missing(),5)==Truth.Unknown);
+Assert(ConditionEvaluator.TargetBelowBand(
+    Observed<HealthBand>.Known(new HealthBand(9,0),now),5)==Truth.Unknown);
+Assert(TargetLifeDecoder.Alive(true,false,false,now).Quality==Knowledge.Unknown);
+Assert(TargetLifeDecoder.Alive(true,false,true,now).Is(x=>x)==Truth.False);
+Assert(TargetLifeDecoder.Alive(true,true,false,now).Is(x=>x)==Truth.True);
+Assert(TargetLifeDecoder.Alive(true,true,true,now).Quality==Knowledge.Unknown);
+Assert(TargetLifeDecoder.Alive(false,false,false,now).Quality==Knowledge.Unknown);
+var attackBase=timeBased with {
+    Transport=Knowledge.Known,
+    TargetExists=Observed<bool>.Known(true,now),
+    TargetHostile=Observed<bool>.Known(true,now),
+    TargetAlive=Observed<bool>.Known(true,now)
+};
+var band04=Observed<HealthBand>.Known(nearZero,now);
+Assert(ConditionEvaluator.AttackTarget(attackBase)==Truth.True);
+Assert(ConditionEvaluator.CanRecommendExecute(attackBase,1130,band04,20));
+var corpse=attackBase with {TargetAlive=Observed<bool>.Known(false,now)};
+Assert(ConditionEvaluator.AttackTarget(corpse)==Truth.False);
+Assert(!ConditionEvaluator.CanRecommendExecute(corpse,1130,band04,20));
+Assert(!ConditionEvaluator.CanRecommendTargetedAttack(corpse,1130));
+var absent=attackBase with {TargetExists=Observed<bool>.Known(false,now)};
+Assert(!ConditionEvaluator.CanRecommendExecute(absent,1130,band04,20));
+var uncertain=attackBase with {TargetAlive=Observed<bool>.Missing()};
+Assert(!ConditionEvaluator.CanRecommendExecute(uncertain,1130,band04,20));
+var notHostile=attackBase with {TargetHostile=Observed<bool>.Missing()};
+Assert(!ConditionEvaluator.CanRecommendTargetedAttack(notHostile,1130));
+var untrusted=attackBase with {Transport=Knowledge.Stale};
+Assert(!ConditionEvaluator.CanRecommendTargetedAttack(untrusted,1130));
+Assert(!ConditionEvaluator.CanRecommendExecute(attackBase,1130,
+    band04,4)); // 0-4 not necessarily below 4
+Assert(!ConditionEvaluator.CanRecommendExecute(attackBase,1130,
+    Observed<HealthBand>.Missing(),20));
+
+Console.WriteLine("GameState, SpellProbe, combat and corpse safety regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
