@@ -6,6 +6,7 @@ on:
     paths:
       - 'LazyG/Windows/**'
       - 'LazyG/AddonTemplate/**'
+      - 'LazyG/Tests/**'
       - '.github/workflows/build-windows.yml'
   workflow_dispatch:
 
