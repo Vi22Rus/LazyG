@@ -64,14 +64,27 @@ public partial class MainWindow : Window
             // Keep them off the WPF dispatcher thread.
             var result = await Task.Run(() =>
             {
-                bool ok = WowRgbBridge.TryRead(out var state, out var detail);
-                return (ok, state, detail);
+                bool ok = WowRgbBridge.TryReadCombined(out var state, out var telemetry, out var detail, out var v3Detail);
+                return (ok, state, telemetry, detail, v3Detail);
             });
             if (closing) return;
             if (result.ok && result.state != null)
             {
                 var state = result.state;
                 ConnectionStatus.Text = $"RGB v2: {state.ClassName} · {state.RaceName} · lvl {state.Level} · {state.SpecName} · target {(state.TargetExists ? "yes" : "no")} · hostile {(state.TargetHostile ? "yes" : "no")} · alive {(state.TargetAlive ? "yes" : "no")} · combat {(state.InCombat ? "yes" : "no")}";
+                if (result.telemetry is RgbV3Packet extra)
+                {
+                    string hp = extra.PlayerHealth <= 100 ? extra.PlayerHealth + "%" : "unknown";
+                    string targetHp = extra.TargetHealth <= 100 ? extra.TargetHealth + "%" : "unknown";
+                    var kind = extra.GetCell(9).R;
+                    var max = extra.GetCell(10);
+                    int powerMax = (max.R << 8) | max.G;
+                    string resource = kind < 255 && powerMax > 0
+                        ? $"{extra.PlayerPower}/{powerMax} (type {kind})" : "unknown";
+                    ConnectionStatus.Text += $" | RGB v3 CRC PASS · frame {extra.FrameCounter} · HP {hp} · target HP {targetHp} · resource {resource}";
+                }
+                else
+                    ConnectionStatus.Text += " | RGB v3: pending (install new addon to test)";
             }
             else if (!result.detail.StartsWith("Switch to WoW", StringComparison.Ordinal))
                 ConnectionStatus.Text = "RGB disconnected: " + result.detail;
