@@ -22,6 +22,7 @@
     <EmbeddedResource Include="../AddonTemplate/Panel.lua" LogicalName="LazyG.Panel.lua" />
     <EmbeddedResource Include="../AddonTemplate/HunterProfile.lua" LogicalName="LazyG.HunterProfile.lua" />
     <EmbeddedResource Include="Assets/icon-pack.txt" LogicalName="LazyG.IconPack" />
+    <EmbeddedResource Include="Assets/class-icons.txt" LogicalName="LazyG.ClassIcons" />
     <Compile Include="../Windows/AddonTemplate.cs" Link="Bridge/AddonTemplate.cs" />
     <Compile Include="../Windows/RgbPanelDetector.cs" Link="Bridge/RgbPanelDetector.cs" />
     <Compile Include="../Windows/RgbV3Codec.cs" Link="Bridge/RgbV3Codec.cs" />
