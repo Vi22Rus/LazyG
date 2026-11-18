@@ -78,7 +78,7 @@ internal sealed class OverlayWindow : Window
         });
         Grid.SetColumn(cdButton,3);header.Children.Add(cdButton);
         var preview=ModeButton("NEXT",NextPreview);
-        ToolTip.SetTip(preview,"Preview another archived spell and restart 1.5s demo GCD");
+        Avalonia.Controls.ToolTip.SetTip(preview,"Preview another archived spell and restart 1.5s demo GCD");
         Grid.SetColumn(preview,4);header.Children.Add(preview);
         var exit=ModeButton("×",close);exit.Width=25;
         Grid.SetColumn(exit,5);header.Children.Add(exit);
