@@ -9,6 +9,9 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LazyGPrototype;
+using Control = Avalonia.Controls.Control;
+using Button = Avalonia.Controls.Button;
+using Orientation = Avalonia.Layout.Orientation;
 
 namespace LazyG.Desktop;
 
@@ -120,7 +123,7 @@ public sealed class MainWindow : Window
         if (close) b.PointerExited+=(_,_)=>b.Background=Palette.Brush("#1B120F");
         return b;
     }
-    private static Border Icon(string key,int size=56)
+    private static Border SpellIcon(string key,int size=56)
     {
         var image=IconPack.Create(key,size);
         return new Border { Width=size,Height=size,CornerRadius=new CornerRadius(9),
@@ -150,7 +153,7 @@ public sealed class MainWindow : Window
         if(selection is not null && lastSpec is not null)
         {
             var last = new Grid { ColumnDefinitions=new ColumnDefinitions("Auto,*,Auto"), ColumnSpacing=17 };
-            last.Children.Add(Icon(lastSpec.Icon,59));
+            last.Children.Add(SpellIcon(lastSpec.Icon,59));
             var labels=Stack(spacing:3);labels.Children.Add(Text("LAST USED",11,"#EFAE56",FontWeight.Bold));
             labels.Children.Add(Text(lastSpec.Name+"  ·  "+selection.Name,20,"#FFFFFF",FontWeight.SemiBold));
             labels.Children.Add(Text("Your previous specialization · Settings are not configured yet",12,"#C8ADA0"));
@@ -185,7 +188,7 @@ public sealed class MainWindow : Window
     {
         var body=Stack(spacing:10);
         body.HorizontalAlignment=HorizontalAlignment.Center;
-        body.Children.Add(Icon(cls.Icon,73));
+        body.Children.Add(SpellIcon(cls.Icon,73));
         body.Children.Add(Text(cls.Name,17,cls.Accent,FontWeight.Bold));
         body.Children.Add(Text("3 specializations",11,"#BBA699"));
         var open=Action("View specs",()=>ShowClass(cls),true);
@@ -201,7 +204,7 @@ public sealed class MainWindow : Window
         selectedClass=cls;selectedSpec=null;view="specs";
         var body=Stack(spacing:21);
         var intro=Stack(Orientation.Horizontal,14);
-        intro.Children.Add(Icon(cls.Icon,63));
+        intro.Children.Add(SpellIcon(cls.Icon,63));
         var txt=Stack(spacing:4);txt.Children.Add(Text(cls.Name,23,cls.Accent,FontWeight.Bold));
         txt.Children.Add(Text("Choose a specialization · PvE / PvP settings will follow the rotation XML",12,"#CDB7A7"));
         intro.Children.Add(txt);
@@ -211,7 +214,7 @@ public sealed class MainWindow : Window
         {
             var spec=cls.Specs[i];
             var p=Stack(spacing:16);p.HorizontalAlignment=HorizontalAlignment.Center;
-            p.Children.Add(Icon(spec.Icon,90));
+            p.Children.Add(SpellIcon(spec.Icon,90));
             p.Children.Add(Text(spec.Name,18,"#FFFFFF",FontWeight.Bold));
             p.Children.Add(Text("Rotation not installed",12,"#B9A399"));
             p.Children.Add(Action("Open",()=>ShowSpec(cls,spec),true,140));
@@ -226,7 +229,7 @@ public sealed class MainWindow : Window
         selectedClass=cls;selectedSpec=spec;view="rotation";
         session.LastClient="forever";session.LastClass=cls.Id;session.LastSpec=spec.Id;session.Save();
         var body=Stack(spacing:18);
-        var top=Stack(Orientation.Horizontal,16);top.Children.Add(Icon(spec.Icon,86));
+        var top=Stack(Orientation.Horizontal,16);top.Children.Add(SpellIcon(spec.Icon,86));
         var identity=Stack(spacing:5);
         identity.Children.Add(Text(spec.Name,27,"#FFFFFF",FontWeight.Bold));
         identity.Children.Add(Text(cls.Name+"  ·  WoW Forever  ·  PvE / PvP",13,cls.Accent));
