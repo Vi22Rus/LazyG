@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — 0.2.12-dev CI recovery: Support TextBox ambiguity [DEV / CI PENDING]
+
+- Investigated actual GitHub Actions Windows publish job logs: runs `44356050987` and `44358796498` failed during `Publish self-contained single EXE` with `CS0104` at `LazyG/Avalonia/MainWindow.cs(38,13)`: `TextBox` ambiguous between `Avalonia.Controls.TextBox` and `System.Windows.Forms.TextBox`. This was introduced when the Support diagnostics log became selectable in 0.2.10-dev. There is no evidence in these logs that RGB decoding or XML parser code caused the build failure.
+- Fixed by explicitly aliasing `TextBox = Avalonia.Controls.TextBox` in `MainWindow.cs`, commit `31dbe068396980f107e139109a66ff9e84304ebb`. This preserves read-only log selection, Copy all and old RGB v2/v3/Curve behavior without changing the actual log implementation.
+- GitHub Actions Windows run initiated for this fix: https://github.com/Vi22Rus/LazyG/actions/runs/44359900108 . Check its final conclusion and artifact before claiming CI-PASSED, distributing the EXE or enabling XML rotation. No in-game test conducted. Last confirmed successful artifact (older source state) remains run `44352315570`; do not label it current code.
+
 ## 2026-11-19 — 0.2.12-dev: guarded Forever XML rotation dispatcher [DEV / CI-UNCONFIRMED / GAME-UNTESTED]
 
 - New `Avalonia/Engine/XmlRotationDispatcher.cs` supports a minimal, strictly parsed `<Rotation client="forever" version="1">` format with ordered `Attack` and `Execute` rules (SpellID, unique priority; Execute requires a target HP upper-bound threshold). It rejects unsupported tags/attributes, wrong client, duplicate priorities, invalid IDs, malformed or oversized XML, DTD and external entity resolution. This is a **suggestion-only calculation**, NOT input automation or enabled rotation gameplay.
