@@ -26,9 +26,9 @@ internal static class RgbV3ThresholdDetector
         for (int x = 0; x < width; x++)
         {
             // First status is green or red, followed by a black/white threshold cell.
-            // Candidate validity requires an entire plausible 30-cell group sequence;
+            // Candidate validity requires an entire plausible 62-cell sequence;
             // location is disambiguated by y-offset from the v3 marker.
-            for (int pitch = 3; pitch <= 10; pitch++)
+            for (int pitch = 3; pitch <= 12; pitch++)
             {
                 if (x + pitch * 61 >= image.Width)
                     break;
@@ -51,7 +51,7 @@ internal static class RgbV3ThresholdDetector
                     bool seenOffAfterOn = false;
                     for (int i = 1; i <= 19; i++)
                     {
-                        var pixel = image.GetPixel(x + (2 + g * 10 + i) * pitch, y);
+                        var pixel = image.GetPixel(x + (2 + g * 20 + i) * pitch, y);
                         bool on = Near(pixel, 255, 255, 255, 30);
                         bool off = Near(pixel, 0, 0, 0, 30);
                         if (!on && !off) { good = false; break; }
@@ -64,7 +64,7 @@ internal static class RgbV3ThresholdDetector
                             seenOffAfterOn = true;
                     }
                     bands[g] = last == 0 ? "0–4%" : last == 19 ? "95–100%" :
-                        $"{last * 10}–{last * 10 + 9}%";
+                        $"{last * 5}–{last * 5 + 4}%";
                 }
                 if (!good || !status[0]) continue;
                 result = new RgbThresholdProbe(bands[0], bands[1], bands[2]);
