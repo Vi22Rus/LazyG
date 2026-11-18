@@ -8,7 +8,8 @@ namespace LazyG.Desktop;
 // transport integrity but does not make protected measurements available.
 internal static class ForeverGameStateBridge
 {
-    public static GameState FromRgb(RgbPlayerState? state, bool crcOk, DateTimeOffset now)
+    public static GameState FromRgb(RgbPlayerState? state, bool crcOk, DateTimeOffset now,
+        bool v3DeadConfirmed=false)
     {
         var empty=GameState.Empty(now);
         if(state is null)return empty;
@@ -24,10 +25,10 @@ internal static class ForeverGameStateBridge
                 ?Observed<int>.Known(state.SpecIndex,now):Observed<int>.Missing(),
             InCombat=Observed<bool>.Known(state.InCombat,now),
             TargetExists=Observed<bool>.Known(state.TargetExists,now),
-            TargetHostile=state.TargetExists
-                ?Observed<bool>.Known(state.TargetHostile,now):Observed<bool>.Missing(),
-            TargetAlive=state.TargetExists
-                ?Observed<bool>.Known(state.TargetAlive,now):Observed<bool>.Missing(),
+            TargetHostile=state.TargetExists && state.TargetHostile
+                ?Observed<bool>.Known(true,now):Observed<bool>.Missing(),
+            TargetAlive=TargetLifeDecoder.Alive(state.TargetExists,state.TargetAlive,
+                crcOk && v3DeadConfirmed,now),
         };
     }
     public static string Diagnostic(GameState game)
@@ -39,6 +40,9 @@ internal static class ForeverGameStateBridge
             " · spec "+Show(game.SpecIndex)+
             " · combat "+Show(game.InCombat)+
             " · target "+Show(game.TargetExists)+
+            " · hostile "+Show(game.TargetHostile)+
+            " · alive "+Show(game.TargetAlive)+
+            " · attackGate "+ConditionEvaluator.AttackTarget(game)+
             " · HP "+Show(game.PlayerHealthPercent)+
             " · power "+Show(game.PowerPercent)+
             " · GCD "+Show(game.GcdRemainingMilliseconds)+
