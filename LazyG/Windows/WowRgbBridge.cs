@@ -90,7 +90,7 @@ internal static class WowRgbBridge
 
         int width = Math.Min(220, client.Right - client.Left);
         int height = Math.Min(120, client.Bottom - client.Top);
-        if (width < 40 || height < 18)
+        if (width < 44 || height < 4)
         {
             detail = "WoW client window is too small.";
             return false;
