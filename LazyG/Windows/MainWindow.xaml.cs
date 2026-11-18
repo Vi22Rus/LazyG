@@ -64,8 +64,8 @@ public partial class MainWindow : Window
             // Keep them off the WPF dispatcher thread.
             var result = await Task.Run(() =>
             {
-                bool ok = WowRgbBridge.TryReadCombined(out var state, out var telemetry, out var detail, out var v3Detail);
-                return (ok, state, telemetry, detail, v3Detail);
+                bool ok = WowRgbBridge.TryReadCombined(out var state, out var telemetry, out var detail, out var v3Detail, out var thresholds);
+                return (ok, state, telemetry, detail, v3Detail, thresholds);
             });
             if (closing) return;
             if (result.ok && result.state != null)
@@ -92,6 +92,10 @@ public partial class MainWindow : Window
                 }
                 else
                     ConnectionStatus.Text += " | RGB v3: pending (install new addon to test)";
+                if (result.thresholds is RgbThresholdProbe probe)
+                    ConnectionStatus.Text += " | " + probe;
+                else
+                    ConnectionStatus.Text += " | UI curve thresholds unavailable";
             }
             else if (!result.detail.StartsWith("Switch to WoW", StringComparison.Ordinal))
                 ConnectionStatus.Text = "RGB disconnected: " + result.detail;
