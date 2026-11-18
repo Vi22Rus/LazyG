@@ -181,6 +181,22 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="cdcompare" then
+    if not LazyGCooldownStateProbe then
+      log("CooldownStateProbe module missing")
+    else
+      local spellID=tonumber(arg) or 1130
+      for _,id in ipairs({spellID,61304,29515}) do
+        local active,onGcd=LazyGCooldownStateProbe.Flags(id)
+        local labels={"Unknown","False","True","Protected","ApiMissing"}
+        local widget=LazyGCooldownStateProbe.WidgetExperiment(id,true)
+        log("CDCOMPARE spell="..id.." isActive="..
+          (labels[active+1] or "Unknown").." isOnGCD="..
+          (labels[onGcd+1] or "Unknown")..
+          " ignoreGcdWidget="..widget.." [experimental; no casts]")
+      end
+      log("CDCOMPARE: 61304/29515 are candidates, not confirmed Forever GCD")
+    end
   elseif cmd=="cooldown" or cmd=="cd" then
     if not LazyGCooldownAudit or type(LazyGCooldownAudit.Inspect)~="function" then
       log("CooldownAudit module missing")
@@ -210,6 +226,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
   end
 end
