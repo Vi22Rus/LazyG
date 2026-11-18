@@ -1,11 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Windows/RgbV3Codec.cs" Link="RgbV3Codec.cs" />
+    <Compile Include="../Windows/RgbV3ThresholdDetector.cs" Link="RgbV3ThresholdDetector.cs" />
   </ItemGroup>
 </Project>
