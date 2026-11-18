@@ -90,7 +90,7 @@ jobs:
       - name: Upload ready-to-install Forever diagnostic addon
         uses: actions/upload-artifact@v4
         with:
-          name: LazyGForeverProbe-0.2.14-dev
+          name: LazyGForeverProbe-0.2.15-dev
           path: release-addon/
           if-no-files-found: error
           retention-days: 30
