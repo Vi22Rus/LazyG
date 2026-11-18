@@ -105,21 +105,22 @@ end
 
 -- Bit mask: 1=target exists, 2=hostile, 4=target alive,
 -- 8=player in combat. Unknown or secret results are not converted.
-local function SafeTrue(fn, ...)
-  if not fn then return false end
+local function SafeBoolean(fn, ...)
+  if not fn then return nil end
   local ok, value = pcall(fn, ...)
-  return ok and type(value) == "boolean" and value
+  if ok and type(value) == "boolean" then return value end
+  return nil
 end
 
 local function CombatFlags()
   local flags = 0
-  local exists = SafeTrue(UnitExists, "target")
-  if exists then
+  local exists = SafeBoolean(UnitExists, "target")
+  if exists == true then
     flags = flags + 1
-    if SafeTrue(UnitCanAttack, "player", "target") then flags = flags + 2 end
-    if not SafeTrue(UnitIsDeadOrGhost, "target") then flags = flags + 4 end
+    if SafeBoolean(UnitCanAttack, "player", "target") == true then flags = flags + 2 end
+    if SafeBoolean(UnitIsDeadOrGhost, "target") == false then flags = flags + 4 end
   end
-  if SafeTrue(UnitAffectingCombat, "player") then flags = flags + 8 end
+  if SafeBoolean(UnitAffectingCombat, "player") == true then flags = flags + 8 end
   return flags
 end
 
@@ -168,8 +169,9 @@ events:RegisterEvent("PLAYER_TARGET_CHANGED")
 events:RegisterEvent("PLAYER_REGEN_DISABLED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("UNIT_FLAGS")
+events:RegisterEvent("UNIT_HEALTH")
 events:SetScript("OnEvent", function(_, event, unit)
-  if event == "UNIT_FLAGS" and unit ~= "target" then return end
+  if (event == "UNIT_FLAGS" or event == "UNIT_HEALTH") and unit ~= "target" then return end
   Refresh()
 end)
 Refresh()
