@@ -288,7 +288,7 @@ public sealed class MainWindow : Window
         actions.Children.Add(Action("Refresh",RefreshDiagnosticsView));
         b.Children.Add(actions);
         diagnosticsOutput=Text(RuntimeDiagnostics.Snapshot(),12,"#D8C6B9");
-        diagnosticsOutput.FontFamily=new FontFamily("Consolas");
+        diagnosticsOutput.FontFamily=new Avalonia.Media.FontFamily("Consolas");
         var diagnosticPanel=new ScrollViewer { Content=diagnosticsOutput, MaxHeight=440,
             VerticalScrollBarVisibility=ScrollBarVisibility.Auto };
         b.Children.Add(Pane(diagnosticPanel,"#171110",8,"#5F4232",new Thickness(16)));
