@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Avalonia.Media.Imaging;
+using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace LazyG.Desktop;
 
