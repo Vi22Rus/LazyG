@@ -27,7 +27,7 @@ jobs:
       - name: Publish self-contained single EXE
         shell: pwsh
         run: |
-          dotnet publish LazyG/Windows/LazyG.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -o "$env:RUNNER_TEMP\LazyG-publish"
+          dotnet publish LazyG/Windows/LazyG.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o "$env:RUNNER_TEMP\LazyG-publish"
           if (-not (Test-Path "$env:RUNNER_TEMP\LazyG-publish\LazyG.exe")) {
             throw "LazyG.exe was not generated"
           }
