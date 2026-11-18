@@ -37,11 +37,13 @@ public sealed class MainWindow : Window
     private TextBlock? diagnosticsOutput;
     private string lastBridgeState = "";
     private string lastProbeState = "";
+    private string lastGameStateDiagnostic = "";
+    private LazyG.Desktop.Engine.GameState latestGameState = LazyG.Desktop.Engine.GameState.Empty(DateTimeOffset.UtcNow);
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.5-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.5-dev started · Forever UI");
+        Title = "LazyG · 0.2.6-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.6-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -159,7 +161,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#031524"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.5-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
+        footer.Children.Add(Text("  LazyG 0.2.6-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#719BB2");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -345,6 +347,8 @@ public sealed class MainWindow : Window
         var b=Stack(spacing:12);
         b.Children.Add(Text("SUPPORT",15,"#45E5F7",FontWeight.Bold));
         b.Children.Add(Text("LIVE RGB & APPLICATION DIAGNOSTICS",18,"#F1FAFF",FontWeight.Bold));
+        b.Children.Add(Text("GAMESTATE v1 · verified RGB fields only · UNKNOWN does not authorize casts",12,"#85DDEE"));
+        b.Children.Add(Text(ForeverGameStateBridge.Diagnostic(latestGameState),12,"#C5E1EF"));
         b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#99BCCC"));
         var actions=Stack(Orientation.Horizontal,9);
         actions.Children.Add(Action("Clear events",()=>{ RuntimeDiagnostics.Clear();RefreshDiagnosticsView(); }));
@@ -456,6 +460,14 @@ public sealed class MainWindow : Window
             {
                 RuntimeDiagnostics.Add("PROBE",probe);
                 lastProbeState=probe;
+            }
+            // Safe initial engine snapshot: ONLY v2-confirmed fields; future signals remain Unknown.
+            latestGameState=ForeverGameStateBridge.FromRgb(connected?result.state:null,crc,DateTimeOffset.UtcNow);
+            var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
+            if(engineDiagnostic!=lastGameStateDiagnostic)
+            {
+                RuntimeDiagnostics.Add("GAMESTATE",engineDiagnostic);
+                lastGameStateDiagnostic=engineDiagnostic;
             }
             overlay?.SetConnection(connected,crc,curve,connected && result.state?.InCombat == true,
                 result.state?.ClassName, result.state?.SpecName);
