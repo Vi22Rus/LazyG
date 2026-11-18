@@ -5,11 +5,19 @@
 local frame = CreateFrame("Frame", "LazyGCurveProbeFrame", UIParent)
 local size, gap = 4, 1
 frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, -24)
-frame:SetSize(30 * (size + gap) - gap, size)
+frame:SetSize(32 * (size + gap) - gap, size)
 frame:SetFrameStrata("TOOLTIP")
 frame:SetFrameLevel(102)
 frame:EnableMouse(false)
 local groups = {}
+for i = 1, 2 do
+  local marker = frame:CreateTexture(nil, "ARTWORK")
+  marker:SetTexture("Interface\\\\Buttons\\\\WHITE8X8")
+  marker:SetSize(size, size)
+  marker:SetPoint("TOPLEFT", frame, "TOPLEFT", (i - 1) * (size + gap), 0)
+  if i == 1 then marker:SetVertexColor(0, 1, 1, 1)
+  else marker:SetVertexColor(1, 0, 1, 1) end
+end
 local function color(t, r, g, b)
   t:SetVertexColor(r / 255, g / 255, b / 255, 1)
 end
@@ -17,7 +25,7 @@ for group = 1, 3 do
   local g = { thresholds = {} }
   groups[group] = g
   for index = 1, 10 do
-    local x = ((group - 1) * 10 + index - 1) * (size + gap)
+    local x = (2 + (group - 1) * 10 + index - 1) * (size + gap)
     local base = frame:CreateTexture(nil, "BACKGROUND")
     base:SetTexture("Interface\\Buttons\\WHITE8X8")
     base:SetSize(size, size)
@@ -79,7 +87,7 @@ local function apply(group, unit, isPower)
     else
       ok, value = pcall(fn, unit, true, c)
     end
-    if not ok or value == nil or not pcall(g.thresholds[i].SetAlpha, g.thresholds[i], value) then
+    if not ok or type(value) == "nil" or not pcall(g.thresholds[i].SetAlpha, g.thresholds[i], value) then
       canBind = false
       break
     end
