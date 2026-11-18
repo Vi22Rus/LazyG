@@ -31,6 +31,9 @@ public sealed class MainWindow : Window
     private bool setupOpen;
     private OverlayWindow? overlay;
     private Button? overlayButton;
+    private Button? classesTab;
+    private Button? commonTab;
+    private Button? supportTab;
     private TextBlock? diagnosticsOutput;
     private string lastBridgeState = "";
     private string lastProbeState = "";
@@ -87,9 +90,12 @@ public sealed class MainWindow : Window
 
         var tabs = Stack(Orientation.Horizontal,8);
         tabs.VerticalAlignment=VerticalAlignment.Center;
-        tabs.Children.Add(Action("Classes & Specs",ShowClasses));
-        tabs.Children.Add(Action("Racials & Consumables",ShowCommon));
-        tabs.Children.Add(Action("Support",ShowSupport));
+        classesTab=Action("⚔  Classes & Specs",ShowClasses);
+        commonTab=Action("⚗  Racials & Consumables",ShowCommon);
+        supportTab=Action("◉  Support",ShowSupport);
+        tabs.Children.Add(classesTab);
+        tabs.Children.Add(commonTab);
+        tabs.Children.Add(supportTab);
         Grid.SetColumn(tabs,1);header.Children.Add(tabs);
         var game = Stack(Orientation.Horizontal,9);
         game.VerticalAlignment=VerticalAlignment.Center;
@@ -174,7 +180,21 @@ public sealed class MainWindow : Window
         return new Border { MaxWidth=1600,HorizontalAlignment=HAlign.Center,
             Child=contentStack,Width=double.NaN };
     }
-    private void Go(Control page) => rootBody.Child=page;
+    private void Go(Control page)
+    {
+        rootBody.Child=page;
+        var tabs=new[] { (button:classesTab,selected:view=="classes"||view=="specs"||view=="rotation"),
+                         (button:commonTab,selected:view=="common"),
+                         (button:supportTab,selected:view=="support") };
+        foreach(var tab in tabs)
+        {
+            if(tab.button is null)continue;
+            tab.button.BorderBrush=Palette.Brush(tab.selected?"#26E8FC":"#26546C");
+            tab.button.Background=Palette.Brush(tab.selected?"#0A4563":"#0A2437");
+            tab.button.Foreground=Palette.Brush(tab.selected?"#F6FDFF":"#C8E1F0");
+            tab.button.BorderThickness=new Thickness(tab.selected?2:1);
+        }
+    }
     private void ShowClasses()
     {
         view="classes"; selectedClass=null; selectedSpec=null;
@@ -232,6 +252,8 @@ public sealed class MainWindow : Window
         var pane=Pane(body,"#11283B",12,"#2B6686",new Thickness(18,19));
         pane.Width=tileWidth;pane.MinHeight=187;
         pane.PointerPressed+=(_,e)=> { if(e.Source is not Button) ShowClass(cls); };
+        pane.PointerEntered+=(_,_)=>pane.BorderBrush=Palette.Brush("#2BECFF");
+        pane.PointerExited+=(_,_)=>pane.BorderBrush=Palette.Brush("#2B6686");
         return pane;
     }
     private void ShowClass(GameClass cls)
@@ -255,6 +277,8 @@ public sealed class MainWindow : Window
             p.Children.Add(Action("Open",()=>ShowSpec(cls,spec),true,120));
             var box=Pane(p,"#0C2336",12,"#2A6784",new Thickness(14,17));
             box.Width=176;box.MinHeight=187;
+            box.PointerEntered+=(_,_)=>box.BorderBrush=Palette.Brush("#2BECFF");
+            box.PointerExited+=(_,_)=>box.BorderBrush=Palette.Brush("#2A6784");
             Grid.SetColumn(box,i);grid.Children.Add(box);
         }
         body.Children.Add(new Viewbox { Child=grid, Stretch=Stretch.Uniform, StretchDirection=StretchDirection.DownOnly, HorizontalAlignment=HAlign.Center });
