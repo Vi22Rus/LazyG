@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — 0.2.14-dev two-artifact Actions run confirmed [CI-PASSED / GAME-UNTESTED]
+
+- Confirmed **SUCCESS** for https://github.com/Vi22Rus/LazyG/actions/runs/44363220974 , commit `d1c09214fcacd57068c8ee3db6c795cc8f1382bd`. Windows build: RGB v3 tests, GameState/XML regression, spell assets, EXE single-file publish, Windows startup smoke, EXE artifact and install-ready addon artifact all SUCCESS. Lua 5.1 diagnostic syntax and `forever_cooldown_audit_test.lua` all SUCCESS.
+- Verified downloadable artifacts inside this exact run: `LazyG-Windows-x64` (ID `14456337125`, 77,716,284 bytes), `LazyGForeverProbe-0.2.14-dev` (ID `14456377216`, 6,154 bytes), both nonexpired at time of checking. Addon artifact contains root `LazyGForeverProbe` directory; unzip directly into game `Interface/AddOns`.
+- User in-game GCD/CD availability NOT YET CHECKED. `/lgprobe cooldown 1130` produces evidence; run before and after cast, `/reload`, supply saved `LazyGForeverProbe.lua`. No changes to game input or rotations; version is dev only.
+
 ## 2026-11-19 — 0.2.14-dev CI verification and install-ready addon artifact
 
 - GitHub Actions https://github.com/Vi22Rus/LazyG/actions/runs/44362740608 completed SUCCESS: Lua 5.1 syntax checks for the standalone diagnostic addon and mocked `forever_cooldown_audit_test.lua` passed; Windows RGB/GameState regression, .NET single-file EXE publish, startup smoke test and EXE upload passed. This is **CI-PASSED / GAME-UNTESTED**.
