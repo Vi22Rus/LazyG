@@ -27,6 +27,8 @@
 
 **[USER REQUEST]** Persistent handoff to new development chat. The exact 126-line `LazyG_JustAC_Sonah_Secret_Data_Audit.md` attached in the preceding chat is now stored in `LazyG/SECRET_DATA_AUDIT.md` on `main` with its 45 source-linked data/state categories, limitations and experimental transport recommendations. No application, Lua, XML or RGB code modified in this docs-only update.
 
+**CI VERIFIED FAILURE / NEXT FIRST ACTION:** 0.2.6-dev run https://github.com/Vi22Rus/LazyG/actions/runs/44341546565 failed on `ForeverGameStateBridge.cs` with CS1002/CS1513 beginning line 17 (bad code around object initializer). Lua checks passed. Before extending engine, fix this syntax bug in current GitHub main, trigger CI and confirm success. Last intermediate successful run: https://github.com/Vi22Rus/LazyG/actions/runs/44341129815; it does not validate the final code. Audit upload was documentation-only.
+
 **Next chat must read** `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `ROTATION_DATA_MATRIX.md`, `SECRET_DATA_AUDIT.md`, and current task-related GitHub code before editing. Source files for the reference implementations are attached to the Project as `JustAC.zip`, `Sonah.zip`, `RoseSlayer_dev.zip`; do not assume all hidden values are readable. Class-specific spell catalog, icon assets and 1.5-second GCD overlay demonstration are in `0.2.5-dev`; tri-state GameState and v2 bridge foundation in `0.2.6-dev`. Next implementation focus: research-backed diagnostic probe with versioned extension, strict quality/unknown rules and tests, not copying external addon engines; preserve WPF rollback and existing v2/v3 tests.
 
 **Audit GitHub commit:** `4b08b1858d631117cf78be58ac6ae2f95b9f70ec`.
