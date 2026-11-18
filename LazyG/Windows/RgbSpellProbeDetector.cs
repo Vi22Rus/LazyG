@@ -25,7 +25,6 @@ internal static class RgbSpellProbeDetector
             {
                 if(x+pitch*5>=image.Width)break;
                 var data=new byte[ForeverSpellProbeCodec.ByteCount];
-                bool valid=true;
                 for(int cell=0;cell<ForeverSpellProbeCodec.Cells;cell++)
                 {
                     var c=image.GetPixel(x+cell*pitch,y);
@@ -36,7 +35,6 @@ internal static class RgbSpellProbeDetector
                 }
                 if(ForeverSpellProbeCodec.TryDecode(data,out probe))
                     return true;
-                if(!valid)continue;
             }
         }
         probe=null;
