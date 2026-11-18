@@ -14,7 +14,7 @@ namespace LazyGPrototype;
 public partial class SetupWizard : Window
 {
     private int step;
-    private Rectangle? region;
+    public string PlayerSummary { get; private set; } = "";
     public bool Installed {get;private set;}
     public bool ConnectionPassed {get;private set;}
     public string InstalledName {get;private set;}="";
@@ -26,24 +26,35 @@ public partial class SetupWizard : Window
     }
     private void ShowStep()
     {
-        string[] titles={"Choose AddOns directory","Name the addon","Install RGB addon","Launch WoW","Place and select RGB panel","Connection Test"};
-        var panels=new UIElement[]{PathPanel,NamePanel,InstallPanel,GamePanel,DragPanel,TestPanel};
+        string[] titles={"Choose AddOns directory","Name the addon","Install RGB addon","Launch WoW","Automatic RGB connection"};
+        var panels=new UIElement[]{PathPanel,NamePanel,InstallPanel,GamePanel,TestPanel};
         for(int i=0;i<panels.Length;i++) panels[i].Visibility=i==step?Visibility.Visible:Visibility.Collapsed;
-        StepLabel.Text=$"Step {step+1} / 6";StepTitle.Text=titles[step];
+        StepLabel.Text=$"Step {step+1} / 5";StepTitle.Text=titles[step];
         BackButton.IsEnabled=step>0 && !Installed;
-        NextButton.Content=step==2?"Install":step==5?"Finish":"Next";
+        NextButton.Content=step==2?"Install":step==4?"Finish":"Next";
         if(step==2) InstallSummary.Text=$"Destination: {System.IO.Path.Combine(FolderText.Text,AddonName.Text)}";
     }
-    private void Next_Click(object sender,RoutedEventArgs e)
+    private async void Next_Click(object sender,RoutedEventArgs e)
     {
         if(step==0 && (!Directory.Exists(FolderText.Text) || !string.Equals(Path.GetFileName(FolderText.Text.TrimEnd('\\','/')),"AddOns",StringComparison.OrdinalIgnoreCase)))
         { System.Windows.MessageBox.Show(this,"Select an existing folder named AddOns.","Setup",MessageBoxButton.OK,MessageBoxImage.Warning); return; }
         if(step==1 && !ValidConfig())return;
         if(step==2 && !Install())return;
         if(step==3 && !CheckGameRunning())return;
-        if(step==4 && region is null){System.Windows.MessageBox.Show(this,"Select the RGB region first.");return;}
-        if(step==5){DialogResult=ConnectionPassed;Close();return;}
-        step++;ShowStep();
+        if(step==4)
+        {
+            if(!ConnectionPassed)
+            {
+                System.Windows.MessageBox.Show(this, "RGB connection not confirmed. Check the installed addon in WoW and run the test again.");
+                return;
+            }
+            DialogResult=true;
+            Close();
+            return;
+        }
+        step++;
+        ShowStep();
+        if(step==4) await RunConnectionTestAsync();
     }
     private bool ValidConfig()
     {
@@ -64,7 +75,7 @@ public partial class SetupWizard : Window
             Directory.CreateDirectory(dir);
             try
             {
-                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB panel for setup and connection diagnostics\n## Version: 0.1.10-dev\n## SavedVariables: LazyGPixelPanelDB\nPanel.lua\nHunterProfile.lua\n",new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB panel for setup and connection diagnostics\n## Version: 0.1.11-dev\nHunterProfile.lua\nPanel.lua\n",new UTF8Encoding(false));
                 // Embedded addon is maintained as our own source, no WarMate assets.
                 File.WriteAllText(Path.Combine(dir,"Panel.lua"),AddonTemplate.PanelLua,new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(dir,"HunterProfile.lua"),AddonTemplate.HunterProfileLua,new UTF8Encoding(false));
@@ -131,81 +142,82 @@ public partial class SetupWizard : Window
         ShowWindow(process.MainWindowHandle, 9); // SW_RESTORE
         SetForegroundWindow(process.MainWindowHandle);
     }
-    private async void ShowGame_Click(object sender,RoutedEventArgs e)
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ClientPoint { public int X; public int Y; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ClientRect { public int Left; public int Top; public int Right; public int Bottom; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetClientRect(IntPtr hwnd, out ClientRect rect);
+    [DllImport("user32.dll")]
+    private static extern bool ClientToScreen(IntPtr hwnd, ref ClientPoint point);
+
+    private async void Test_Click(object sender, RoutedEventArgs e)
     {
-        if(!CheckGameRunning()) return;
-        // Unlike capture, placement is user-driven: minimize the wizard so the
-        // user can restore it from the taskbar after dragging the panel in WoW.
-        ShowInTaskbar = true;
-        WindowState = WindowState.Minimized;
-        await Task.Delay(230);
-        BringGameToFront();
+        await RunConnectionTestAsync();
     }
-    private async void SelectRegion_Click(object sender,RoutedEventArgs e)
-    {
-        if(!CheckGameRunning()) return;
-        // Minimize instead of Hide: hiding a ShowDialog window can end its modal loop.
-        WindowState = WindowState.Minimized;
-        try
-        {
-            await Task.Delay(250);
-            BringGameToFront();
-            await Task.Delay(150);
-            var selector = new RegionSelector();
-            if(selector.ShowDialog() == true)
-            {
-                region = selector.SelectedRegion;
-                ConnectionPassed = false;
-                RegionText.Text = $"Region: X={region.Value.X}, Y={region.Value.Y}, W={region.Value.Width}, H={region.Value.Height}";
-                step = 5;
-                ShowStep();
-                await CaptureRegionAsync();
-            }
-        }
-        catch(Exception ex)
-        {
-            TestResult.Text = "Region selection error: " + ex.Message;
-        }
-        finally { WindowState = WindowState.Normal; Activate(); }
-    }
-    private void Reselect_Click(object sender,RoutedEventArgs e)
-    {
-        ConnectionPassed=false;
-        region=null;
-        step=4;
-        ShowStep();
-    }
-    private async void Test_Click(object sender,RoutedEventArgs e)
-    {
-        if(region is null){TestResult.Text="No region selected";return;}
-        WindowState = WindowState.Minimized;
-        try { await CaptureRegionAsync(); }
-        finally { WindowState = WindowState.Normal; Activate(); }
-    }
-    private async Task CaptureRegionAsync()
+
+    private async Task RunConnectionTestAsync()
     {
         ConnectionPassed = false;
-        if(region is null){TestResult.Text="No region selected";return;}
-        var r=region.Value;
-        if(r.Width<40 || r.Height<3 || r.Width>2500 || r.Height>350)
-        {
-            TestResult.Text="FAIL — select the whole compact RGB bar (you may include a small margin).";
-            return;
-        }
+        PlayerSummary = "";
+        TestResult.Text = "Checking the small RGB bridge at the WoW window top-left...";
+        WindowState = WindowState.Minimized;
         try
         {
-            await Task.Delay(230);
             BringGameToFront();
-            await Task.Delay(270);
-            using var image=new Bitmap(r.Width,r.Height);
-            using(var g=Graphics.FromImage(image))
-                g.CopyFromScreen(r.Left,r.Top,0,0,new System.Drawing.Size(r.Width,r.Height));
-            ConnectionPassed = RgbPanelDetector.FindPanel(image, out var detail);
-            TestResult.Text=ConnectionPassed
-                ? "PASS — compact RGB markers found. " + detail
-                : "FAIL — full calibration pattern not found. " + detail;
+            await Task.Delay(550);
+            using var game = FindWowProcess();
+            if (game == null)
+            {
+                TestResult.Text = "FAIL — WoW window not found.";
+                return;
+            }
+
+            IntPtr hwnd = game.MainWindowHandle;
+            if (!GetClientRect(hwnd, out var client))
+            {
+                TestResult.Text = "FAIL — cannot read WoW client size.";
+                return;
+            }
+
+            var origin = new ClientPoint();
+            if (!ClientToScreen(hwnd, ref origin))
+            {
+                TestResult.Text = "FAIL — cannot locate WoW client on screen.";
+                return;
+            }
+
+            int width = Math.Min(220, client.Right - client.Left);
+            int height = Math.Min(120, client.Bottom - client.Top);
+            if (width < 40 || height < 18)
+            {
+                TestResult.Text = "FAIL — WoW client window is too small.";
+                return;
+            }
+
+            using var shot = new Bitmap(width, height);
+            using (var graphics = Graphics.FromImage(shot))
+                graphics.CopyFromScreen(origin.X, origin.Y, 0, 0, new System.Drawing.Size(width, height));
+
+            ConnectionPassed = RgbPanelDetector.FindPanel(shot, out var player, out var detail);
+            if (ConnectionPassed && player != null)
+            {
+                PlayerSummary = $"{player.ClassName} · {player.RaceName} · Level {player.Level} · {player.SpecName}";
+                TestResult.Text = "PASS — " + PlayerSummary + "\n" + detail;
+            }
+            else
+                TestResult.Text = "FAIL — " + detail;
         }
-        catch(Exception ex){TestResult.Text="Capture error: "+ex.Message;}
+        catch (Exception ex)
+        {
+            TestResult.Text = "Capture error: " + ex.Message;
+        }
+        finally
+        {
+            WindowState = WindowState.Normal;
+            Activate();
+        }
     }
     private void Back_Click(object sender,RoutedEventArgs e){if(step>0 && !Installed){step--;ShowStep();}}
     private void Cancel_Click(object sender,RoutedEventArgs e){Close();}
