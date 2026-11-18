@@ -13,5 +13,6 @@
   <ItemGroup>
     <EmbeddedResource Include="../AddonTemplate/RgbV3Encoder.lua" LogicalName="LazyG.RgbV3Encoder.lua" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
+    <EmbeddedResource Include="../AddonTemplate/RgbV3Thresholds.lua" LogicalName="LazyG.RgbV3Thresholds.lua" />
   </ItemGroup>
 </Project>
