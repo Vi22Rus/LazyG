@@ -142,16 +142,6 @@ public partial class SetupWizard : Window
         ShowWindow(process.MainWindowHandle, 9); // SW_RESTORE
         SetForegroundWindow(process.MainWindowHandle);
     }
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ClientPoint { public int X; public int Y; }
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ClientRect { public int Left; public int Top; public int Right; public int Bottom; }
-
-    [DllImport("user32.dll")]
-    private static extern bool GetClientRect(IntPtr hwnd, out ClientRect rect);
-    [DllImport("user32.dll")]
-    private static extern bool ClientToScreen(IntPtr hwnd, ref ClientPoint point);
-
     private async void Test_Click(object sender, RoutedEventArgs e)
     {
         await RunConnectionTestAsync();
@@ -161,46 +151,13 @@ public partial class SetupWizard : Window
     {
         ConnectionPassed = false;
         PlayerSummary = "";
-        TestResult.Text = "Checking the small RGB bridge at the WoW window top-left...";
+        TestResult.Text = "Checking the automatic RGB connection...";
         WindowState = WindowState.Minimized;
         try
         {
-            BringGameToFront();
+            WowRgbBridge.ActivateGame();
             await Task.Delay(550);
-            using var game = FindWowProcess();
-            if (game == null)
-            {
-                TestResult.Text = "FAIL — WoW window not found.";
-                return;
-            }
-
-            IntPtr hwnd = game.MainWindowHandle;
-            if (!GetClientRect(hwnd, out var client))
-            {
-                TestResult.Text = "FAIL — cannot read WoW client size.";
-                return;
-            }
-
-            var origin = new ClientPoint();
-            if (!ClientToScreen(hwnd, ref origin))
-            {
-                TestResult.Text = "FAIL — cannot locate WoW client on screen.";
-                return;
-            }
-
-            int width = Math.Min(220, client.Right - client.Left);
-            int height = Math.Min(120, client.Bottom - client.Top);
-            if (width < 40 || height < 18)
-            {
-                TestResult.Text = "FAIL — WoW client window is too small.";
-                return;
-            }
-
-            using var shot = new Bitmap(width, height);
-            using (var graphics = Graphics.FromImage(shot))
-                graphics.CopyFromScreen(origin.X, origin.Y, 0, 0, new System.Drawing.Size(width, height));
-
-            ConnectionPassed = RgbPanelDetector.FindPanel(shot, out var player, out var detail);
+            ConnectionPassed = WowRgbBridge.TryRead(out var player, out var detail);
             if (ConnectionPassed && player != null)
             {
                 PlayerSummary = $"{player.ClassName} · {player.RaceName} · Level {player.Level} · {player.SpecName}";
@@ -208,10 +165,6 @@ public partial class SetupWizard : Window
             }
             else
                 TestResult.Text = "FAIL — " + detail;
-        }
-        catch (Exception ex)
-        {
-            TestResult.Text = "Capture error: " + ex.Message;
         }
         finally
         {
