@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.2.13-dev: opt-in read-only Forever XML preview [DEV / CI PENDING / GAME-UNTESTED]
+
+- Following verified build run `44360433065`, added `Avalonia/Engine/XmlRotationPreview.cs`: a read-only explanation layer reporting absent profile, wrong client, stale capture, unknown target-life/hostility, GCD gate, no eligible rule or a suggestion without taking any action. This layer **does not authorize casts** and always delegates actual suggestion eligibility to `XmlRotationDispatcher.Evaluate`.
+- `Avalonia/MainWindow.cs` Support panel adds **XML preview ON/OFF**, disabled by default. When enabled it reads the embedded `Rotations/Forever/Examples/diagnostic-hunter.xml` via assembly resource and parses the existing strict Forever-only XML schema. Each screen-poll uses that capture's v2/v3 state and same-screenshot Curve band (when available); logs only changes in the preview status. A health band is never evidence of target being alive. All recommendations are informational only, and no keys, click, Start button behavior, or Overlay logic changed.
+- `Avalonia/LazyG.Avalonia.csproj` embeds the sample XML. `Tests/GameStateTests.csproj` and `Tests/GameStateTests.cs` include preview helper and regression cases for corpse, stale capture, known synthetic suggestion, unknown GCD, and missing profile.
+- Windows title updated to **0.2.13-dev**. This is not a release or demonstrated gameplay rotation: the sample `SpellID 1130` is a fixture, and current live diagnostic telemetry still lacks numeric GCD/cooldown measurements; therefore a real preview is expected to say blocked.
+- Current candidate Windows CI run after the latest preview test commit: https://github.com/Vi22Rus/LazyG/actions/runs/44361341115 . Do not declare [CI-PASSED] or provide this artifact until checked. Last separately confirmed successful build: https://github.com/Vi22Rus/LazyG/actions/runs/44360433065 . Preserved previous rollback point.
+
 ## 2026-11-19 — 0.2.12-dev build recovery confirmed [CI-PASSED / GAME-UNTESTED]
 
 - Successful run **https://github.com/Vi22Rus/LazyG/actions/runs/44360433065** (commit `497201145071c3edb19ef8e4343ec91ad3f5b71c`).
