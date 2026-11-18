@@ -97,6 +97,39 @@ internal sealed record GameState(
         return result;
     }
 }
+// Range evidence is never a precise HP value; 0-4 includes both living and dead.
+internal readonly record struct HealthBand(int Lower, int Upper)
+{
+    public bool IsValid => Lower>=0 && Upper<=100 && Lower<=Upper;
+    public static bool TryParse(string? text,out HealthBand band)
+    {
+        band=default;
+        if(string.IsNullOrWhiteSpace(text))return false;
+        var parts=text.Replace('–','-').Replace("%","").Split('-');
+        if(parts.Length!=2 || !int.TryParse(parts[0],out int lo) ||
+           !int.TryParse(parts[1],out int hi))return false;
+        var candidate=new HealthBand(lo,hi);
+        if(!candidate.IsValid)return false;
+        band=candidate;
+        return true;
+    }
+}
+
+// RGB v2 reports positive flags only; an absent flag cannot distinguish
+// 'false' from 'the secret API could not be read'. V3 may confirm dead=true.
+internal static class TargetLifeDecoder
+{
+    public static Observed<bool> Alive(bool targetExists,bool v2AliveBit,
+        bool v3DeadConfirmed,DateTimeOffset now)
+    {
+        if(!targetExists)return Observed<bool>.Missing();
+        if(v2AliveBit && v3DeadConfirmed)return Observed<bool>.Missing(); // conflicting frames
+        if(v3DeadConfirmed)return Observed<bool>.Known(false,now);
+        if(v2AliveBit)return Observed<bool>.Known(true,now);
+        return Observed<bool>.Missing();
+    }
+}
+
 internal sealed record SpellState(
     Observed<bool> Learned,
     Observed<bool> Usable,
@@ -157,6 +190,25 @@ internal static class ConditionEvaluator
     public static Truth PowerAbove(GameState s,int percent) => s.PowerPercent.Is(x=>x>=percent);
     public static Truth IsMoving(GameState s) => s.Moving.Is(x=>x);
     public static Truth GcdReady(GameState s) => s.GcdRemainingMilliseconds.Is(x=>x<=0);
+    // Global invariant for all hostile single-target attack and execute logic.
+    // No target, corpse, missing death evidence, unknown hostility => no cast.
+    public static Truth AttackTarget(GameState s) =>
+        TruthLogic.And(s.Transport==Knowledge.Known?Truth.True:Truth.Unknown,
+            HasTarget(s),TargetHostile(s),TargetAlive(s));
+    public static bool CanRecommendTargetedAttack(GameState s,int spellId,
+        params Truth[] additionalConditions)
+    {
+        if(AttackTarget(s)!=Truth.True || SpellReady(s,spellId)!=Truth.True)return false;
+        return CanRecommend(additionalConditions);
+    }
+    // Entire 5% band must satisfy the threshold. This NEVER equates 0-4% to
+    // a nonzero value or presumes the target alive.
+    public static Truth TargetBelowBand(Observed<HealthBand> band,int threshold) =>
+        band.Is(x=>x.IsValid && x.Upper<threshold);
+    public static bool CanRecommendExecute(GameState s,int spellId,
+        Observed<HealthBand> targetBand,int threshold) =>
+        CanRecommendTargetedAttack(s,spellId,TargetBelowBand(targetBand,threshold));
+
     public static Truth SpellReady(GameState s,int spellId)
     {
         if(!s.Spells.TryGetValue(spellId,out var spell))return Truth.Unknown;
