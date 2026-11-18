@@ -40,8 +40,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.3-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.3-dev started · Forever UI");
+        Title = "LazyG · 0.2.4-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.4-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -79,7 +79,16 @@ public sealed class MainWindow : Window
     private Control CreateShell()
     {
         var shell = new Grid { RowDefinitions=new RowDefinitions("58,*,34") };
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto,Auto,Auto"), Background=Palette.Brush("#071622") };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,Auto,*,Auto,Auto,Auto,Auto"),
+            Background=new LinearGradientBrush {
+                StartPoint=new RelativePoint(0,0,RelativeUnit.Relative),
+                EndPoint=new RelativePoint(1,0,RelativeUnit.Relative),
+                GradientStops=new GradientStops {
+                    new GradientStop(Avalonia.Media.Color.Parse("#082A43"),0),
+                    new GradientStop(Avalonia.Media.Color.Parse("#082337"),0.54),
+                    new GradientStop(Avalonia.Media.Color.Parse("#061B2D"),1)
+                }
+            } };
         header.PointerPressed += (_,e) => { if (e.GetCurrentPoint(header).Properties.IsLeftButtonPressed && e.Source is not Button) BeginMoveDrag(e); };
         var brand = Stack(Orientation.Horizontal,11);
         brand.VerticalAlignment=VerticalAlignment.Center;
@@ -113,38 +122,44 @@ public sealed class MainWindow : Window
         wins.Children.Add(WindowAction("□",()=>WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized));
         wins.Children.Add(WindowAction("×",Close,true));
         Grid.SetColumn(wins,6);header.Children.Add(wins);
-        var headerBorder=new Border { Child=header,BorderBrush=Palette.Brush("#1A799F"),
+        var headerBorder=new Border { Child=header,BorderBrush=Palette.Brush("#28718D"),
             BorderThickness=new Thickness(0,0,0,1) };
         Grid.SetRow(headerBorder,0);shell.Children.Add(headerBorder);
-        var backdropLayer=new Grid();
+        // The landscape is precomposed at a consistent 1440:800 aspect ratio,
+        // with feathered transitions into the same base gradient at EVERY edge.
+        // Render it as a single full-viewport decorative layer, not a fixed
+        // 780x445 image attached to the bottom-right corner.
+        var backdropLayer=new Grid { ClipToBounds=true };
         var backdropImage=ThemeArtwork.Background();
         if (backdropImage is not null)
         {
             backdropLayer.Children.Add(new Avalonia.Controls.Image {
-                Source=backdropImage,Width=780,Height=445,Opacity=0.68,
-                Stretch=Stretch.UniformToFill,IsHitTestVisible=false,
-                HorizontalAlignment=HAlign.Right,
-                VerticalAlignment=Avalonia.Layout.VerticalAlignment.Bottom
+                Source=backdropImage,
+                Stretch=Stretch.UniformToFill,
+                IsHitTestVisible=false,
+                HorizontalAlignment=HAlign.Stretch,
+                VerticalAlignment=Avalonia.Layout.VerticalAlignment.Stretch
             });
         }
         backdropLayer.Children.Add(new ScrollViewer { Content=rootBody,
             HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,
             VerticalScrollBarVisibility=ScrollBarVisibility.Auto });
         var bodyWrap = new Border {
+            ClipToBounds=true,
             Background=new LinearGradientBrush {
                 StartPoint=new RelativePoint(0,0,RelativeUnit.Relative),
                 EndPoint=new RelativePoint(1,1,RelativeUnit.Relative),
                 GradientStops=new GradientStops {
-                    new GradientStop(Avalonia.Media.Color.Parse("#082C45"),0),
-                    new GradientStop(Avalonia.Media.Color.Parse("#061B30"),0.54),
-                    new GradientStop(Avalonia.Media.Color.Parse("#020B16"),1)
+                    new GradientStop(Avalonia.Media.Color.Parse("#092A43"),0),
+                    new GradientStop(Avalonia.Media.Color.Parse("#061B2F"),0.57),
+                    new GradientStop(Avalonia.Media.Color.Parse("#020D1A"),1)
                 }
             },Child=backdropLayer
         };
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
-        var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#041220"),
+        var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#031524"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.3-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
+        footer.Children.Add(Text("  LazyG 0.2.4-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#719BB2");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -153,11 +168,11 @@ public sealed class MainWindow : Window
     private Button WindowAction(string label,Action action,bool close=false)
     {
         var b=new Button { Content=label,Width=45,Padding=new Thickness(0),
-            Background=Palette.Brush("#071622"), Foreground=Palette.White, BorderThickness=new Thickness(0),
+            Background=Palette.Brush("#061B2D"), Foreground=Palette.White, BorderThickness=new Thickness(0),
             FontSize=17,VerticalContentAlignment=VerticalAlignment.Center,HorizontalContentAlignment=HAlign.Center };
         b.Click+=(_,_)=>action();
         if (close) b.PointerEntered+=(_,_)=>b.Background=Palette.Brush("#B3344E");
-        if (close) b.PointerExited+=(_,_)=>b.Background=Palette.Brush("#071622");
+        if (close) b.PointerExited+=(_,_)=>b.Background=Palette.Brush("#061B2D");
         return b;
     }
     private static Border SpellIcon(string key,int size=56)
