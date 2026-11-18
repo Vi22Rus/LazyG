@@ -82,6 +82,26 @@ Assert(!ForeverSpellProbeCodec.TryDecode(probeBytes,out _)); // invalid status
 
 // Target epoch and event hints; a UNIT_AURA notification is never proof
 // that any specific buff/debuff exists.
+var timeBased=baseline with {
+    Spells=new System.Collections.Generic.Dictionary<int,SpellState> {
+        [1130]=new SpellState(Observed<bool>.Known(true,now),
+            Observed<bool>.Known(true,now),Observed<bool>.Missing(),
+            Observed<int>.Known(0,now),Observed<int>.Missing())
+    },
+    Auras=new System.Collections.Generic.Dictionary<AuraKey,AuraState> {
+        [new AuraKey("target-epoch-0",1130,true)]=new AuraState(
+            Observed<bool>.Known(true,now),Observed<int>.Known(1,now),
+            Observed<int>.Missing())
+    }
+};
+Assert(ConditionEvaluator.SpellReady(timeBased,1130)==Truth.True);
+var timeExpired=timeBased.Age(now.AddSeconds(4),TimeSpan.FromSeconds(2));
+Assert(timeExpired.Spells[1130].CooldownMs.Quality==Knowledge.Stale);
+Assert(timeExpired.Auras[new AuraKey("target-epoch-0",1130,true)]
+    .Present.Quality==Knowledge.Stale);
+Assert(ConditionEvaluator.SpellReady(timeExpired,1130)==Truth.Unknown);
+Assert(ConditionEvaluator.HasAura(timeExpired,
+    new AuraKey("target-epoch-0",1130,true))==Truth.Unknown);
 var tracker=new ForeverCombatTracker();
 Assert(tracker.Apply(new ForeverCombatEvent(
     ForeverCombatEventKind.TargetCastStarted,now,12345)));
