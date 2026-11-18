@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.2.1-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.2.2-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,14 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — 0.2.2-dev: compact class/spec cards, redesigned overlay [DEV / GAME-UNTESTED]
+
+[USER REQUEST] Based on supplied Screenshot_6.jpg (WarMate floating overlay): keep the spell icon as the focal point with a golden GCD circular border, show the spell name, retain AoE and CD switches, show combat and signal readiness, and put pause state/reason below. Omit rows of future abilities and GCD/mana horizontal bars. Keep class and specialization cards at the compact normal-window size when app maximizes, instead of scaling up.
+
+[IMPLEMENTED] `Avalonia/MainWindow.cs` Viewbox for five+four class cards and three spec cards is now StretchDirection.DownOnly and centered. Class/spec tiles use matching 180px nominal width; spec icon 73px and compact padding matching class cards. `Avalonia/OverlayWindow.cs` is a self-authored dark draggable topmost 420×260 panel: visual gold GCD ring around a placeholder unknown-spell icon, NEXT SPELL label, explicit NOT AVAILABLE while XML rotation is absent; functional visual AoE/CD toggles (UI preference only, no rotation action), combat state from decoded RGB v2, signal READY only for v2 plus v3 CRC, an independent PAUSE reason row and specialization label where available. No fabricated real spell, no GCD timing, no simulated combat readiness. Actual rotation-driven icon, GCD progress and use of AoE/CD in priority logic are deferred to the XML engine and appropriate telemetry. Maintained previous Setup, Support diagnostics and RGB protocol unchanged; old WPF and 0.2.1-dev remain rollback options.
+
+[TEST REQUIRED] UI correctness at both normal and maximized Windows sizes, overlay on top of WoW, moving overlay, real RGB connectivity and COMBAT signal; test toggles. No in-game proof yet.
 
 ## 2026-11-18 — 0.2.1-dev: Setup, Start, Overlay, diagnostics; 0hara Aster review
 
