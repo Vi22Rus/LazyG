@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.2.16-dev: automatic cooldown/GCD 30-second recorder [DEV / CI PENDING / GAME-UNTESTED]
+
+- In response to user feedback that manual slash commands during a 1.5-second GCD are impractical, implemented an automatic `/lgprobe cdwatch [SpellID]` command in standalone `LazyGForeverProbe`. The command starts a single, read-only 30-second capture and stops automatically. `/lgprobe cdwatch status` and `/lgprobe cdwatch stop` are available. It does NOT require the user to paste a command while GCD is active.
+- New `Diagnostics/LazyGForeverProbe/CooldownWatch.lua`: own `OnUpdate` frame captures up to 20 Hz (best-effort 50ms) for plain `isActive/isOnGCD` quality states of chosen spell and candidate GCD SpellIDs `61304/29515`. Every 200ms separately samples the experimental hidden Cooldown widget and labels its outcome *experimental*. Records only transitions plus initial/final samples, fractional `+seconds`, and stop reason; gracefully rejects invalid IDs, missing clock and repeated start. No gameplay actions or keypresses.
+- The existing `LazyGForeverProbeDB.lines` 400-line SavedVariables ring stores recorded transitions without spamming chat, and `/reload` persists them. `LazyGForeverProbe.toc` now 0.2.16-dev and loads `CooldownWatch.lua`; slash command routing, README, `Tests/forever_cooldown_watch_test.lua`, Lua CI syntax/mock tests and GitHub artifact naming updated.
+- **No Windows UI or base RGB wire changes.** The 0.2.13-dev EXE still cannot treat unavailable cooldown/GCD milliseconds as Known or make XML recommendations. No in-game Forever validation. Older successful 0.2.15-dev run https://github.com/Vi22Rus/LazyG/actions/runs/44365955551 remains rollback.
+- Candidate workflow with full watch feature: https://github.com/Vi22Rus/LazyG/actions/runs/44367415607 (verify success/artifacts before distribution).
+
 ## 2026-11-19 — 0.2.15-dev JustAC-inspired diagnostic verification [CI-PASSED / GAME-UNTESTED]
 
 - GitHub Actions https://github.com/Vi22Rus/LazyG/actions/runs/44365955551 completed **SUCCESS** for source commit `67ebaea8a081580be46b945ee9bcae3b54dee4ca`. Lua 5.1 syntax checks and both cooldown diagnostic mocked tests passed; Windows RGB v3, GameState/XML safety, EXE publish, Windows startup smoke test, and both artifact uploads passed.
