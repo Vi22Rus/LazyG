@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.2.4-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.2.5-dev` Avalonia UI [DEV / GAME-UNTESTED] (Setup hide, Start, Overlay, Support logs), прежняя WPF точка `0.1.19-dev` (исправление декодера 62-cell Curve 5%) — [DEV / GAME-UNTESTED]; `0.1.18-dev` [USER-TESTED / REPORTED ISSUE]: полоска есть, Overview `UI Curve Thresholds unavailable`; **`0.1.17-dev` [USER-TESTED]** динамика HP цели подтверждена (~50–59% и 20–29%); `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,18 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — 0.2.5-dev: 512 Forever spells, 395 images, bilingual catalog, 1.5s GCD demonstration
+
+**[USER REQUEST]** Integrate the uploaded `LazyG_Icons.7z` ability icons into the Forever Avalonia EXE, pair each class/SpellID with exact icon and RU/EN names, display actual spell art and correct name to the right in the topmost overlay, and temporarily animate a 1.5s "GCD" circle until actual GCD API is available. No false claim that an XML rotation already runs.
+
+**[SOURCE AUDIT]** Archive: `LazyG_Spell_Icon_Catalog_RU_EN_General.csv`, `spell_icon_map.csv`, image directory. Exactly 512 catalog rows from 9 classes + General, 504 distinct (class,SpellID) keys, 493 different Spell IDs, 395 available actual WEBP bitmaps and 401 referenced Icon IDs. The only missing icon files are **8 class-specific attack SpellID=6603** references; these 8 explicitly fall back to the present general Warrior attack icon and carry a `GenericAttackFallback` marker. The four previously missing EN names have been filled from the user's subsequent verification: 20600 Perception, 1259718 Will to Survive, 20554 Berserking, 1260270 Rapid Regeneration. No invented translations. Some Spell IDs (6603 and 5019) have different graphics per class, hence **class+SpellID lookup**, falling back to General only when appropriate.
+
+**[IMPLEMENTED / USER-UNTESTED]** New offline `Avalonia/Assets/forever-spells.txt` stores a gzip+base64 compact UTF-8 bilingual mapping of all 512 source records, with class, numeric SpellID, Russian/English name, IconID, atlas index, fallback marker. New offline `Avalonia/Assets/forever-spell-atlas.txt` contains 395 authentic source WEBP images in a 20-column 56x56 atlas, embedded directly into EXE; does not change the 9/27 decorative class/spec icons. `ForeverSpellCatalog.cs` loads and indexes data, exposes class-aware `Find(className,spellId)`, `ForClass`, and `Icon`. `MainWindow.cs` passes last selected class to Overlay and labels 0.2.5-dev. `OverlayWindow.cs` shows real class-specific spell icon and English name/Spell ID, with `NEXT` cycling archived spells of selected class as an explicit **DEMO ONLY** preview. Golden/yellow circular progress is drawn as an Avalonia arc and updates every ~33ms, with a 1500ms repeat. Does not use live GCD telemetry, does not press keys, and does not claim live ability selection. Future engine entry point is `OverlayWindow.SetSpell(string className,int spellId,string language="en")` and supports RU display if requested. The no-rotation PAUSE / combat / RGB CRC information remains. Existing Lua, RGB bridge, setup, profiles are not altered.
+ 
+**[CI]** `Tests/test_spell_assets.py` validates the compressed catalog and WEBP atlas, all 512 names, 395 atlas indices, 8 labelled icon fallbacks and checked translations. GitHub Windows workflow runs this test before publishing EXE, plus existing codec tests and Windows startup smoke. Current run: https://github.com/Vi22Rus/LazyG/actions/runs/44336320839, status `queued` at first check (no pass claim). Rollback: successful earlier `0.2.4-dev` run. Need user feedback on actual icons, cycling, ring and multilingual naming in future.
+
+**[LIMITATIONS]** This is an archive coverage test, not verification of every Spell ID against the live WoW Forever game data. Image names/spec associations may still require manual validation. Preview is **not** a real next-spell recommendation and 1.5s loop is **not** a measured GCD.
 
 ## 2026-11-18 — 0.2.4-dev: Midnight theme continuity / seamless panorama [DEV / USER-UNTESTED]
 
