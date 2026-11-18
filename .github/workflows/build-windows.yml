@@ -76,5 +76,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y lua5.1
+      - name: Verify Lua 5.1 syntax for both RGB v3 modules
+        run: |
+          luac5.1 -p LazyG/AddonTemplate/RgbV3Encoder.lua
+          luac5.1 -p LazyG/AddonTemplate/RgbV3Panel.lua
       - name: Verify Lua RGB v3 wire vectors
         run: lua5.1 LazyG/Tests/rgb_v3_encoder_test.lua
