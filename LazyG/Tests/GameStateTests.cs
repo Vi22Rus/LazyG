@@ -55,6 +55,19 @@ Assert(spellObserved.CooldownMs.Quality==Knowledge.Unknown);
 Assert(!ConditionEvaluator.CanRecommend(
     (empty with { Spells=new System.Collections.Generic.Dictionary<int,SpellState>
     { [1130]=spellObserved } }).Spells[1130].CooldownMs.Is(x=>x==0)));
+var baseline=empty with {
+    Client="forever",Transport=Knowledge.Known,
+    ClassId=Observed<int>.Known(3,now)
+};
+var accepted=ForeverSpellProbeCodec.ApplyDiagnostic(baseline,spellProbe,now,now,
+    TimeSpan.FromSeconds(1));
+Assert(accepted.Spells.ContainsKey(1130));
+Assert(ConditionEvaluator.SpellReady(accepted,1130)==Truth.Unknown);
+var expired=ForeverSpellProbeCodec.ApplyDiagnostic(baseline,spellProbe,
+    now.AddSeconds(-3),now,TimeSpan.FromSeconds(1));
+Assert(!expired.Spells.ContainsKey(1130));
+Assert(!ForeverSpellProbeCodec.ApplyDiagnostic(empty,spellProbe,now,now,
+    TimeSpan.FromSeconds(1)).Spells.ContainsKey(1130));
 probeBytes[10]=3;
 Assert(!ForeverSpellProbeCodec.TryDecode(probeBytes,out _)); // CRC failure
 probeBytes[10]=2;
