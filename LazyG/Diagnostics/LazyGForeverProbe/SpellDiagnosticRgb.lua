@@ -14,6 +14,8 @@ f:SetSize(C*STEP-1,SIZE)
 f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",0,-65)
 f:SetFrameStrata("TOOLTIP")
 f:EnableMouse(false)
+f:Hide()
+LazyGSpellDiagnostic.Frame=f
 local cells={}
 for i=1,C do
   local t=f:CreateTexture(nil,"ARTWORK")
@@ -73,4 +75,4 @@ f:SetScript("OnUpdate",function(_,delta)
   elapsed=0
   if enabled then pcall(paint) end
 end)
-pcall(paint)
+if enabled then pcall(paint) end
