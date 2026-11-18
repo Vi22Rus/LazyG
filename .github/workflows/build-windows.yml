@@ -8,6 +8,7 @@ on:
       - 'LazyG/Avalonia/**'
       - 'LazyG/AddonTemplate/**'
       - 'LazyG/Tests/**'
+      - 'LazyG/Diagnostics/LazyGForeverProbe/**'
       - '.github/workflows/build-windows.yml'
   workflow_dispatch:
 
@@ -91,5 +92,11 @@ jobs:
           luac5.1 -p LazyG/AddonTemplate/RgbV3Encoder.lua
           luac5.1 -p LazyG/AddonTemplate/RgbV3Panel.lua
           luac5.1 -p LazyG/AddonTemplate/RgbV3Thresholds.lua
+          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownAudit.lua
+          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/LazyGForeverProbe.lua
+          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/SpellDiagnosticRgb.lua
       - name: Verify Lua RGB v3 wire vectors
         run: lua5.1 LazyG/Tests/rgb_v3_encoder_test.lua
+
+      - name: Verify Forever cooldown audit behavior
+        run: lua5.1 LazyG/Tests/forever_cooldown_audit_test.lua
