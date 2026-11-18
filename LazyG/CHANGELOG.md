@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.12-dev build recovery confirmed [CI-PASSED / GAME-UNTESTED]
+
+- Successful run **https://github.com/Vi22Rus/LazyG/actions/runs/44360433065** (commit `497201145071c3edb19ef8e4343ec91ad3f5b71c`).
+- Confirmed jobs: Windows RGB v3 reference tests SUCCESS; GameState tri-state / corpse / guarded XML dispatcher tests SUCCESS; spell atlas mapping SUCCESS; `Publish self-contained single EXE` SUCCESS; Windows startup smoke test SUCCESS; Lua 5.1 codec and syntax tests SUCCESS; artifact upload SUCCESS.
+- Artifact `LazyG-Windows-x64` id `14453509755` (77,717,033 bytes, not expired at verification). Link to exact run above. This is a **CI-verified build**, not proof of gameplay operation. Two earlier failures `CS0104` and `CS0117` were caused by Support Avalonia TextBox use and have both been corrected.
+- The single-file EXE contains the guarded XML code but XML execution and key input remain disabled. Follow-on work: add opt-in diagnostics-only preview before implementing gameplay rotation.
+
 ## 2026-11-19 — CI follow-up: invalid TextBox scrollbar properties [DEV / CI PENDING]
 
 - Run https://github.com/Vi22Rus/LazyG/actions/runs/44359900108 passed RGB v3, GameState/XML safety, spell atlas and Lua tests; Windows publish failed only on `MainWindow.cs(389,390) CS0117`: Avalonia TextBox has no properties `HorizontalScrollBarVisibility` or `VerticalScrollBarVisibility`. These were introduced with the Support read-only selectable text control.
