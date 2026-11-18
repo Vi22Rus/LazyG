@@ -23,6 +23,15 @@
 
 ---
 
+## 2026-11-18 — 0.2.7-dev: isolated Forever API probe and SpellProbe state gating [DEV / GAME-UNTESTED]
+
+**User-approved direction:** Build a small in-game slash-command diagnostic to establish actual Blizzard API availability in Forever instead of assuming the JustAC 12.x / Forever profiles behave the same.
+
+- Added optional standalone `Diagnostics/LazyGForeverProbe/{LazyGForeverProbe.toc,LazyGForeverProbe.lua,README.md}`. Commands: `/lgprobe api`, `spell <ID>`, `target`, `events on/off`, `show`, `clear`. Local capped SavedVariables log (written by game on `/reload` or logout), API presence and return **types/statuses** only; does not store exact protected values, identify player, hook existing RGB, automate gameplay or modify installed Lua files. User-facing test ZIP was separately generated for manual installation; code in GitHub is separately versioned and should be reviewed before using it.
+- Extended existing isolated `ForeverSpellProbeCodec.ApplyDiagnostic` to refuse packets without a known Forever/v2 identity and matching age TTL. Injects only learned/usable; actual cooldown duration, charges, range and GCD milliseconds stay Unknown. Added GameState regression assertions for this behavior and expired packets. **Not yet wired to live RGB capture, Support, Overlay or rotation.**
+- Previous CI syntax fix commit `02586f55` remains on `main`. Existing v2/v3/Curve implementation and production embedded Lua resources unchanged. Current GitHub Actions completion status for latest commits could not be confirmed by available workflow/commit-status queries; no CI-PASSED claim or new artifact URL.
+- Next step: user runs /lgprobe api, /lgprobe spell 1130 or valid local SpellID, /lgprobe target, events on/off; sends sanitized SavedVariables; compare API availability, update diagnostic schema and add explicit opt-in pixel capture only after game test. CI status must be checked for the current commit and compilation issues fixed before publishing.
+
 ## 2026-11-18 — 0.2.6-dev CI syntax fix + SpellProbe v1 scaffold [DEV / GAME-UNTESTED]
 
 - Fixed literal \\n in `Avalonia/ForeverGameStateBridge.cs` that swallowed `return empty with` inside a C# comment, causing CS1002/CS1513. Fix commit `02586f55ce8cfd32731a5c80af06c9708d43c81d`. The RGB v2/v3/Curve source was not modified.
