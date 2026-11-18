@@ -6,6 +6,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
+using ArcPath = Avalonia.Controls.Shapes.Path;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -28,7 +29,7 @@ internal sealed class OverlayWindow : Window
     private readonly TextBlock spellCaption;
     private readonly TextBlock gcdLabel;
     private readonly Border iconSurface;
-    private readonly Path gcdArc;
+    private readonly ArcPath gcdArc;
     private readonly Button aoeButton;
     private readonly Button cdButton;
     private readonly DispatcherTimer gcdTimer;
@@ -97,7 +98,7 @@ internal sealed class OverlayWindow : Window
             BorderBrush=Palette.Brush("#2B93C1"),BorderThickness=new Thickness(1),
             Background=Palette.Brush("#061827")};
         iconStack.Children.Add(iconSurface);
-        gcdArc=new Path {Stroke=Palette.Brush("#F5CF68"),StrokeThickness=4,
+        gcdArc=new ArcPath {Stroke=Palette.Brush("#F5CF68"),StrokeThickness=4,
             StrokeLineCap=PenLineCap.Round,IsHitTestVisible=false};
         iconStack.Children.Add(gcdArc);
         next.Children.Add(iconStack);
