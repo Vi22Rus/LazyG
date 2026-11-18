@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.1.16-dev` (диагностика Unknown в RGB v3 Forever) — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.1.17-dev` (Blizzard UI Curve threshold RGB probes, отдельно от v2 и CRC v3) — [DEV / USER-UNTESTED], CI по push; `0.1.16-dev` — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,16 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — 0.1.17-dev: пороговые RGB-ячейки из Blizzard Curve UI [DEV / UNTESTED]
+
+Пользователь уточнил, что NAG 6.0.6 и Sonah следует использовать как непосредственные примеры работы с официальными API Forever, не искать другой путь ради новизны. Из Sonah изучены `Core/Atoms/Curves.lua`, `Units.lua`, `Secret.lua`, `Organisms/SelfTest.lua`: секретные `UnitHealthPercent` / `UnitPowerPercent` можно передавать в Blizzard curve и UI widget без арифметики в Lua; это не означает возможность получить обычное числовое значение. В NAG Camelot тоже используются curve/UI-методы с ограничениями.
+
+В `LazyG/AddonTemplate/RgbV3Thresholds.lua` реализован **собственный экспериментальный** curve→Texture:SetAlpha→RGB диагностический канал: три группы player HP, target HP, player primary power; 9 порогов (10–90%) на каждую группу, маркеры cyan/magenta, по 1 ячейке статуса доступности на группу. В `LazyG/Windows/RgbV3ThresholdDetector.cs` — самостоятельный поиск полоски и чтение диапазонов; `WowRgbBridge.cs` читает её из одного захвата только если v3 CRC корректен, `MainWindow.xaml.cs` показывает результаты в Overview. Экспериментальный Lua встраивается в один EXE через csproj и добавляется в Setup TOC. Версия EXE/аддона `0.1.17-dev`. Тест синтаксиса Lua добавлен в GitHub Actions.
+
+**Ограничение:** curve может не принимать вызовы в пользовательском клиенте, а наложение текстур/масштаб может исказить светлые/тёмные ячейки. Пока это *не проверено в WoW*. Нет точного процента или автоматического использования порогов в ротациях. Сохранены RGB v2 и CRC v3, точка отката `0.1.13-dev`.
+
+**CI:** запускается автоматически по push; сразу дать ссылку на конкретный workflow, не ожидая завершения, как просил пользователь.
 
 ## 2026-11-18 — игровые результаты 0.1.16-dev, NAG 6.0.6 и правило CI [DOCS-ONLY]
 
