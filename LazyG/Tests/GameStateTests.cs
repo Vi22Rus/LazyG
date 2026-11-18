@@ -182,5 +182,65 @@ Assert(!ConditionEvaluator.CanRecommendExecute(attackBase,1130,
 Assert(!ConditionEvaluator.CanRecommendExecute(attackBase,1130,
     Observed<HealthBand>.Missing(),20));
 
-Console.WriteLine("GameState, SpellProbe, combat and corpse safety regression: PASS");
+
+// XML dispatch boundary: ALL rules, not only Execute, must pass living hostile
+// target + fresh transport + known SpellReady + known GCD.
+var sampleXml="<Rotation client=\"forever\" version=\"1\">"+
+    "<Rule priority=\"1\" spellId=\"1130\" kind=\"Execute\" targetHpBelow=\"20\"/>"+
+    "<Rule priority=\"2\" spellId=\"1130\" kind=\"Attack\"/>"+
+    "</Rotation>";
+var parsed=XmlRotationDispatcher.Parse(sampleXml);
+var ready=attackBase with {GcdRemainingMilliseconds=Observed<int>.Known(0,now)};
+var recommendation=XmlRotationDispatcher.Evaluate(parsed,ready,band04,now);
+Assert(recommendation?.Kind==XmlActionKind.Execute);
+Assert(recommendation?.Priority==1);
+Assert(XmlRotationDispatcher.Evaluate(parsed,corpse with {
+    GcdRemainingMilliseconds=Observed<int>.Known(0,now)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,absent with {
+    GcdRemainingMilliseconds=Observed<int>.Known(0,now)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,uncertain with {
+    GcdRemainingMilliseconds=Observed<int>.Known(0,now)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,notHostile with {
+    GcdRemainingMilliseconds=Observed<int>.Known(0,now)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,attackBase,band04,now) is null); // GCD missing
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    GcdRemainingMilliseconds=Observed<int>.Known(850,now)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready,band04,now.AddSeconds(2)) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready,Observed<HealthBand>.Missing(),now)
+    ?.Kind==XmlActionKind.Attack); // non-execute still under global target gate
+var executeOnly=XmlRotationDispatcher.Parse(
+    "<Rotation client=\"forever\" version=\"1\">"+
+    "<Rule priority=\"1\" spellId=\"1130\" kind=\"Execute\" targetHpBelow=\"20\"/>"+
+    "</Rotation>");
+Assert(XmlRotationDispatcher.Evaluate(executeOnly,ready,
+    Observed<HealthBand>.Missing(),now) is null);
+Assert(XmlRotationDispatcher.Evaluate(executeOnly,ready,
+    Observed<HealthBand>.Known(new HealthBand(20,24),now),now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    Spells=new System.Collections.Generic.Dictionary<int,SpellState>()},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    Transport=Knowledge.Unknown},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    TargetAlive=Observed<bool>.Known(false,now)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    TargetExists=Observed<bool>.Missing()},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    TargetHostile=Observed<bool>.Missing()},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready with {
+    GcdRemainingMilliseconds=Observed<int>.Missing(Knowledge.Protected)},band04,now) is null);
+Assert(XmlRotationDispatcher.Evaluate(parsed,ready,band04,now.AddMilliseconds(-1)) is null);
+void BadXml(string xml)
+{
+    try { XmlRotationDispatcher.Parse(xml);throw new Exception("Unsafe XML accepted"); }
+    catch(FormatException) {}
+}
+BadXml("<!DOCTYPE Rotation [<!ENTITY x SYSTEM 'file:///secret'>]><Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Attack\"/></Rotation>");
+BadXml("<Rotation client=\"3.3.5\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Attack\"/></Rotation>");
+BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Heal\"/></Rotation>");
+BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Attack\" targetHpBelow=\"20\"/></Rotation>");
+BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Execute\"/></Rotation>");
+BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Attack\"/><Rule priority=\"1\" spellId=\"44\" kind=\"Attack\"/></Rotation>");
+BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"0\" kind=\"Attack\"/></Rotation>");
+
+Console.WriteLine("GameState, corpse safety and XML dispatch regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
