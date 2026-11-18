@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
- <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
- <ItemGroup><Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" /></ItemGroup>
+ <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+ <ItemGroup><Compile Include="GameStateTests.cs" />
+    <Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" /></ItemGroup>
 </Project>
