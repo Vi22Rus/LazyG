@@ -1,11 +1,11 @@
--- LazyG Forever UI-curve threshold experiment, 0.1.17-dev.
+-- LazyG Forever UI-curve threshold experiment, 0.1.18-dev.
 -- Independently implemented using Blizzard C_CurveUtil / UnitHealthPercent /
 -- UnitPowerPercent secret-value-to-widget APIs. Does NOT evaluate secret values
 -- in Lua and does NOT change the CRC-validated RGB v3 transport strip.
 local frame = CreateFrame("Frame", "LazyGCurveProbeFrame", UIParent)
 local size, gap = 4, 1
 frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, -24)
-frame:SetSize(32 * (size + gap) - gap, size)
+frame:SetSize(62 * (size + gap) - gap, size)
 frame:SetFrameStrata("TOOLTIP")
 frame:SetFrameLevel(102)
 frame:EnableMouse(false)
@@ -24,8 +24,8 @@ end
 for group = 1, 3 do
   local g = { thresholds = {} }
   groups[group] = g
-  for index = 1, 10 do
-    local x = (2 + (group - 1) * 10 + index - 1) * (size + gap)
+  for index = 1, 20 do
+    local x = (2 + (group - 1) * 20 + index - 1) * (size + gap)
     local base = frame:CreateTexture(nil, "BACKGROUND")
     base:SetTexture("Interface\\Buttons\\WHITE8X8")
     base:SetSize(size, size)
@@ -53,7 +53,7 @@ local function curveAt(step)
   local ok, c = pcall(C_CurveUtil.CreateCurve)
   if not ok or not c then return nil end
   if c.SetType then pcall(c.SetType, c, Enum.LuaCurveType.Step) end
-  local threshold = step / 10
+  local threshold = step / 20
   local success = pcall(function()
     c:AddPoint(0, 0)
     c:AddPoint(threshold - 0.0001, 0)
@@ -78,7 +78,7 @@ local function apply(group, unit, isPower)
     end
     powerType = result
   end
-  for i = 1, 9 do
+  for i = 1, 19 do
     local c = curveAt(i)
     if not c then canBind = false break end
     local ok, value
