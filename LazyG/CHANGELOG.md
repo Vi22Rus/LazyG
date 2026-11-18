@@ -23,6 +23,19 @@
 
 ---
 
+## 2026-11-19 — 0.2.11-dev: fail-closed corpse/execute safety [DEV / CI-UNCONFIRMED / GAME-UNTESTED]
+
+**Motivation:** User showed live CRC-valid v3 + changing 5% Curve bands, including `0–4%`, and correctly noted that the same band may include both a living target and a corpse. A 5% band is not an exact zero value and cannot decide whether the target is dead.
+
+**Code in `main`:**
+- `Avalonia/Engine/GameState.cs`: added `HealthBand` validating bounds 0..100 and parsing `0–4%` without constructing a fake precise HP. Added `TargetLifeDecoder` preserving Unknown when v2 flags omit target alive and decoding *positive* explicit dead evidence from a verified v3 snapshot. Contradictory v2 alive + v3 dead results in Unknown. Added `ConditionEvaluator.AttackTarget` gating on known transport, existing hostile and positively alive target. `CanRecommendTargetedAttack` and `CanRecommendExecute` enforce this gate plus known SpellReady and (for executes) upper end of known HP band strictly below threshold. Invalid/unknown HP band never authorizes casts.
+- `Avalonia/ForeverGameStateBridge.cs`: v2 missing positive target-exists/hostile/alive flags are no longer interpreted as a reliable false; no-target and unverified deaths remain Unknown. A separate positive v3 target-dead flag (CRC-checked) may indicate known `TargetAlive=False`. Added `hostile`, `alive`, and `attackGate` fields to Support diagnostic string.
+- `Avalonia/MainWindow.cs`: forwards positive v3 target-dead evidence only if CRC-valid, while preserving existing RGB decoder and Curve transport. Bumped window title/diagnostic version to `0.2.11-dev`.
+- `Tests/GameStateTests.cs`: regression cases for living 0–4%, corpse 0–4%, unknown life, no target, unknown hostility, stale transport, conflicting dead/alive flags, unknown HP band, and boundary where 0–4% is not below 4%. Not executed locally; compiler verification through GitHub Actions still required.
+- Production Lua `Panel.lua` /`RgbV3Panel.lua`, v2/v3/Curve wire layouts, XML rotations and key inputs unchanged.
+
+**Limits/next steps:** This is a fail-closed **engine API for future XML integrations**. LazyG has no functioning automatic XML rotation yet, so no claim of in-game auto-execute safety or actual corpse test is made. RGB v2/v3 negative flags can mean Unknown because the current Lua protocol lacks per-flag validity bits. Exact-zero HP and freshness/target GUID after target swap are not yet represented; never infer those from the Curve band. Continue by validating `target alive / corpse / target changed` in-game, then apply the common gate at the actual rotation-dispatch boundary before enabling any actions. Existing user-tested v2 transport retained as rollback.
+
 ## 2026-11-19 — 0.2.10-dev: copyable Support diagnostics [DEV / CI-UNCONFIRMED]
 
 - User screenshot shows the RGB v3 CRC and Curve diagnostic results are present, while Support log could not be selected because it used `TextBlock`. Kept the existing RGB implementation unchanged.
