@@ -20,7 +20,7 @@ internal sealed class OverlayWindow : Window
         CanResize=false; ShowInTaskbar=false; Topmost=true; ShowActivated=false;
         SystemDecorations=SystemDecorations.None;
         Background=Palette.Brush("#19130F");
-        TransparencyLevelHint = new[]{WindowTransparencyLevel.Transparent,WindowTransparencyLevel.None};
+
         var border=new Border {
             CornerRadius=new CornerRadius(11),
             Background=Palette.Brush("#DE211814"),
