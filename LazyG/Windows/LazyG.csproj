@@ -10,4 +10,8 @@
     <AssemblyName>LazyG</AssemblyName>
     <RootNamespace>LazyGPrototype</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../AddonTemplate/RgbV3Encoder.lua" LogicalName="LazyG.RgbV3Encoder.lua" />
+    <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
+  </ItemGroup>
 </Project>
