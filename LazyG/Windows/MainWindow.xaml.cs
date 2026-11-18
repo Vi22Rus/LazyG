@@ -81,7 +81,14 @@ public partial class MainWindow : Window
                     int powerMax = (max.R << 8) | max.G;
                     string resource = kind < 255 && powerMax > 0
                         ? $"{extra.PlayerPower}/{powerMax} (type {kind})" : "unknown";
-                    ConnectionStatus.Text += $" | RGB v3 CRC PASS · frame {extra.FrameCounter} · HP {hp} · target HP {targetHp} · resource {resource}";
+                    var reasons = extra.GetCell(22);
+                    string Reason(byte status) => status switch
+                    {
+                        0 => "OK", 1 => "API missing", 2 => "non-numeric",
+                        3 => "protected/API error", 4 => "invalid max",
+                        5 => "no target", _ => "unclassified"
+                    };
+                    ConnectionStatus.Text += $" | RGB v3 CRC PASS · frame {extra.FrameCounter} · HP {hp} ({Reason(reasons.R)}) · target HP {targetHp} ({Reason(reasons.G)}) · resource {resource} ({Reason(reasons.B)})";
                 }
                 else
                     ConnectionStatus.Text += " | RGB v3: pending (install new addon to test)";
