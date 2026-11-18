@@ -29,6 +29,8 @@
 
 [IMPLEMENTED] `Avalonia/MainWindow.cs` Viewbox for five+four class cards and three spec cards is now StretchDirection.DownOnly and centered. Class/spec tiles use matching 180px nominal width; spec icon 73px and compact padding matching class cards. `Avalonia/OverlayWindow.cs` is a self-authored dark draggable topmost 420×260 panel: visual gold GCD ring around a placeholder unknown-spell icon, NEXT SPELL label, explicit NOT AVAILABLE while XML rotation is absent; functional visual AoE/CD toggles (UI preference only, no rotation action), combat state from decoded RGB v2, signal READY only for v2 plus v3 CRC, an independent PAUSE reason row and specialization label where available. No fabricated real spell, no GCD timing, no simulated combat readiness. Actual rotation-driven icon, GCD progress and use of AoE/CD in priority logic are deferred to the XML engine and appropriate telemetry. Maintained previous Setup, Support diagnostics and RGB protocol unchanged; old WPF and 0.2.1-dev remain rollback options.
 
+[CI RUNNING at handoff] GitHub Actions workflow https://github.com/Vi22Rus/LazyG/actions/runs/44321655977, code SHA 03a131455f36dda22a1111327bf4f8a17ab67adf, status in_progress at handoff. Once successful: Artifacts -> LazyG-Windows-x64. Do not imply completion before CI.
+
 [TEST REQUIRED] UI correctness at both normal and maximized Windows sizes, overlay on top of WoW, moving overlay, real RGB connectivity and COMBAT signal; test toggles. No in-game proof yet.
 
 ## 2026-11-18 — 0.2.1-dev: Setup, Start, Overlay, diagnostics; 0hara Aster review
