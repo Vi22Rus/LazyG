@@ -12,9 +12,8 @@ using Image = Avalonia.Controls.Image;
 namespace LazyG.Desktop;
 internal static class IconPack
 {
-    private const int Tile = 36;
-    // Artwork positions are based on verified Blizzard-style specialization icons
-    // extracted from the user-provided reference executable, in class/spec order.
+    private const int Tile = 64;
+    // New custom 64x64 Midnight Cyan fantasy icon atlas: 9 class icons and 27 spec icons.
     private static readonly string[] Keys =
     [
         "Warrior_Arms","Warrior_Fury","Warrior_Protection",
