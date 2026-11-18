@@ -2,11 +2,14 @@ namespace LazyGPrototype;
 internal static class AddonTemplate
 {
     public const string PanelLua = """
--- LazyG compact RGB calibration frame 0.1.7-dev.
+-- LazyG compact RGB calibration frame 0.1.8-dev.
 -- Static test pattern only. No rotations or keyboard automation.
--- One row of 32 cells, 3x3 UI units each; stable opaque colours.
-local COUNT, CELL, GAP, MARGIN = 32, 3, 1, 4
-local WIDTH, HEIGHT = COUNT * (CELL + GAP) - GAP + MARGIN * 2, 17
+-- Three rows of 11 cells, 3x3 UI units each; stable opaque colours.
+local COUNT, COLS, ROWS = 33, 11, 3
+local CELL, GAP, ROW_GAP = 3, 1, 5
+local MARGIN_X, MARGIN_Y = 4, 7
+local WIDTH = COLS * (CELL + GAP) - GAP + MARGIN_X * 2
+local HEIGHT = ROWS * CELL + (ROWS - 1) * ROW_GAP + MARGIN_Y * 2
 local f = CreateFrame("Frame", "LazyGCalibrationPanel", UIParent)
 f:SetWidth(WIDTH)
 f:SetHeight(HEIGHT)
@@ -24,20 +27,24 @@ local bg = f:CreateTexture(nil, "BACKGROUND")
 bg:SetAllPoints(f)
 Color(bg, 25, 39, 50)
 
--- Beginning: green, magenta, white, black, then 27 deterministic calibration
--- bytes; last marker is magenta. Values are not rotations or spell indices.
+-- Fixed calibration markers only: four at the start of the first row,
+-- and magenta at the end of the third row. Other cells match the background.
+-- No flashing test pattern, rotations or spell indices.
 local cells = {}
 for i = 1, COUNT do
   local t = f:CreateTexture(nil, "ARTWORK")
   t:SetWidth(CELL)
   t:SetHeight(CELL)
-  t:SetPoint("LEFT", f, "LEFT", MARGIN + (i-1) * (CELL+GAP), 0)
+  local col = (i - 1) % COLS
+  local row = math.floor((i - 1) / COLS)
+  t:SetPoint("TOPLEFT", f, "TOPLEFT", MARGIN_X + col * (CELL + GAP),
+    -(MARGIN_Y + row * (CELL + ROW_GAP)))
   if i == 1 then Color(t, 0, 255, 0)
   elseif i == 2 then Color(t, 255, 0, 255)
   elseif i == 3 then Color(t, 255, 255, 255)
   elseif i == 4 then Color(t, 0, 0, 0)
   elseif i == COUNT then Color(t, 255, 0, 255)
-  else Color(t, 35 + (i*17)%175, 45 + (i*31)%165, 55 + (i*43)%155) end
+  else Color(t, 25, 39, 50) end
   cells[i] = t
 end
 
