@@ -37,8 +37,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.1-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.1-dev started · Forever UI");
+        Title = "LazyG · 0.2.2-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.2-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -118,7 +118,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#15100E"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.1-dev  ·  Forever profile  ·  Local desktop application",11,"#8F7A6D"));
+        footer.Children.Add(Text("  LazyG 0.2.2-dev  ·  Forever profile  ·  Local desktop application",11,"#8F7A6D"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#8F7A6D");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -181,7 +181,7 @@ public sealed class MainWindow : Window
             wrap.Children.Add(Pane(top,"#302015"));
         }
         wrap.Children.Add(Text("CLASSES",15,"#E9B16F",FontWeight.Bold));
-        // Viewbox scales both the five-column class layout and its icons uniformly.
+        // Stable, compact class cards. Viewbox only scales DOWN on narrow windows.
         var board= new Grid { ColumnDefinitions=new ColumnDefinitions("*,*,*,*,*"),
              RowDefinitions=new RowDefinitions("Auto,Auto"), ColumnSpacing=13,RowSpacing=13 };
         for(int i=0;i<client.Classes.Length;i++)
@@ -191,8 +191,8 @@ public sealed class MainWindow : Window
             Grid.SetColumn(tile,i<5?i:i-5);Grid.SetRow(tile,i<5?0:1);
             board.Children.Add(tile);
         }
-        var scaler=new Viewbox { Child=board,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.Both,
-            HorizontalAlignment=HAlign.Stretch };
+        var scaler=new Viewbox { Child=board,Stretch=Stretch.Uniform,StretchDirection=StretchDirection.DownOnly,
+            HorizontalAlignment=HAlign.Center };
         wrap.Children.Add(scaler);
         Go(Page("CLASSES & SPECS","WoW Forever · 9 classes · Select a class to explore its specializations",wrap));
     }
@@ -226,14 +226,15 @@ public sealed class MainWindow : Window
         {
             var spec=cls.Specs[i];
             var p=Stack(spacing:16);p.HorizontalAlignment=HAlign.Center;
-            p.Children.Add(SpellIcon(spec.Icon,90));
-            p.Children.Add(Text(spec.Name,18,"#FFFFFF",FontWeight.Bold));
+            p.Children.Add(SpellIcon(spec.Icon,73));
+            p.Children.Add(Text(spec.Name,15,"#FFFFFF",FontWeight.Bold));
             p.Children.Add(Text("Rotation not installed",12,"#B9A399"));
-            p.Children.Add(Action("Open",()=>ShowSpec(cls,spec),true,140));
-            var box=Pane(p,"#2D1F18",12,"#624631",new Thickness(24,26));
+            p.Children.Add(Action("Open",()=>ShowSpec(cls,spec),true,120));
+            var box=Pane(p,"#2D1F18",12,"#624631",new Thickness(14,17));
+            box.Width=180;box.MinHeight=180;
             Grid.SetColumn(box,i);grid.Children.Add(box);
         }
-        body.Children.Add(new Viewbox { Child=grid, Stretch=Stretch.Uniform, StretchDirection=StretchDirection.Both, HorizontalAlignment=HAlign.Stretch });
+        body.Children.Add(new Viewbox { Child=grid, Stretch=Stretch.Uniform, StretchDirection=StretchDirection.DownOnly, HorizontalAlignment=HAlign.Center });
         Go(Page(cls.Name.ToUpperInvariant()+" SPECIALIZATIONS","Forever · Class library",body,"Classes",ShowClasses));
     }
     private void ShowSpec(GameClass cls,Specialization spec)
@@ -393,7 +394,8 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("PROBE",probe);
                 lastProbeState=probe;
             }
-            overlay?.SetConnection(connected,crc,curve);
+            overlay?.SetConnection(connected,crc,curve,connected && result.state?.InCombat == true,
+                result.state?.ClassName, result.state?.SpecName);
             RefreshDiagnosticsView();
         }
         catch(Exception e)
