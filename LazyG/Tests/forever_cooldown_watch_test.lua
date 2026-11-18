@@ -44,6 +44,10 @@ phase=1
 clock=clock+0.1;script()
 assert(linesContaining("gcd61304")==2)
 assert(linesContaining("spell spell=1130")==2)
+-- The widget intentionally runs at 200ms, not at every 50ms flag sample.
+-- Keep this phase active until at least one full widget sampling interval.
+clock=clock+0.25;script()
+assert(linesContaining("widget61304")>=2)
 phase=2
 clock=clock+0.1;script()
 assert(linesContaining("gcd61304")==3)
