@@ -181,6 +181,11 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="rgb" and (arg=="on" or arg=="off") then
+    if LazyGSpellDiagnostic and LazyGSpellDiagnostic.SetEnabled then
+      LazyGSpellDiagnostic.SetEnabled(arg=="on")
+      log("LGD RGB "..arg.." (visual test only; no rotations)")
+    else log("LGD RGB module missing") end
   elseif cmd=="aura" then
     local unit=arg=="target" and "target" or "player"
     auraProbe(unit,20)
@@ -196,6 +201,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | target | aura [player|target] | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | target | aura [player|target] | rgb on/off | events on/off | show | clear")
   end
 end
