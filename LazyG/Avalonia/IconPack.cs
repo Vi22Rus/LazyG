@@ -28,11 +28,12 @@ internal static class IconPack
     ];
     private static readonly Dictionary<string,int> Positions = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Bitmap? Atlas;
+    private static readonly Bitmap? ClassAtlas;
+    private static readonly string[] ClassKeys = { "Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Shaman", "Mage", "Warlock", "Druid" };
     static IconPack()
     {
         for (int i=0;i<Keys.Length;i++) Positions[Keys[i]]=i;
-        foreach (var key in new[]{"Warrior","Paladin","Hunter","Rogue","Priest","Shaman","Mage","Warlock","Druid"})
-            Positions[key]=Positions[Array.Find(Keys,k=>k.StartsWith(key+"_",StringComparison.OrdinalIgnoreCase))!];
+
         try
         {
             using var stream=typeof(IconPack).Assembly.GetManifestResourceStream("LazyG.IconPack");
@@ -45,9 +46,26 @@ internal static class IconPack
             }
         }
         catch(Exception) { Atlas=null; }
+        try
+        {
+            using var stream=typeof(IconPack).Assembly.GetManifestResourceStream("LazyG.ClassIcons");
+            if(stream is not null)
+            {
+                using var reader=new StreamReader(stream);
+                using var input=new MemoryStream(Convert.FromBase64String(reader.ReadToEnd().Trim()));
+                ClassAtlas=new Bitmap(input);
+            }
+        }
+        catch(Exception) { ClassAtlas=null; }
     }
     public static Control Create(string key,int size)
     {
+        int classIndex=Array.FindIndex(ClassKeys,k=>string.Equals(k,key,StringComparison.OrdinalIgnoreCase));
+        if(ClassAtlas is not null && classIndex>=0)
+        {
+            var image=new CroppedBitmap(ClassAtlas,new PixelRect((classIndex%3)*Tile,(classIndex/3)*Tile,Tile,Tile));
+            return new Image {Source=image,Width=size,Height=size,Stretch=Stretch.Fill};
+        }
         if (Atlas is not null && Positions.TryGetValue(key,out int idx))
         {
             var clip=new CroppedBitmap(Atlas,new PixelRect((idx%3)*Tile,(idx/3)*Tile,Tile,Tile));
