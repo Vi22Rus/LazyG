@@ -161,7 +161,7 @@ public partial class SetupWizard : Window
             if (ConnectionPassed && player != null)
             {
                 PlayerSummary = $"{player.ClassName} · {player.RaceName} · Level {player.Level} · {player.SpecName}";
-                TestResult.Text = "PASS — " + PlayerSummary + "\n" + detail;
+                TestResult.Text = "PASS — " + PlayerSummary + "\n" + detail + "\n" + $"Target: {(player.TargetExists ? "yes" : "no")} | Hostile: {(player.TargetHostile ? "yes" : "no")} | Alive: {(player.TargetAlive ? "yes" : "no")} | Combat: {(player.InCombat ? "yes" : "no")}";
             }
             else
                 TestResult.Text = "FAIL — " + detail;
