@@ -45,10 +45,10 @@ function LazyGCooldownStateProbe.WidgetExperiment(id,ignoreGcd)
      type(C_Spell.GetSpellCooldownDuration)~="function" then return "ApiMissing" end
   local ok,duration=pcall(C_Spell.GetSpellCooldownDuration,id,ignoreGcd==true)
   if not ok then return "ProtectedOrError" end
-  if duration==nil then return "Unknown" end
-  if secret(duration) then
-    -- A protected object may be acceptable to a widget, but do not read it.
-  end
+  -- Never compare a potentially-secret duration object outside pcall.
+  -- It is passed into the native widget without extracting its fields.
+  local nilOk,isNil=pcall(function() return duration==nil end)
+  if nilOk and isNil then return "Unknown" end
   if not scratch then
     if type(CreateFrame)~="function" or not UIParent then return "WidgetMissing" end
     local created,holder=pcall(CreateFrame,"Frame",nil,UIParent)
