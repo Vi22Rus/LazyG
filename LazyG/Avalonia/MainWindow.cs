@@ -84,8 +84,7 @@ public sealed class MainWindow : Window
         brand.Children.Add(Text("LazyG",24,"#F3F9FF",FontWeight.Bold));
         brand.Margin=new Thickness(20,0,28,0);
         header.Children.Add(brand);
-        header.BorderBrush=Palette.Brush("#1A5E80");
-        header.BorderThickness=new Thickness(0,0,0,1);
+
         var tabs = Stack(Orientation.Horizontal,8);
         tabs.VerticalAlignment=VerticalAlignment.Center;
         tabs.Children.Add(Action("Classes & Specs",ShowClasses));
@@ -108,15 +107,34 @@ public sealed class MainWindow : Window
         wins.Children.Add(WindowAction("□",()=>WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized));
         wins.Children.Add(WindowAction("×",Close,true));
         Grid.SetColumn(wins,6);header.Children.Add(wins);
-        Grid.SetRow(header,0);shell.Children.Add(header);
-        var bodyWrap = new Border { Background=new LinearGradientBrush { StartPoint=new RelativePoint(0,0,RelativeUnit.Relative),
-            EndPoint=new RelativePoint(1,1,RelativeUnit.Relative),
-            GradientStops=new GradientStops {
-                new GradientStop(Avalonia.Media.Color.Parse("#0B3652"),0),
-                new GradientStop(Avalonia.Media.Color.Parse("#0A1E34"),0.48),
-                new GradientStop(Avalonia.Media.Color.Parse("#03111D"),1)
-            } }, Child=new ScrollViewer { Content=rootBody, HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,
-                 VerticalScrollBarVisibility=ScrollBarVisibility.Auto } };
+        var headerBorder=new Border { Child=header,BorderBrush=Palette.Brush("#1A799F"),
+            BorderThickness=new Thickness(0,0,0,1) };
+        Grid.SetRow(headerBorder,0);shell.Children.Add(headerBorder);
+        var backdropLayer=new Grid();
+        var backdropImage=ThemeArtwork.Background();
+        if (backdropImage is not null)
+        {
+            backdropLayer.Children.Add(new Avalonia.Controls.Image {
+                Source=backdropImage,Width=780,Height=445,Opacity=0.68,
+                Stretch=Stretch.UniformToFill,IsHitTestVisible=false,
+                HorizontalAlignment=HAlign.Right,
+                VerticalAlignment=Avalonia.Layout.VerticalAlignment.Bottom
+            });
+        }
+        backdropLayer.Children.Add(new ScrollViewer { Content=rootBody,
+            HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility=ScrollBarVisibility.Auto });
+        var bodyWrap = new Border {
+            Background=new LinearGradientBrush {
+                StartPoint=new RelativePoint(0,0,RelativeUnit.Relative),
+                EndPoint=new RelativePoint(1,1,RelativeUnit.Relative),
+                GradientStops=new GradientStops {
+                    new GradientStop(Avalonia.Media.Color.Parse("#082C45"),0),
+                    new GradientStop(Avalonia.Media.Color.Parse("#061B30"),0.54),
+                    new GradientStop(Avalonia.Media.Color.Parse("#020B16"),1)
+                }
+            },Child=backdropLayer
+        };
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#041220"),
             Margin=new Thickness(0) };
