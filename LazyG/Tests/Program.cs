@@ -51,6 +51,10 @@ static class Check
     }
 }
 
+internal static class Program
+{
+    private static void Main()
+    {
 Check.That(RgbV3Codec.Crc16("123456789"u8) == 0x29B1, "CCITT-FALSE check value");
 var baseFrame = Check.Build();
 Check.That(baseFrame.Length == 24 * 3, "24 direct8 physical cells");
@@ -103,3 +107,5 @@ Check.That(!RgbV3Codec.TryDecode(badStep, 0, 0xBEEF, out _, out err)
     && err.Contains("step 17"), "reject invalid 4-bit color");
 
 Console.WriteLine("RGB v3 codec regression: PASS (CRC, direct8, stepped4, markers, profile and corruption)");
+    }
+}
