@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using HAlign = Avalonia.Layout.HorizontalAlignment;
+using Button = Avalonia.Controls.Button;
 
 namespace LazyG.Desktop;
 
