@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-18 — первый игровой скриншот curve probes 0.1.17-dev [USER-TESTED / PARTIAL, DOCS-ONLY]
+
+**[USER-TESTED] 0.1.17-dev, screenshot 18.11.2026:** `RGB v2 Hunter Tauren lvl30 Beast Mastery`, target=yes hostile=yes alive=yes combat=no; `RGB v3 CRC PASS frame=128`; прямые HP, target HP и resource = `Unknown (protected/API error)`; `curve probes: HP 90–100% · target HP 90–100% · resource 90–100%`. Три одинаковых диапазона **могут быть корректными** при полном HP/ресурсе вне боя; факт их изменения при уроне/расходовании ресурса НЕ проверен. Запретить автоматические решения на базе curve probes до динамического игрового теста.
+
+**Следующая проверка:** на живой цели сравнить фактический HP/ресурс в UI WoW с LazyG, затем получить урон или потратить ресурс и проверить, меняется ли диапазон хотя бы с `90–100%` на соответствующее значение. Не объявлять динамические пороги подтверждёнными по одному статическому скриншоту. Код и EXE не менялись.
+
 ## 2026-11-18 — 0.1.17-dev: пороговые RGB-ячейки из Blizzard Curve UI [DEV / UNTESTED]
 
 Пользователь уточнил, что NAG 6.0.6 и Sonah следует использовать как непосредственные примеры работы с официальными API Forever, не искать другой путь ради новизны. Из Sonah изучены `Core/Atoms/Curves.lua`, `Units.lua`, `Secret.lua`, `Organisms/SelfTest.lua`: секретные `UnitHealthPercent` / `UnitPowerPercent` можно передавать в Blizzard curve и UI widget без арифметики в Lua; это не означает возможность получить обычное числовое значение. В NAG Camelot тоже используются curve/UI-методы с ограничениями.
