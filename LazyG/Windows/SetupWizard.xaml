@@ -48,7 +48,7 @@
     <TextBlock x:Name="RegionText" Text="No region selected" Foreground="#F6BA78" Margin="0,13,0,0"/>
    </StackPanel>
    <StackPanel x:Name="TestPanel" Visibility="Collapsed">
-    <TextBlock Text="Connection Test minimizes Setup and searches for the complete 3×3-cell calibration pattern anywhere in the selected region." TextWrapping="Wrap" Margin="0,0,0,14"/>
+    <TextBlock Text="Connection Test minimizes Setup and searches for the complete three-row RGB calibration pattern anywhere in the selected region." TextWrapping="Wrap" Margin="0,0,0,14"/>
     <WrapPanel>
      <Button Content="Run Connection Test" Click="Test_Click" Margin="0,0,10,0"/>
      <Button Content="Reselect RGB region" Click="Reselect_Click"/>
