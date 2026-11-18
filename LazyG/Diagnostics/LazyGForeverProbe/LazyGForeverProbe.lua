@@ -7,13 +7,14 @@ local entries={"IsPlayerSpell","IsSpellKnown","C_SpellBook.IsSpellKnown",
 "C_CurveUtil.CreateCurve","C_UnitAuras.GetPlayerAuraBySpellID",
 "UnitGUID","UnitCastingInfo","UnitChannelInfo","issecretvalue"}
 local saved,watching=nil,false
+local targetEpoch=0
 local function log(value)
   if type(value)~="string" then return end
   local t=type(GetTime)=="function" and math.floor(GetTime()) or 0
   local msg=t.."s "..value
   if saved then
     saved.lines[#saved.lines+1]=msg
-    while #saved.lines>120 do table.remove(saved.lines,1) end
+    while #saved.lines>400 do table.remove(saved.lines,1) end
   end
   print("LazyGProbe "..msg)
 end
@@ -84,6 +85,55 @@ local function target()
     end
   end
 end
+-- Inspect ONLY numeric and plain spell IDs. Event cast GUID / names are never written.
+local function plainNumber(value)
+  if protected(value) then return nil end
+  local ok,kind=pcall(type,value)
+  if not ok or kind~="number" then return nil end
+  local valid,n=pcall(function()
+    return value==math.floor(value) and value>=1 and value<=16777215
+  end)
+  return valid and n and value or nil
+end
+local function eventSpellId(...)
+  -- UNIT_SPELLCAST_* event signatures vary. We inspect likely numeric fields,
+  -- explicitly treating ambiguous values as unknown. No inference from GUID.
+  local args={...}
+  for i=3,math.min(#args,4) do
+    local id=plainNumber(args[i])
+    if id then return tostring(id) end
+  end
+  return "Unknown"
+end
+local function auraProbe(unit,limit)
+  -- Manual diagnostic only. No assertions about absence of auras when API
+  -- is secret, incomplete or missing. Do not store names or numeric stacks.
+  if unit~="player" and unit~="target" then log("AURA invalid unit") return end
+  local api=lookup("C_UnitAuras.GetAuraDataByIndex")
+  if type(api)~="function" then log("AURA "..unit.." ApiMissing GetAuraDataByIndex") return end
+  local successes,failures=0,0
+  for index=1,limit do
+    local ok,aura=pcall(api,unit,index)
+    if not ok or protected(aura) then
+      failures=failures+1
+    elseif aura~=nil then
+      successes=successes+1
+      local spellStatus=field(aura,"spellId")
+      local durationStatus=field(aura,"duration")
+      local stacksStatus=field(aura,"applications")
+      local instanceStatus=field(aura,"auraInstanceID")
+      local spellId
+      local extracted,value=pcall(function() return aura.spellId end)
+      if extracted then spellId=plainNumber(value) end
+      log("AURA "..unit.." epoch="..targetEpoch.." idx="..index..
+        " spell="..(spellId and tostring(spellId) or spellStatus)..
+        " stacks="..stacksStatus.." duration="..durationStatus..
+        " instance="..instanceStatus)
+    end
+  end
+  log("AURA summary unit="..unit.." observed="..successes..
+    " inaccessible="..failures.." checked="..limit)
+end
 local eventList={"UNIT_SPELLCAST_START","UNIT_SPELLCAST_SUCCEEDED",
 "UNIT_SPELLCAST_STOP","UNIT_SPELLCAST_CHANNEL_START","UNIT_SPELLCAST_CHANNEL_STOP",
 "UNIT_SPELLCAST_INTERRUPTIBLE","UNIT_SPELLCAST_NOT_INTERRUPTIBLE",
@@ -101,12 +151,21 @@ frame:SetScript("OnEvent",function(_,event,...)
     return
   end
   if not watching then return end
-  if event=="PLAYER_TARGET_CHANGED" then log("EVENT TARGET_CHANGED") return end
+  if event=="PLAYER_TARGET_CHANGED" then
+    targetEpoch=targetEpoch+1
+    log("EVENT TARGET_CHANGED epoch="..targetEpoch.." invalidate target snapshots")
+    return
+  end
   if event=="SPELL_UPDATE_COOLDOWN" or event=="SPELL_UPDATE_CHARGES" then
     log("EVENT "..event) return end
   local unit=...
   if protected(unit) or (unit~="player" and unit~="target") then return end
-  log("EVENT "..event.." unit="..unit.." (no payload)")
+  if event=="UNIT_AURA" then
+    log("EVENT UNIT_AURA unit="..unit.." epoch="..targetEpoch.." payload=untrusted")
+  else
+    log("EVENT "..event.." unit="..unit.." epoch="..targetEpoch..
+      " spellId="..eventSpellId(...).." (event hint only)")
+  end
 end)
 SLASH_LAZYGFOREVERPROBE1="/lgprobe"
 SlashCmdList.LAZYGFOREVERPROBE=function(message)
@@ -122,6 +181,9 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="aura" then
+    local unit=arg=="target" and "target" or "player"
+    auraProbe(unit,20)
   elseif cmd=="events" and (arg=="on" or arg=="off") then
     watching=arg=="on"
     for _,event in ipairs(eventList) do
@@ -134,6 +196,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | target | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | target | aura [player|target] | events on/off | show | clear")
   end
 end
