@@ -11,7 +11,7 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<LazyApp>().UsePlatformDetect().LogToTrace();
 }
-public sealed class LazyApp : Application
+public sealed class LazyApp : Avalonia.Application
 {
     public override void Initialize()
     {
