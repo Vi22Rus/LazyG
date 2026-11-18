@@ -49,7 +49,8 @@ end
 
 local function bits(fields)
   local value = 0
-  for index, flag in ipairs(fields) do
+  for index = 1, 8 do
+    local flag = fields[index]
     if flag == true or (type(flag) == "number" and flag > 0) then
       value = value + 2 ^ (index - 1)
     end
@@ -140,4 +141,5 @@ function Encoder.Encode(coreCells, extraCells, mode)
   return physical
 end
 
+LazyGRgbV3Encoder = Encoder
 return Encoder
