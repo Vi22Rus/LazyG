@@ -9,6 +9,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using LazyGPrototype;
+using LazyG.Desktop.Diagnostics;
 using Control = Avalonia.Controls.Control;
 using Button = Avalonia.Controls.Button;
 using Orientation = Avalonia.Layout.Orientation;
@@ -38,12 +39,17 @@ public sealed class MainWindow : Window
     private string lastBridgeState = "";
     private string lastProbeState = "";
     private string lastGameStateDiagnostic = "";
+    private bool spellDiagnosticEnabled;
+    private string lastSpellDiagnostic = "";
+    private byte? lastSpellSequence;
+    private DateTimeOffset lastSpellPacketAt;
+    private SpellProbe? lastSpellPacket;
     private LazyG.Desktop.Engine.GameState latestGameState = LazyG.Desktop.Engine.GameState.Empty(DateTimeOffset.UtcNow);
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.6-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.6-dev started · Forever UI");
+        Title = "LazyG · 0.2.9-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.9-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -161,7 +167,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#031524"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.6-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
+        footer.Children.Add(Text("  LazyG 0.2.9-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#719BB2");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -353,6 +359,15 @@ public sealed class MainWindow : Window
         var actions=Stack(Orientation.Horizontal,9);
         actions.Children.Add(Action("Clear events",()=>{ RuntimeDiagnostics.Clear();RefreshDiagnosticsView(); }));
         actions.Children.Add(Action("Refresh",RefreshDiagnosticsView));
+        actions.Children.Add(Action("LGD SpellProbe ON/OFF",()=>{
+            spellDiagnosticEnabled=!spellDiagnosticEnabled;
+            lastSpellPacket=null;lastSpellSequence=null;
+            lastSpellDiagnostic="";
+            RuntimeDiagnostics.Add("LGD",spellDiagnosticEnabled
+                ?"Opt-in capture enabled; use /lgprobe rgb on in WoW"
+                :"Capture disabled");
+            RefreshDiagnosticsView();
+        }));
         b.Children.Add(actions);
         diagnosticsOutput=Text(RuntimeDiagnostics.Snapshot(),12,"#C5E1EF");
         diagnosticsOutput.FontFamily=new Avalonia.Media.FontFamily("Consolas");
@@ -440,8 +455,11 @@ public sealed class MainWindow : Window
         try
         {
             var result=await Task.Run(() => {
-                bool ok=WowRgbBridge.TryReadCombined(out var state,out var packet,out var detail,out var v3,out var thresholds);
-                return (ok,state,packet,detail,v3,thresholds);
+                bool ok=WowRgbBridge.TryReadCombined(out var state,out var packet,
+                    out var detail,out var v3,out var thresholds,
+                    spellDiagnosticEnabled,out var spell);
+                return (ok,state,packet,detail,v3,thresholds,spell,
+                    capturedAt:DateTimeOffset.UtcNow);
             });
             if(finished)return;
             var connected=result.ok && result.state is not null;
@@ -462,7 +480,33 @@ public sealed class MainWindow : Window
                 lastProbeState=probe;
             }
             // Safe initial engine snapshot: ONLY v2-confirmed fields; future signals remain Unknown.
-            latestGameState=ForeverGameStateBridge.FromRgb(connected?result.state:null,crc,DateTimeOffset.UtcNow);
+            latestGameState=ForeverGameStateBridge.FromRgb(connected?result.state:null,crc,result.capturedAt);
+            if(spellDiagnosticEnabled && connected && result.spell is not null)
+            {
+                if(lastSpellSequence!=result.spell.Sequence || lastSpellPacket?.SpellId!=result.spell.SpellId)
+                {
+                    lastSpellPacket=result.spell;
+                    lastSpellSequence=result.spell.Sequence;
+                    lastSpellPacketAt=result.capturedAt;
+                }
+            }
+            if(spellDiagnosticEnabled && connected && lastSpellPacket is not null &&
+               result.capturedAt-lastSpellPacketAt<=TimeSpan.FromSeconds(1.5))
+            {
+                latestGameState=ForeverSpellProbeCodec.ApplyDiagnostic(latestGameState,
+                    lastSpellPacket,lastSpellPacketAt,result.capturedAt,TimeSpan.FromSeconds(1.5));
+            }
+            string lgdStatus=!spellDiagnosticEnabled?"OFF":!connected?"No RGB v2 identity":
+                lastSpellPacket is null?"LGD strip not found":
+                result.capturedAt-lastSpellPacketAt>TimeSpan.FromSeconds(1.5)?"STALE (frozen or absent)":
+                "SpellID "+lastSpellPacket.SpellId+" learned="+lastSpellPacket.Learned+
+                " usable="+lastSpellPacket.Usable+" cooldownActive="+lastSpellPacket.CooldownActive+
+                " gcdActive="+lastSpellPacket.GcdActive+" · remaining/GCD time Unknown";
+            if(lgdStatus!=lastSpellDiagnostic)
+            {
+                RuntimeDiagnostics.Add("LGD",lgdStatus);
+                lastSpellDiagnostic=lgdStatus;
+            }
             var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
             if(engineDiagnostic!=lastGameStateDiagnostic)
             {
