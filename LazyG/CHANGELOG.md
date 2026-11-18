@@ -23,6 +23,15 @@
 
 ---
 
+## 2026-11-18 — JustAC + Sonah Secret Data Audit uploaded [DOCS-ONLY]
+
+**[USER REQUEST]** Persistent handoff to new development chat. The exact 126-line `LazyG_JustAC_Sonah_Secret_Data_Audit.md` attached in the preceding chat is now stored in `LazyG/SECRET_DATA_AUDIT.md` on `main` with its 45 source-linked data/state categories, limitations and experimental transport recommendations. No application, Lua, XML or RGB code modified in this docs-only update.
+
+**Next chat must read** `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `ROTATION_DATA_MATRIX.md`, `SECRET_DATA_AUDIT.md`, and current task-related GitHub code before editing. Source files for the reference implementations are attached to the Project as `JustAC.zip`, `Sonah.zip`, `RoseSlayer_dev.zip`; do not assume all hidden values are readable. Class-specific spell catalog, icon assets and 1.5-second GCD overlay demonstration are in `0.2.5-dev`; tri-state GameState and v2 bridge foundation in `0.2.6-dev`. Next implementation focus: research-backed diagnostic probe with versioned extension, strict quality/unknown rules and tests, not copying external addon engines; preserve WPF rollback and existing v2/v3 tests.
+
+**Audit GitHub commit:** `4b08b1858d631117cf78be58ac6ae2f95b9f70ec`.
+
+
 ## 2026-11-18 — 0.2.6-dev: first GameState engine foundation + Sonah/RoseSlayer data matrix [DEV / GAME-UNTESTED]
 
 **User request:** analyze the complete Sonah Atoms and RoseSlayer rotations in detail and start implementing the Windows engine in GitHub now. No copying the source of the third-party engine. Inspected exact uploaded `Sonah.zip` and `RoseSlayer_dev.zip`: all 32 relevant Lua files in RoseSlayer are byte-for-byte identical to their corresponding Sonah counterparts. Inventory: 14 Sonah Atoms, `Core/Molecules/Conditions.lua` and all nine class files. Calls `C.name(...)` from the nine classes cover **89 distinct condition names** (Warrior 34, Paladin 41, Hunter 33, Rogue 33, Priest 34, Shaman 41, Mage 41, Warlock 37, Druid 46; counts are *distinct in each class* not unique across all). This does NOT include arbitrary calls inside `C.fn` or direct Atom dependencies, which require later per-template validation.
