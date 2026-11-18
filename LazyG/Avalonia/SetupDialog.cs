@@ -50,41 +50,41 @@ internal sealed class SetupDialog : Window
         test.IsEnabled=false;finish.IsEnabled=false;
         Content=Build();
     }
-    private static TextBlock T(string text,int size=13,string color="#EADCD0",bool bold=false) =>
+    private static TextBlock T(string text,int size=13,string color="#DDF2FD",bool bold=false) =>
         new() { Text=text,FontSize=size,Foreground=Palette.Brush(color),
             FontWeight=bold?FontWeight.Bold:FontWeight.Normal,TextWrapping=TextWrapping.Wrap };
     private static Button Act(string text,Action action,bool primary=false)
     {
-        var b=new Button {Content=new TextBlock { Text=text, FontSize=13, FontWeight=FontWeight.SemiBold, VerticalAlignment=VerticalAlignment.Center, TextAlignment=TextAlignment.Center },MinHeight=42,Padding=new Thickness(22,8),VerticalContentAlignment=VerticalAlignment.Center,Background=Palette.Brush(primary?"#E5A34B":"#37271E"),
-            Foreground=Palette.Brush(primary?"#281B11":"#F8E9DB"),CornerRadius=new CornerRadius(8),
-            BorderBrush=Palette.Brush(primary?"#F6C46D":"#694A35"),BorderThickness=new Thickness(1)};
+        var b=new Button {Content=new TextBlock { Text=text, FontSize=13, FontWeight=FontWeight.SemiBold, VerticalAlignment=VerticalAlignment.Center, TextAlignment=TextAlignment.Center },MinHeight=42,Padding=new Thickness(22,8),VerticalContentAlignment=VerticalAlignment.Center,Background=Palette.Brush(primary?"#18D5EF":"#0A263B"),
+            Foreground=Palette.Brush(primary?"#062233":"#EAF7FF"),CornerRadius=new CornerRadius(8),
+            BorderBrush=Palette.Brush(primary?"#7BEFFD":"#246789"),BorderThickness=new Thickness(1)};
         b.Click+=(_,_)=>action();return b;
     }
     private Control Build()
     {
         var root=new Grid { RowDefinitions=new RowDefinitions("52,*,94") };
-        var top=new Grid {ColumnDefinitions=new ColumnDefinitions("*,Auto"),Background=Palette.Brush("#241710")};
+        var top=new Grid {ColumnDefinitions=new ColumnDefinitions("*,Auto"),Background=Palette.Brush("#061827")};
         top.PointerPressed+=(_,e)=> { if(e.GetCurrentPoint(top).Properties.IsLeftButtonPressed && e.Source is not Button) BeginMoveDrag(e); };
-        var title=T("  LazyG   /   SETUP",19,"#F0BA70",true); title.VerticalAlignment=VerticalAlignment.Center;top.Children.Add(title);
+        var title=T("  LazyG   /   SETUP",19,"#56E8F9",true); title.VerticalAlignment=VerticalAlignment.Center;top.Children.Add(title);
         var x=Act("×",Close);Grid.SetColumn(x,1);top.Children.Add(x);
         root.Children.Add(top);
         var form=new StackPanel { Margin=new Thickness(32,24,32,20),Spacing=12 };
         form.Children.Add(T("Connect your WoW client",26,"#FFFFFF",true));
-        form.Children.Add(T("Client profile",13,"#E6B47D",true));
+        form.Children.Add(T("Client profile",13,"#5EE5F4",true));
         form.Children.Add(versions);
-        form.Children.Add(T("Only Forever is implemented in this dev build. Other client profiles cannot be installed yet.",12,"#C4AD9F"));
-        form.Children.Add(T("Interface / AddOns folder",13,"#E6B47D",true));
+        form.Children.Add(T("Only Forever is implemented in this dev build. Other client profiles cannot be installed yet.",12,"#9EBFCC"));
+        form.Children.Add(T("Interface / AddOns folder",13,"#5EE5F4",true));
         var folderRow=new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"),ColumnSpacing=10 };
         folderRow.Children.Add(addOns);
         var browse=Act("Browse",()=>_ = BrowseAsync());Grid.SetColumn(browse,1);folderRow.Children.Add(browse);
         form.Children.Add(folderRow);
-        form.Children.Add(T("Addon folder name",13,"#E6B47D",true));
+        form.Children.Add(T("Addon folder name",13,"#5EE5F4",true));
         form.Children.Add(addonName);
-        form.Children.Add(T("The installer creates a new folder and never overwrites another addon. Disable older test LazyG addons before /reload.",12,"#C4AD9F"));
-        form.Children.Add(new Border { Child=status,Background=Palette.Brush("#302019"),Padding=new Thickness(14),
+        form.Children.Add(T("The installer creates a new folder and never overwrites another addon. Disable older test LazyG addons before /reload.",12,"#9EBFCC"));
+        form.Children.Add(new Border { Child=status,Background=Palette.Brush("#0B253A"),Padding=new Thickness(14),
             CornerRadius=new CornerRadius(8),MinHeight=66 });
         status.Text="Select WoW Forever, choose its AddOns folder, and install.";
-        status.Foreground=Palette.Brush("#CFB09B");
+        status.Foreground=Palette.Brush("#9EBBC9");
         Grid.SetRow(form,1);
         var scroller=new ScrollViewer { Content=form,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto };
         Grid.SetRow(scroller,1);
@@ -122,7 +122,7 @@ internal sealed class SetupDialog : Window
             Directory.CreateDirectory(target);
             try
             {
-                var toc=$"## Interface: 16001\n## Title: {name}\n## Notes: LazyG Forever RGB adapter\n## Version: 0.2.1-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n";
+                var toc=$"## Interface: 16001\n## Title: {name}\n## Notes: LazyG Forever RGB adapter\n## Version: 0.2.3-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n";
                 File.WriteAllText(Path.Combine(target,name+".toc"),toc,new UTF8Encoding(false));
                 foreach(var f in new[]{"HunterProfile.lua","Panel.lua","RgbV3Encoder.lua","RgbV3Panel.lua","RgbV3Thresholds.lua"})
                 {
@@ -136,7 +136,7 @@ internal sealed class SetupDialog : Window
             installed=true;session.ForeverAddonsPath=path;session.Save();
             RuntimeDiagnostics.Add("SETUP","Forever addon installed in a new directory");
             status.Text="Addon installed: "+target+"\nEnable it in WoW, disable older test addons, then /reload and click Test RGB.";
-            status.Foreground=Palette.Brush("#92D09D");test.IsEnabled=true;
+            status.Foreground=Palette.Brush("#5CEFB0");test.IsEnabled=true;
         }
         catch(Exception ex) { Failure("Installation failed: "+ex.Message); }
     }
@@ -155,7 +155,7 @@ internal sealed class SetupDialog : Window
             {
                 validated=true;
                 RuntimeDiagnostics.Add("SETUP","RGB test PASS · "+result.player.ClassName);
-                status.Foreground=Palette.Brush("#97DDA4");
+                status.Foreground=Palette.Brush("#53E7B1");
                 status.Text="RGB PASS · "+result.player.ClassName+" / "+result.player.RaceName+
                     " · Lv "+result.player.Level+"\n"+(result.packet is null?"RGB v3 not detected":result.v3)+
                     (result.curve is null?" · Curve not detected":" · Curve detected");
@@ -166,5 +166,5 @@ internal sealed class SetupDialog : Window
         catch(Exception e){Failure("Test failed: "+e.Message);}
         finally{test.IsEnabled=installed;}
     }
-    private void Failure(string message){status.Text=message;status.Foreground=Palette.Brush("#F4A092");RuntimeDiagnostics.Add("SETUP","Setup validation failed");}
+    private void Failure(string message){status.Text=message;status.Foreground=Palette.Brush("#FF91A3");RuntimeDiagnostics.Add("SETUP","Setup validation failed");}
 }
