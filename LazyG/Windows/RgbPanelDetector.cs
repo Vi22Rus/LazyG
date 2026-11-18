@@ -25,7 +25,7 @@ internal sealed record RgbPlayerState(byte ClassId, byte RaceId, byte Level, byt
     {
         1 => "Beast Mastery", 2 => "Marksmanship", 3 => "Survival",
         _ => "Undetermined"
-    } : "Not transmitted yet";
+    } : SpecIndex == 0 ? "Undetermined" : $"Talent tree {SpecIndex}";
 }
 
 /// <summary>Decodes the tiny four-column/two-row static protocol at the WoW client top-left.</summary>
