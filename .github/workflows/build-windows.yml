@@ -65,3 +65,16 @@ jobs:
           path: release/LazyG.exe
           if-no-files-found: error
           retention-days: 30
+
+  lua-codec:
+    name: Lua 5.1 wire encoder regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+      - name: Verify Lua RGB v3 wire vectors
+        run: lua5.1 LazyG/Tests/rgb_v3_encoder_test.lua
