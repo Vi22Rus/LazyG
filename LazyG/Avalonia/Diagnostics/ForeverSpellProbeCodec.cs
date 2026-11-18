@@ -30,6 +30,20 @@ internal static class ForeverSpellProbeCodec
             (ProbeCode)rgb[11],(ProbeCode)rgb[12]);
         return true;
     }
+    // A diagnostic snapshot is never an authorization source by itself.
+    // A valid frame is accepted only with an existing, known RGB v2 identity,
+    // and the caller must supply timestamp from the pixel-capture instant.
+    public static GameState ApplyDiagnostic(GameState baseline, SpellProbe probe,
+        DateTimeOffset observedAt, DateTimeOffset now, TimeSpan ttl)
+    {
+        if (baseline.Client!="forever" || baseline.Transport!=Knowledge.Known ||
+            baseline.ClassId.Quality!=Knowledge.Known || probe.SpellId<=0 ||
+            observedAt>now || now-observedAt>ttl || now-baseline.CapturedAt>ttl)
+            return baseline;
+        var spells=new System.Collections.Generic.Dictionary<int,SpellState>(baseline.Spells);
+        spells[probe.SpellId]=ToSpellState(probe,observedAt);
+        return baseline with { Spells=spells };
+    }
     private static bool Valid(byte value)=>value<=4;
     public static Observed<bool> Observe(ProbeCode code, DateTimeOffset now) => code switch
     {
