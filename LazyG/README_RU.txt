@@ -1,14 +1,24 @@
-LazyG 0.2.2-dev — WoW Forever Avalonia (development build, not a release)
+LazyG 0.2.3-dev — Midnight Blue + Cyan visual redesign (WoW Forever)
 
-Changes:
-- Class cards keep compact nominal size on maximized window; scale DOWN only when space is smaller.
-- Specialization cards match class-card width / layout instead of stretching across the screen.
-- Overlay redesigned with golden circular spell focal area, NEXT SPELL title, AoE/CD preference switches, COMBAT state, RGB READY indicator and PAUSE reason.
-- Removed previous generic overlay text-only layout. No upcoming ability row or mana/GCD horizontal bars.
-- Gold ring and unknown-spell icon are design placeholders until XML rotation and GCD telemetry exist: no fake spell recommendations or auto-input. AoE/CD switches are visual preferences only.
-- Setup, RGB v2/v3 CRC, Curve and in-memory Support logs preserved.
+Status: DEV / awaiting new Avalonia CI and user test. Not a release.
 
-Test both normal and maximized windows, all nine class cards and Mage/Warrior specializations; test Overlay ON, move panel over WoW, toggle AoE and CD, confirm pause reason and RGB readiness.
+New visual theme:
+- Dark midnight-blue and cyan highlights across the main screen, Setup and Overlay.
+- Actual nine class illustrations taken from the user-approved generated LazyG Midnight Blue concept, packed offline.
+- 27 new fantasy specialization illustrations generated in the same style and embedded offline.
+- Cyan fantasy-mountain scenery is an embedded backdrop with no network access.
+- Five narrower class tiles (166 units) on the top row, four slightly wider (211 units) below, center-aligned with 12-unit gaps. Cards do not upscale just because the main app is maximized.
+- All class labels keep distinct established class colors (Warlock purple, Rogue yellow, Priest white, Druid orange, etc.).
+- Active top tab, class/spec hover, buttons and frameless titlebar use blue/cyan palette.
+- Setup remains independent with main window hidden. Support and Overlay keep existing behavior.
+- XML rotation engine and active next spell remain unimplemented, so Start and Overlay are honest placeholders.
 
-Build from repository root (PowerShell):
+Test after successful GitHub Actions run:
+1. Launch LazyG.exe, inspect dark blue/cyan main window, new class icons and backdrop.
+2. Compare normal and maximized windows: classes stay in 5+4, bottom four slightly wider.
+3. Open Mage -> Arcane, Fire, Frost and other class specs, verify 27 icon mappings and Back.
+4. Check class-name text colors, highlight and hover, Setup, Support, Overlay.
+5. Report screenshots and wrong art mappings so we can refine them.
+
+PowerShell command from repository root:
 dotnet publish LazyG/Avalonia/LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None
