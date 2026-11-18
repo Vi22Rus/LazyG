@@ -5,7 +5,7 @@ LazyGCooldownWatch={}
 local W=LazyGCooldownWatch
 local frame=CreateFrame("Frame")
 local running=false
-local trackedId,startedAt,lastAt,samples
+local trackedId,startedAt,lastAt,lastWidgetAt,samples
 local previous={}
 local writeLine
 local function timeNow()
@@ -42,7 +42,7 @@ local function finish(reason)
   running=false
   frame:SetScript("OnUpdate",nil)
   record(string.format("CDWATCH STOP reason=%s samples=%d",reason,samples or 0))
-  trackedId,startedAt,lastAt=nil,nil,nil
+  trackedId,startedAt,lastAt,lastWidgetAt=nil,nil,nil,nil
 end
 function W.IsRunning() return running end
 function W.Stop() finish("manual") end
@@ -57,13 +57,29 @@ function W.Start(id,writer)
   local now=timeNow()
   if not now then return false,"TimeUnavailable" end
   if type(writer)~="function" then return false,"LoggerMissing" end
-  trackedId,startedAt,lastAt=id,now,now
+  trackedId,startedAt,lastAt,lastWidgetAt=id,now,now,now
   samples=0
   previous={}
   writeLine=writer
   running=true
   record("CDWATCH START duration=30s interval=0.05s spell="..id..
     " gcdCandidates=61304,29515; read-only plain flags")
+  -- Experimental: hidden native widget is sampled only every 200ms,
+  -- separately from 50ms plain flags; its output is NEVER authorization.
+  local function widgetSample(t,force)
+    if type(LazyGCooldownStateProbe.WidgetExperiment)~="function" then return end
+    for _,pair in ipairs({{"widgetSpell",trackedId},{"widget61304",61304},
+                          {"widget29515",29515}}) do
+      local ok,result=pcall(LazyGCooldownStateProbe.WidgetExperiment,pair[2],true)
+      local status=ok and type(result)=="string" and result or "WidgetUnknown"
+      local key=pair[1]
+      if force or previous[key]~=status then
+        previous[key]=status
+        record(string.format("CDWATCH +%.3fs %s spell=%d status=%s [experimental]",
+          t-startedAt,key,pair[2],status))
+      end
+    end
+  end
   local function sample(t,force)
     samples=samples+1
     local elapsed=t-startedAt
@@ -72,18 +88,24 @@ function W.Start(id,writer)
     observe(29515,"gcd29515",elapsed,force)
   end
   sample(now,true)
+  widgetSample(now,true)
   frame:SetScript("OnUpdate",function()
     local t=timeNow()
     if not t then finish("TimeUnavailable") return end
     if t<lastAt or t<startedAt then finish("ClockReset") return end
     if t-startedAt>=30 then
       sample(t,true)
+      widgetSample(t,true)
       finish("completed")
       return
     end
     if t-lastAt>=0.05 then
       lastAt=t
       sample(t,false)
+    end
+    if t-lastWidgetAt>=0.20 then
+      lastWidgetAt=t
+      widgetSample(t,false)
     end
   end)
   return true,"Started"
