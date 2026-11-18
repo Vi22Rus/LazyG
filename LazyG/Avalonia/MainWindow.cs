@@ -35,7 +35,7 @@ public sealed class MainWindow : Window
     private Button? classesTab;
     private Button? commonTab;
     private Button? supportTab;
-    private TextBlock? diagnosticsOutput;
+    private TextBox? diagnosticsOutput;
     private string lastBridgeState = "";
     private string lastProbeState = "";
     private string lastGameStateDiagnostic = "";
@@ -48,8 +48,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.9-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.9-dev started · Forever UI");
+        Title = "LazyG · 0.2.10-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.10-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -167,7 +167,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#031524"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.9-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
+        footer.Children.Add(Text("  LazyG 0.2.10-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#719BB2");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -358,7 +358,12 @@ public sealed class MainWindow : Window
         b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#99BCCC"));
         var actions=Stack(Orientation.Horizontal,9);
         actions.Children.Add(Action("Clear events",()=>{ RuntimeDiagnostics.Clear();RefreshDiagnosticsView(); }));
-        actions.Children.Add(Action("Refresh",RefreshDiagnosticsView));
+        actions.Children.Add(Action("Refresh",()=>RefreshDiagnosticsView(force:true)));
+        actions.Children.Add(Action("Copy all",async ()=>{
+            var clipboard=TopLevel.GetTopLevel(this)?.Clipboard;
+            if(clipboard is not null)
+                await clipboard.SetTextAsync(RuntimeDiagnostics.Snapshot());
+        }));
         actions.Children.Add(Action("LGD SpellProbe ON/OFF",()=>{
             spellDiagnosticEnabled=!spellDiagnosticEnabled;
             lastSpellPacket=null;lastSpellSequence=null;
@@ -369,19 +374,35 @@ public sealed class MainWindow : Window
             RefreshDiagnosticsView();
         }));
         b.Children.Add(actions);
-        diagnosticsOutput=Text(RuntimeDiagnostics.Snapshot(),12,"#C5E1EF");
-        diagnosticsOutput.FontFamily=new Avalonia.Media.FontFamily("Consolas");
-        var diagnosticPanel=new ScrollViewer { Content=diagnosticsOutput, MaxHeight=440,
-            VerticalScrollBarVisibility=ScrollBarVisibility.Auto };
-        b.Children.Add(Pane(diagnosticPanel,"#041624",8,"#275B78",new Thickness(16)));
+        diagnosticsOutput=new TextBox {
+            Text=RuntimeDiagnostics.Snapshot(),
+            IsReadOnly=true,
+            AcceptsReturn=true,
+            TextWrapping=TextWrapping.NoWrap,
+            FontFamily=new Avalonia.Media.FontFamily("Consolas"),
+            FontSize=12,
+            Foreground=Palette.Brush("#C5E1EF"),
+            Background=Palette.Brush("#041624"),
+            BorderThickness=new Thickness(0),
+            Height=440,
+            HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility=ScrollBarVisibility.Auto
+        };
+        b.Children.Add(Pane(diagnosticsOutput,"#041624",8,"#275B78",new Thickness(12)));
+        b.Children.Add(Text("Select lines with the mouse, Ctrl+C to copy. Live refresh pauses while the log has keyboard focus; Refresh updates it manually.",12,"#99BCCC"));
         b.Children.Add(Text("RGB v2 / v3 CRC / Curve, window visibility, Setup and Overlay events appear here. Automatic rotation is not implemented.",12,"#99BCCC"));
         Go(Page("SUPPORT","Local live status and event history",Pane(b)));
         RefreshDiagnosticsView();
     }
-    private void RefreshDiagnosticsView()
+    private void RefreshDiagnosticsView(bool force=false)
     {
-        if (view == "support" && diagnosticsOutput is not null)
-            diagnosticsOutput.Text=RuntimeDiagnostics.Snapshot();
+        if(view!="support" || diagnosticsOutput is null)return;
+        // Replacing Text clears its selection. Keep the visible text stable
+        // while the user is selecting/copying, even though events accumulate.
+        if(!force && diagnosticsOutput.IsFocused)return;
+        var snapshot=RuntimeDiagnostics.Snapshot();
+        if(diagnosticsOutput.Text!=snapshot)
+            diagnosticsOutput.Text=snapshot;
     }
     private void RequestStart(GameClass cls, Specialization spec)
     {
