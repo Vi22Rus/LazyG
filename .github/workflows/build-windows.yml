@@ -45,6 +45,11 @@ jobs:
           $app.Refresh()
           if ($app.HasExited) {
             if (Test-Path $log) { Get-Content $log }
+            Write-Host "Windows Application event log (recent errors):"
+            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = (Get-Date).AddMinutes(-5); Level = 2 } -ErrorAction SilentlyContinue |
+              Where-Object { $_.ProviderName -match 'Application Error|\.NET Runtime|Windows Error Reporting' -or $_.Message -match 'LazyG' } |
+              Select-Object -First 12 TimeCreated, ProviderName, Id, Message |
+              Format-List | Out-String -Width 220 | Write-Host
             throw "LazyG.exe exited during startup (exit code $($app.ExitCode))."
           }
           Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
