@@ -1,6 +1,14 @@
 namespace LazyGPrototype;
 internal static class AddonTemplate
 {
+    // Keep Lua sources in their own files and bundle them into the single EXE.
+    public static string ReadEmbeddedLua(string resourceName)
+    {
+        using var stream = typeof(AddonTemplate).Assembly.GetManifestResourceStream("LazyG." + resourceName)
+            ?? throw new System.IO.FileNotFoundException("Embedded Lua resource missing: " + resourceName);
+        using var reader = new System.IO.StreamReader(stream, System.Text.Encoding.UTF8);
+        return reader.ReadToEnd();
+    }
     public const string HunterProfileLua = """
 -- LazyG Hunter Forever (Camelot) profile detection, 0.1.10-dev.
 -- Diagnostic only: no rotation actions, key presses, or RGB-pixel changes.
