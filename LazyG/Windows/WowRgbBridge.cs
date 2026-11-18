@@ -99,7 +99,7 @@ internal static class WowRgbBridge
             return false;
         }
 
-        int width = Math.Min(220, client.Right - client.Left);
+        int width = Math.Min(350, client.Right - client.Left);
         int height = Math.Min(120, client.Bottom - client.Top);
         if (width < 44 || height < 4)
         {
