@@ -23,6 +23,18 @@
 
 ---
 
+## 2026-11-18 — 0.2.8-dev: Forever combat event and aura diagnostic foundation [DEV / UNTESTED]
+
+**Game evidence received from user (second SavedVariables log):** `UNIT_SPELLCAST_SUCCEEDED` for player; `UNIT_SPELLCAST_START/STOP/SUCCEEDED` for target; `UNIT_AURA` for player and target; `SPELL_UPDATE_COOLDOWN`; `PLAYER_TARGET_CHANGED` all observed during combat. Target `UnitExists=True` and GUID return type StringReadable, while HP and power were Protected. Learned/usable of SpellID 1130 True, cooldown `isActive=False` at sampled instant; duration and startTime numeric type, not measured values; GCD 61304 Unknown. These events do NOT by themselves verify cast SpellID, aura stacks, aura presence, CD timings or GCD measurement.
+
+**Code changes in main:**
+- `Diagnostics/LazyGForeverProbe/LazyGForeverProbe.lua` extended with `/lgprobe aura [player|target]` to inspect up to 20 aura entries via a version-dependent API with per-field readability statuses; event logging now includes target epoch and a **plain-number-only SpellID hint** when discoverable. No secrets decoded, no player/target names or GUID persisted. This standalone addon remains manual, not bundled into production installer. Version marker `0.2.8-dev` in TOC. In-game validation of new command and event args pending.
+- `Avalonia/Diagnostics/ForeverCombatTracker.cs`: new independently implemented event evidence tracker with monotonic timestamp guard, target-switch invalidation, cast start/stop state, last plain player-successful-spell hint, aura notification times, and TTL; no guessed aura present or target spell ID. NOT yet wired into live RGB pipeline.
+- `Avalonia/Engine/GameState.cs`: `Age` now also marks spell and aura observations Stale (previously only scalar fields aged). Existing fail-closed `SpellReady` / `HasAura` then return Unknown as expected.
+- `Tests/GameStateTests.cs` / `.csproj`: import fixed for `LazyG.Desktop.Diagnostics`; new tests cover tracker event sequence, target epoch invalidation, stale spell and aura state, TTL and unknown fields.
+
+**Preservation and next step:** RGB v2/v3/Curve, XML and overlay untouched. New standalone addon is for testing only; external Windows capture, packetizing event/aura data, and actual Forever API compatibility for aura enumeration are still to be built/tested. No new .NET 8 CI or in-game success claim until workflow and user test. User can test new Github addon by copying 2 files into AddOns/LazyGForeverProbe, reload and execute `/lgprobe events on`, `/lgprobe aura target` with an active target, `/lgprobe events off`, `/reload`. Previous working RGB remains rollback.
+
 ## 2026-11-18 — 0.2.7-dev: isolated Forever API probe and SpellProbe state gating [DEV / GAME-UNTESTED]
 
 **User-approved direction:** Build a small in-game slash-command diagnostic to establish actual Blizzard API availability in Forever instead of assuming the JustAC 12.x / Forever profiles behave the same.
