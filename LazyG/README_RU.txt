@@ -1,14 +1,21 @@
-LazyG 0.2.4-dev — Midnight Blue + Cyan seamless-background correction
+LazyG 0.2.5-dev — Forever bilingual ability icons and 1.5s Overlay GCD demo
 
-Development version; build and in-game testing are separate.
+This is a development build, not a verified release.
+512 catalog entries from LazyG_Icons.7z, with Russian and English spell names.
+395 authentic WEBP ability images embedded into one offline sprite atlas.
+8 class-specific Attack icon files (SpellID 6603) absent from archive; use a labelled generic Attack icon fallback.
+4 missing English names are filled: Perception, Will to Survive, Berserking, Rapid Regeneration.
+Identity uses game client + class + SpellID (not bare SpellID). General abilities are shared.
+No download, remote API, or per-image file operations are needed at runtime.
 
-Fixes from Screenshot_7.jpg:
-- Upper custom titlebar now shares the main midnight-navy gradient instead of appearing as a separate black bar. Subtle cyan border remains.
-- Replaced the cut-off lower-right decorative image with one pre-blended 1440x800 composition: the same mountains and citadel gently fade into the dark navy gradient across all edges.
-- The full content area uses aspect-preserving UniformToFill, never non-uniformly stretched pixels; the picture adapts to the window without a rectangular cut-off.
-- Setup, RGB v2/v3, XML placeholders, 9 class icons / 27 spec icons, Overlay, navigation are unchanged.
+Overlay:
+- Click Overlay ON. The big icon is a REAL ability icon from the embedded Forever catalog, with its source EN name beside it.
+- NEXT cycles through archived abilities of the last selected class. Use a different specialization and revisit Overlay to preview a different class.
+- Ring is a VISUAL DEMO: full gold circular sweep each 1.5 seconds, roughly 30 fps; it is not the real GCD from WoW.
+- DEMO ONLY / no XML engine and PAUSE remain explicit. Nothing will automatically activate spells.
+- Future display API accepts a verified class+SpellID and language 'en' or 'ru'; front-end is English now, Russian localization is future work.
 
-After successful Actions run, open Paladin > View specs in normal and maximized window sizes. Compare titlebar and check for seams at image boundaries. Report a screenshot if any remain.
+CI validates catalog translation and image mapping; this does not replace a WoW user test.
 
-PowerShell from the repository root:
+PowerShell from repository root (single EXE):
 dotnet publish LazyG/Avalonia/LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None
