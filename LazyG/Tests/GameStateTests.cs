@@ -1,5 +1,6 @@
 using System;
 using LazyG.Desktop.Engine;
+using LazyG.Desktop.Diagnostics;
 var now=DateTimeOffset.UtcNow;
 var empty=GameState.Empty(now);
 Assert(empty.PlayerHealthPercent.Quality==Knowledge.Unknown);
