@@ -1,4 +1,4 @@
-<Window x:Class="LazyGPrototype.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="LazyG  ·  0.1.15-dev" Width="1250" Height="790" MinWidth="1040" MinHeight="660" WindowStartupLocation="CenterScreen" Background="#151312" Foreground="#F8EEE8" FontFamily="Segoe UI" FontSize="13">
+<Window x:Class="LazyGPrototype.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="LazyG  ·  0.1.16-dev" Width="1250" Height="790" MinWidth="1040" MinHeight="660" WindowStartupLocation="CenterScreen" Background="#151312" Foreground="#F8EEE8" FontFamily="Segoe UI" FontSize="13">
  <Window.Resources>
   <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#372017" Offset="0"/><GradientStop Color="#221916" Offset="0.7"/><GradientStop Color="#161312" Offset="1"/></LinearGradientBrush>
   <LinearGradientBrush x:Key="HeroGradient" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#452819" Offset="0"/><GradientStop Color="#2A201B" Offset="0.65"/><GradientStop Color="#1F1A18" Offset="1"/></LinearGradientBrush>
@@ -12,7 +12,7 @@
     </StackPanel>
     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
      <Ellipse Width="8" Height="8" Fill="#E9A247" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBlock Text="OFFLINE / LOCAL UI" Foreground="#DBC3B2" VerticalAlignment="Center" FontSize="12"/>
-     <Border BorderBrush="#785038" BorderThickness="1" CornerRadius="4" Padding="9,5" Margin="18,0,0,0"><TextBlock Text="0.1.15-dev" FontSize="11" Foreground="#F0AC6D"/></Border>
+     <Border BorderBrush="#785038" BorderThickness="1" CornerRadius="4" Padding="9,5" Margin="18,0,0,0"><TextBlock Text="0.1.16-dev" FontSize="11" Foreground="#F0AC6D"/></Border>
     </StackPanel>
    </Grid>
   </Border>
