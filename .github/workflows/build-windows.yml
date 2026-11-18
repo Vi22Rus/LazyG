@@ -77,6 +77,24 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Package optional Forever diagnostic addon
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "release-addon/LazyGForeverProbe" | Out-Null
+          Copy-Item "LazyG/Diagnostics/LazyGForeverProbe/*.lua" "release-addon/LazyGForeverProbe/"
+          Copy-Item "LazyG/Diagnostics/LazyGForeverProbe/*.toc" "release-addon/LazyGForeverProbe/"
+          if (-not (Test-Path "release-addon/LazyGForeverProbe/CooldownAudit.lua")) {
+            throw "CooldownAudit.lua missing from addon artifact"
+          }
+
+      - name: Upload ready-to-install Forever diagnostic addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: LazyGForeverProbe-0.2.14-dev
+          path: release-addon/
+          if-no-files-found: error
+          retention-days: 30
+
   lua-codec:
     name: Lua 5.1 wire encoder regression
     runs-on: ubuntu-latest
