@@ -11,10 +11,15 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using LazyGPrototype;
+using Control = Avalonia.Controls.Control;
+using Button = Avalonia.Controls.Button;
+using TextBox = Avalonia.Controls.TextBox;
+using ComboBox = Avalonia.Controls.ComboBox;
+using Orientation = Avalonia.Layout.Orientation;
 
 namespace LazyG.Desktop;
 
-public sealed class SetupDialog : Window
+internal sealed class SetupDialog : Window
 {
     private readonly UserSession session;
     private readonly ComboBox versions = new() { MinWidth=315 };
