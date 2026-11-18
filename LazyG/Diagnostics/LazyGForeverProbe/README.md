@@ -1,4 +1,4 @@
-# LazyGForeverProbe — WoW Forever manual API audit (0.2.7-dev)
+# LazyGForeverProbe — WoW Forever manual API audit (0.2.8-dev)
 
 This is an isolated optional diagnostic addon, **not** installed by LazyG.exe. Its only purpose is to identify which Blizzard functions are present, return ordinary values, expose protected/unknown results, and which cast/aura events arrive in the exact user's Forever build. It does **not** bypass secret values, access their content, or drive rotations.
 
@@ -11,7 +11,7 @@ Copy the entire `LazyGForeverProbe` folder (containing the TOC and Lua) to the *
 - `/lgprobe api` — presence and selected C_Secrets result **types**.
 - `/lgprobe spell 1130` — spell learned/usable/cooldown/charges and GCD probe; change spell ID for class/spec as appropriate.
 - `/lgprobe target` — player and target health/power/GUID/cast **readability**, not their values.
-- `/lgprobe events on` and `/lgprobe events off` — event names for player and target (no raw event payload; capped history).
+- `/lgprobe aura player` or `/lgprobe aura target` — manually enumerate up to 20 aura slots and report whether spell ID, stacks, duration and instance-ID fields are readable. Absence or unsupported API is never reported as a confirmed missing aura.\n- `/lgprobe events on` and `/lgprobe events off` — event hints for player and target, including only safe plain numeric SpellID when supplied, target epoch and no names/GUIDs. Events are capped (400 lines) and do not confirm specific aura presence.
 - `/lgprobe show`, `/lgprobe clear` — last 20 entries or clear the log.
 
 Enter `/reload` (or logout) to save `WTF/Account/<account>/SavedVariables/LazyGForeverProbe.lua` using the standard Blizzard SavedVariables mechanism. Upload the file after reviewing any contents you wish to withhold. Data include only time relative to login, API names, spell IDs supplied in commands, unit labels and status strings. Numeric private gameplay measurements and character names are not deliberately recorded. The client, not the addon, writes the SavedVariables file.
