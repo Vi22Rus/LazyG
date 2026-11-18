@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — 0.2.14-dev CI verification and install-ready addon artifact
+
+- GitHub Actions https://github.com/Vi22Rus/LazyG/actions/runs/44362740608 completed SUCCESS: Lua 5.1 syntax checks for the standalone diagnostic addon and mocked `forever_cooldown_audit_test.lua` passed; Windows RGB/GameState regression, .NET single-file EXE publish, startup smoke test and EXE upload passed. This is **CI-PASSED / GAME-UNTESTED**.
+- For convenient installation, CI `build-windows.yml` now packages all current `LazyGForeverProbe/*.lua` and `*.toc` under a root `LazyGForeverProbe` directory and uploads separate artifact `LazyGForeverProbe-0.2.14-dev`; unzip into the active Forever `Interface/AddOns`. This workflow change is commit `d1c09214`, and its exact new run is https://github.com/Vi22Rus/LazyG/actions/runs/44363220974 (pending final verification at documentation time). The diagnostic addon is optional and separate from installed main Lua RGB addon.
+- The Windows UI has not changed since 0.2.13-dev; diagnostic addon version 0.2.14-dev does NOT imply numeric cooldown values are now available in the XML engine. Actual Forever results requested before developing a new wire format.
+
 ## 2026-11-19 — 0.2.14-dev: first manual GCD/cooldown evidence collection [DEV / GAME-UNTESTED]
 
 - New separate diagnostic `Diagnostics/LazyGForeverProbe/CooldownAudit.lua`. Manual command `/lgprobe cooldown <SpellID>` (alias `cd`, defaults to Hunter 1130) queries the specified SpellID and GCD candidate 61304. Checks C_Spell.GetSpellCooldown table availability; reads startTime, duration, modRate and optional isActive/isOnGCD with `pcall` and `issecretvalue` checks; returns status strings if unavailable/protected. When all time fields are plain numbers, reports `remainingEstimateMs` as **diagnostic approximation only** (no modRate assumption), not real gameplay-ready evidence.
