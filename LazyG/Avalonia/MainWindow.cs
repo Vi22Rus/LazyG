@@ -385,9 +385,7 @@ public sealed class MainWindow : Window
             Foreground=Palette.Brush("#C5E1EF"),
             Background=Palette.Brush("#041624"),
             BorderThickness=new Thickness(0),
-            Height=440,
-            HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility=ScrollBarVisibility.Auto
+            Height=440
         };
         b.Children.Add(Pane(diagnosticsOutput,"#041624",8,"#275B78",new Thickness(12)));
         b.Children.Add(Text("Select lines with the mouse, Ctrl+C to copy. Live refresh pauses while the log has keyboard focus; Refresh updates it manually.",12,"#99BCCC"));
