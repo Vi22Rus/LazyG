@@ -24,6 +24,10 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Verify RGB v3 codec reference vectors
+        shell: pwsh
+        run: dotnet run --project LazyG/Tests/RgbV3CodecTests.csproj -c Release
+
       - name: Publish self-contained single EXE
         shell: pwsh
         run: |
