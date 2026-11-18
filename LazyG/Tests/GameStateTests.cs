@@ -242,5 +242,15 @@ BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=
 BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"1130\" kind=\"Attack\"/><Rule priority=\"1\" spellId=\"44\" kind=\"Attack\"/></Rotation>");
 BadXml("<Rotation client=\"forever\" version=\"1\"><Rule priority=\"1\" spellId=\"0\" kind=\"Attack\"/></Rotation>");
 
-Console.WriteLine("GameState, corpse safety and XML dispatch regression: PASS");
+
+// A read-only UI description cannot change the centralized XML action gate.
+Assert(XmlRotationPreview.Describe(parsed,corpse with {
+    GcdRemainingMilliseconds=Observed<int>.Known(0,now)},band04,now).Contains("target"));
+Assert(XmlRotationPreview.Describe(parsed,ready,band04,now).Contains("suggestion ONLY"));
+Assert(XmlRotationPreview.Describe(parsed,attackBase,band04,now).Contains("GCD"));
+Assert(XmlRotationPreview.Describe(parsed,ready,band04,now.AddSeconds(2))
+    .Contains("stale"));
+Assert(XmlRotationPreview.Describe(null,ready,band04,now).Contains("no validated profile"));
+
+Console.WriteLine("GameState, corpse safety, XML dispatch and preview regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
