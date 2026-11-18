@@ -29,6 +29,8 @@
 
 ClientCatalog.cs declares 4 client IDs (forever, wotlk, mop, retail), but ONLY FOREVER is installable and has a real Lua adapter. The other IDs are structural placeholders, not functional WoW support. Setup installs embedded Forever Lua modules in a fresh directory and requires an RGB test before Finish. UserSession remembers last client/class/spec and the configured Forever folder in LocalAppData. License key validation requires a future server and is NOT implemented (no fake validation). Existing v2/v3/Curve RGB source classes are linked to the new Avalonia EXE. No DXGI capture, macOS build, enabled XML actions, or other client compatibility is claimed. CI and in-game verification must be separately recorded.
 
+[CI] First Avalonia UI code build/smoke/Lua tests SUCCESS: https://github.com/Vi22Rus/LazyG/actions/runs/44315053310 (artifact LazyG-Windows-x64 ID 14432073065). Subsequent change 8fbddfdbf23d scales class/spec icon grids up and down with window size. Current new run https://github.com/Vi22Rus/LazyG/actions/runs/44315585748 was queued at reporting; use this run for the most recent EXE after success. The Avalonia UI is not yet user-tested in WoW; no release declared.
+
 ## 2026-11-18 — 0.1.19-dev: исправление Curve 5% [DEV / USER-UNTESTED]
 
 **[USER-TESTED, 0.1.18-dev]:** третья полоска выросла, зелёные status cells и фиолетовый marker видны; при выборе цели её цвета меняются, но в Overview `UI Curve Thresholds unavailable`.
