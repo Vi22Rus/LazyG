@@ -58,7 +58,7 @@ public partial class MainWindow : Window
         }
 
         if (WowRgbBridge.TryRead(out var state, out var detail) && state != null)
-            ConnectionStatus.Text = $"RGB connected: {state.ClassName} · {state.RaceName} · level {state.Level} · {state.SpecName}";
+            ConnectionStatus.Text = $"RGB v2: {state.ClassName} · {state.RaceName} · lvl {state.Level} · {state.SpecName} · target {(state.TargetExists ? "yes" : "no")} · hostile {(state.TargetHostile ? "yes" : "no")} · alive {(state.TargetAlive ? "yes" : "no")} · combat {(state.InCombat ? "yes" : "no")}";
         else if (!detail.StartsWith("Switch to WoW", StringComparison.Ordinal))
             ConnectionStatus.Text = "RGB disconnected: " + detail;
     }
