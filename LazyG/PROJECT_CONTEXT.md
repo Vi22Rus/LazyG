@@ -211,7 +211,9 @@ XML должен уметь выразить:
 
 **[CI-PASSED] 0.1.16-dev:** GitHub Actions run https://github.com/Vi22Rus/LazyG/actions/runs/44297583123 — SUCCESS: Lua 5.1 syntax + encoder tests, .NET 8 codec tests, Windows single EXE publish и startup smoke test. Артефакт `LazyG-Windows-x64`, ID `14423214506`. Собранный SHA исходников `ed28fa195a7009acb4ca2813a73f06cfe2222bf2`; обновления документов выполнялись после исходников.
 
-**Следующая конкретная задача:** предоставить ссылку на автоматически запущенный GitHub Actions для 0.1.17-dev, получить игровой тест `curve probes` с 3 диапазонами/`unavailable` и сравнить показания со здоровьем игрока/цели/ресурсом. Никакой реальной ротации до проверки порогов.
+**[CI-PASSED] 0.1.17-dev:** https://github.com/Vi22Rus/LazyG/actions/runs/44300483483 — SUCCESS, оба job PASS (C# codec regression, single EXE publish/startup; Lua 5.1 синтаксис и тесты); артефакт `LazyG-Windows-x64` ID `14424404763`. Это не подтверждение работы Curve в WoW.
+
+**Следующая конкретная задача:** предоставить ссылку на CI и получить игровой тест `curve probes` с 3 диапазонами/`unavailable` и сравнить показания со здоровьем игрока/цели/ресурсом. Никакой реальной ротации до проверки порогов.
 
 **Предыдущая задача:** исследовать доступность HP/ресурсов в WoW Forever с учётом `NAG-6.0.6.zip` (`NAG/NAG_camelot.toc`, `NAG/camelot/CamelotCupbearer.lua`, `NAG/handlers/APLValues_Resources.lua`). В NAG существует экспериментальный `CamelotExactPercent`, использующий `UnitHealthPercent` / `UnitPowerPercent` и `C_CurveUtil`, но с ограничениями `PackageAllows`, видимостью tooltip, калибровкой и `nil` при ошибке. Это **не доказательство**, что LazyG получает точные значения, и нельзя выдавать догадки за рабочий обход protected API. Экспериментальный пороговый UI-адаптер создан в `0.1.17-dev` по прямому запросу пользователя и требует CI и теста внутри WoW. Сохранить RGB v2 и откат 0.1.13-dev.
 
