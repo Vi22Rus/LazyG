@@ -203,7 +203,9 @@ XML должен уметь выразить:
 
 **[USER-TESTED] 18.11.2026, 0.1.15-dev:** RGB v2: Hunter Tauren lvl30 Beast Mastery, target=yes hostile=yes alive=yes combat=no; RGB v3 CRC PASS, frame=196; HP игрока/цели и ресурс показывают Unknown. Это доказывает исправное чтение новой полоски и CRC в данном тесте, но не доступность игровых числовых API. **В 0.1.16-dev** добавлены коды причин в logical cell 22: 0 OK, 1 API missing, 2 non-numeric, 3 protected/API error, 4 invalid max, 5 no target. Windows отображает причины в Overview; v2 не изменялся.
 
-**Следующая конкретная задача:** подтвердить CI `0.1.16-dev`, дать новый EXE и выполнить игровой тест кодов причин Unknown (три значения на живой цели, затем без цели), чтобы установить действительное ограничение Lua API Forever; сохранить 0.1.13-dev для отката.
+**[CI-PASSED] 0.1.16-dev:** GitHub Actions run https://github.com/Vi22Rus/LazyG/actions/runs/44297583123 — SUCCESS: Lua 5.1 syntax + encoder tests, .NET 8 codec tests, Windows single EXE publish и startup smoke test. Артефакт `LazyG-Windows-x64`, ID `14423214506`. Собранный SHA исходников `ed28fa195a7009acb4ca2813a73f06cfe2222bf2`; обновления документов выполнялись после исходников.
+
+**Следующая конкретная задача:** пользовательский тест кодов причин Unknown в WoW Forever (три значения на живой цели, затем без цели), чтобы установить действительное ограничение Lua API Forever; сохранить 0.1.13-dev для отката.
 
 ## История изменений (CHANGELOG)
 
