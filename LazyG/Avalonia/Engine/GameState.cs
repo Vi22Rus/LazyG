@@ -1,0 +1,144 @@
+using System;
+using System.Collections.Generic;
+
+namespace LazyG.Desktop.Engine;
+
+// RGB transport remains versioned and separate from this immutable game snapshot.
+// Never encode "unknown" as zero/false. Unknown cannot satisfy an action gate.
+internal enum Knowledge { Unknown, Known, Protected, Stale }
+internal enum Truth { False, True, Unknown }
+
+internal readonly record struct Observed<T>(T? Value, Knowledge Quality, DateTimeOffset UpdatedAt)
+    where T : struct
+{
+    public static Observed<T> Known(T value, DateTimeOffset now) => new(value, Knowledge.Known, now);
+    public static Observed<T> Missing(Knowledge reason = Knowledge.Unknown) => new(null, reason, default);
+    public Observed<T> At(DateTimeOffset now, TimeSpan maxAge) =>
+        Quality == Knowledge.Known && now - UpdatedAt > maxAge
+            ? this with { Quality = Knowledge.Stale }
+            : this;
+    public Truth Is(Func<T,bool> predicate) =>
+        Quality == Knowledge.Known && Value.HasValue
+            ? predicate(Value.Value) ? Truth.True : Truth.False
+            : Truth.Unknown;
+}
+
+internal sealed record GameState(
+    string Client,
+    DateTimeOffset CapturedAt,
+    Knowledge Transport,
+    Observed<int> ClassId,
+    Observed<int> RaceId,
+    Observed<int> Level,
+    Observed<int> SpecIndex,
+    Observed<bool> InCombat,
+    Observed<bool> TargetExists,
+    Observed<bool> TargetHostile,
+    Observed<bool> TargetAlive,
+    Observed<int> PlayerHealthPercent,
+    Observed<int> TargetHealthPercent,
+    Observed<int> PowerPercent,
+    Observed<bool> Moving,
+    Observed<bool> Casting,
+    Observed<int> GcdRemainingMilliseconds,
+    IReadOnlyDictionary<int,SpellState> Spells,
+    IReadOnlyDictionary<AuraKey,AuraState> Auras)
+{
+    public static GameState Empty(DateTimeOffset now) => new(
+        "forever",now,Knowledge.Unknown,
+        Observed<int>.Missing(),Observed<int>.Missing(),Observed<int>.Missing(),
+        Observed<int>.Missing(),Observed<bool>.Missing(),Observed<bool>.Missing(),
+        Observed<bool>.Missing(),Observed<bool>.Missing(),Observed<int>.Missing(),
+        Observed<int>.Missing(),Observed<int>.Missing(),Observed<bool>.Missing(),
+        Observed<bool>.Missing(),Observed<int>.Missing(),
+        new Dictionary<int,SpellState>(),new Dictionary<AuraKey,AuraState>());
+
+    // A snapshot is valid only for its explicitly observed fields. Never infer
+    // HP, aura, GCD, cooldown, or usability from an RGB v2 status flag.
+    public GameState Age(DateTimeOffset now, TimeSpan maxAge) => this with
+    {
+        Transport = now - CapturedAt > maxAge ? Knowledge.Stale : Transport,
+        ClassId=ClassId.At(now,maxAge),RaceId=RaceId.At(now,maxAge),
+        Level=Level.At(now,maxAge),SpecIndex=SpecIndex.At(now,maxAge),
+        InCombat=InCombat.At(now,maxAge),TargetExists=TargetExists.At(now,maxAge),
+        TargetHostile=TargetHostile.At(now,maxAge),TargetAlive=TargetAlive.At(now,maxAge),
+        PlayerHealthPercent=PlayerHealthPercent.At(now,maxAge),
+        TargetHealthPercent=TargetHealthPercent.At(now,maxAge),
+        PowerPercent=PowerPercent.At(now,maxAge),Moving=Moving.At(now,maxAge),
+        Casting=Casting.At(now,maxAge),GcdRemainingMilliseconds=GcdRemainingMilliseconds.At(now,maxAge)
+    };
+}
+internal sealed record SpellState(
+    Observed<bool> Learned,
+    Observed<bool> Usable,
+    Observed<bool> InRange,
+    Observed<int> CooldownMs,
+    Observed<int> Charges);
+
+internal readonly record struct AuraKey(string UnitId, int SpellId, bool IsDebuff);
+internal sealed record AuraState(
+    Observed<bool> Present,
+    Observed<int> Stacks,
+    Observed<int> RemainingMs);
+
+internal static class TruthLogic
+{
+    public static Truth Not(Truth x) => x switch
+    {
+        Truth.True=>Truth.False,Truth.False=>Truth.True,_=>Truth.Unknown
+    };
+    public static Truth And(params Truth[] values)
+    {
+        bool unknown=false;
+        foreach(var x in values)
+        {
+            if(x==Truth.False)return Truth.False;
+            if(x==Truth.Unknown)unknown=true;
+        }
+        return unknown?Truth.Unknown:Truth.True;
+    }
+    public static Truth Or(params Truth[] values)
+    {
+        bool unknown=false;
+        foreach(var x in values)
+        {
+            if(x==Truth.True)return Truth.True;
+            if(x==Truth.Unknown)unknown=true;
+        }
+        return unknown?Truth.Unknown:Truth.False;
+    }
+    public static Truth AtLeast(int count,params Truth[] values)
+    {
+        if(count<=0)return Truth.True;
+        int yes=0,maybe=0;
+        foreach(var x in values) {if(x==Truth.True)yes++;if(x==Truth.Unknown)maybe++;}
+        if(yes>=count)return Truth.True;
+        return yes+maybe<count?Truth.False:Truth.Unknown;
+    }
+}
+
+internal static class ConditionEvaluator
+{
+    public static Truth InCombat(GameState s) => s.InCombat.Is(x=>x);
+    public static Truth HasTarget(GameState s) => s.TargetExists.Is(x=>x);
+    public static Truth TargetHostile(GameState s) => s.TargetHostile.Is(x=>x);
+    public static Truth TargetAlive(GameState s) => s.TargetAlive.Is(x=>x);
+    public static Truth HealthBelow(GameState s,int percent) => s.PlayerHealthPercent.Is(x=>x<percent);
+    public static Truth TargetBelow(GameState s,int percent) => s.TargetHealthPercent.Is(x=>x<percent);
+    public static Truth PowerAbove(GameState s,int percent) => s.PowerPercent.Is(x=>x>=percent);
+    public static Truth IsMoving(GameState s) => s.Moving.Is(x=>x);
+    public static Truth GcdReady(GameState s) => s.GcdRemainingMilliseconds.Is(x=>x<=0);
+    public static Truth SpellReady(GameState s,int spellId)
+    {
+        if(!s.Spells.TryGetValue(spellId,out var spell))return Truth.Unknown;
+        return TruthLogic.And(spell.Learned.Is(x=>x),spell.Usable.Is(x=>x),
+            spell.CooldownMs.Is(x=>x<=0));
+    }
+    public static Truth HasAura(GameState s,AuraKey key)
+    {
+        return s.Auras.TryGetValue(key,out var aura) ? aura.Present.Is(x=>x):Truth.Unknown;
+    }
+    // Default policy: an unknown requirement never authorizes a cast.
+    public static bool CanRecommend(params Truth[] requirements) =>
+        TruthLogic.And(requirements)==Truth.True;
+}
