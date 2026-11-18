@@ -13,7 +13,7 @@
 - **[DOCS-ONLY]** — изменены только документы, EXE и аддон не изменялись.
 - **[REPORTED ISSUE]** — проблема или ограничение, которое ещё нужно проверить/исправить.
 
-**Главная актуальная точка:** `0.1.16-dev` (диагностика Unknown в RGB v3 Forever) — [DEV / UNTESTED IN WOW], требует CI и нового теста. `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
+**Главная актуальная точка:** `0.1.16-dev` (диагностика Unknown в RGB v3 Forever) — **[CI-PASSED] [USER-TESTED / PARTIAL]**: player HP и ресурс Unknown (protected/API error), target HP Unknown (no target на момент наблюдения). `0.1.15-dev` — [USER-TESTED] RGB v3 CRC PASS, HP/target HP/resource Unknown; RGB v2 остался рабочим.
 **Последняя проверенная пользователем:** `0.1.13-dev` (быстрый RGB v2) — **[USER-TESTED]**, состояние обновляется быстро; сохраняем как точку отката.
 **Последняя подтверждённая в игре:** `0.1.12-dev` (RGB Bridge v2, один ряд) — **[CI-PASSED]**, **[USER-TESTED]** по четырём игровым сценариям.
 **Предыдущая точка отката:** `0.1.11-dev` (RGB Bridge v1) — **[USER-TESTED]** с ограничением по настройкам графики.
@@ -22,6 +22,16 @@
 Архитектура, референсы, требования и ближайшие задачи: [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
 
 ---
+
+## 2026-11-18 — игровые результаты 0.1.16-dev, NAG 6.0.6 и правило CI [DOCS-ONLY]
+
+**[USER-TESTED]:** пользователь сообщил: HP игрока `Unknown (protected/API error)`, ресурс `Unknown (protected/API error)`, цель `Unknown (no target)`. Предыдущий тест `0.1.15-dev` подтвердил v3 CRC PASS и изменение Frame Counter. **Не утверждать**, что причина target HP — защищённый API: код `no target` назначается при отсутствии цели на момент снятия показаний. Для player HP/resource код 3 означает исключение внутри защищённого `pcall` блока; он не указывает конкретную функцию, пока нет более детальной диагностики.
+
+**[SOURCE REVIEW / NAG]:** пользователь снова предоставил `NAG-6.0.6.zip` как дополнительный референс именно по API Forever (не основа ротационного кода). Архив локально изучен: `NAG/NAG_camelot.toc` — `Interface: 16001`, `Version: 6.0.6`, `AllowLoadGameType: camelot`; `NAG/camelot/CamelotCupbearer.lua` — собственный `CamelotExactPercent`, использующий `UnitHealthPercent` / `UnitPowerPercent` и `C_CurveUtil.CreateCurve`, калибровку и чтение через UI-элементы/tooltip; `NAG/handlers/APLValues_Resources.lua` при секретных значениях пытается брать проценты из `CamelotExactPercent:Try` и использует дополнительные стратегии и fallback. В файлах есть ограничения `PackageAllows` (в том числе привязка к beta/dev package), возможен `nil` и намеренно грубые fallback; **не считать**, что метод точно доступен всем пользователям и что точные здоровье и ресурс уже доступны в LazyG. Не переносить сторонний код. NAG остаётся вспомогательным референсом API, а не источником наших XML-ротаций. В репозиторий NAG-архив не загружался.
+
+**[PROCESS CHANGE]:** пользователь просит не ждать завершения сборки: по push workflow GitHub Actions запускается автоматически, сразу давать ссылку на **идущий конкретный run**, описание изменений, путь `Artifacts → LazyG-Windows-x64` после окончания, и PowerShell-команду. Не утверждать PASS и не изобретать ссылку на отсутствующий artifact. Пользователь сам дождётся CI.
+
+**Код и EXE:** в этом обсуждении **не менялись**. Новая версия не объявлялась; следующий этап — по отдельной явной команде пользователя исследовать доступные методы численной телеметрии Forever, сохраняя откат `0.1.13-dev`.
 
 ## 2026-11-18 — 0.1.16-dev: диагностические причины Unknown [DEV / USER-UNTESTED]
 
