@@ -30,8 +30,11 @@ internal static class RgbV3ThresholdDetector
             // location is disambiguated by y-offset from the v3 marker.
             for (int pitch = 3; pitch <= 10; pitch++)
             {
-                if (x + pitch * 29 >= image.Width)
+                if (x + pitch * 31 >= image.Width)
                     break;
+                if (!Near(image.GetPixel(x, y), 0, 255, 255) ||
+                    !Near(image.GetPixel(x + pitch, y), 255, 0, 255))
+                    continue;
                 // Decode supported test rows only if status colors are valid
                 // for all three groups and thresholds are essentially binary.
                 var status = new bool[3];
@@ -39,7 +42,7 @@ internal static class RgbV3ThresholdDetector
                 var bands = new string[3];
                 for (int g = 0; g < 3 && good; g++)
                 {
-                    Color marker = image.GetPixel(x + g * 10 * pitch, y);
+                    Color marker = image.GetPixel(x + (2 + g * 10) * pitch, y);
                     if (Near(marker, 0, 255, 0)) status[g] = true;
                     else if (Near(marker, 255, 0, 0)) status[g] = false;
                     else { good = false; break; }
@@ -48,7 +51,7 @@ internal static class RgbV3ThresholdDetector
                     bool seenOffAfterOn = false;
                     for (int i = 1; i <= 9; i++)
                     {
-                        var pixel = image.GetPixel(x + (g * 10 + i) * pitch, y);
+                        var pixel = image.GetPixel(x + (2 + g * 10 + i) * pitch, y);
                         bool on = Near(pixel, 255, 255, 255, 30);
                         bool off = Near(pixel, 0, 0, 0, 30);
                         if (!on && !off) { good = false; break; }
