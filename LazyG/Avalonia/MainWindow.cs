@@ -40,8 +40,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.4-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.4-dev started · Forever UI");
+        Title = "LazyG · 0.2.5-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.5-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -159,7 +159,7 @@ public sealed class MainWindow : Window
         Grid.SetRow(bodyWrap,1);shell.Children.Add(bodyWrap);
         var footer = new Grid { ColumnDefinitions=new ColumnDefinitions("*,Auto"), Background=Palette.Brush("#031524"),
             Margin=new Thickness(0) };
-        footer.Children.Add(Text("  LazyG 0.2.4-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
+        footer.Children.Add(Text("  LazyG 0.2.5-dev  ·  Forever profile  ·  Local desktop application",11,"#719BB2"));
         var fw=Text("Rotation engine: not configured   ·   No automatic input",11,"#719BB2");
         fw.Margin=new Thickness(10,0,18,0);Grid.SetColumn(fw,1);footer.Children.Add(fw);
         Grid.SetRow(footer,2);shell.Children.Add(footer);
@@ -393,18 +393,19 @@ public sealed class MainWindow : Window
             RuntimeDiagnostics.Add("OVERLAY","Closed");
             return;
         }
+        var previewClass=client.Classes.FirstOrDefault(c=>c.Id==session.LastClass)?.Name ?? "Hunter";
         overlay=new OverlayWindow(()=>{
             var current=overlay;overlay=null;current?.Close();
             if(overlayButton is not null)overlayButton.Content="Overlay OFF";
             RuntimeDiagnostics.Add("OVERLAY","Closed by user");
-        });
+        },previewClass);
         overlay.Closed+=(_,_)=> {
             overlay=null;
             if(overlayButton is not null)overlayButton.Content="Overlay OFF";
         };
         overlay.Show();
         if(overlayButton is not null)overlayButton.Content="Overlay ON";
-        RuntimeDiagnostics.Add("OVERLAY","Shown · topmost compact status window");
+        RuntimeDiagnostics.Add("OVERLAY",$"Shown · icon preview class {previewClass} · {ForeverSpellCatalog.Count} Forever spell records");
     }
     private void ShowSetup()
     {
