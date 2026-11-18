@@ -75,4 +75,3 @@ f:SetScript("OnUpdate",function(_,delta)
   elapsed=0
   if enabled then pcall(paint) end
 end)
-if enabled then pcall(paint) end
