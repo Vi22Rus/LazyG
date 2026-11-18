@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.14-dev: first manual GCD/cooldown evidence collection [DEV / GAME-UNTESTED]
+
+- New separate diagnostic `Diagnostics/LazyGForeverProbe/CooldownAudit.lua`. Manual command `/lgprobe cooldown <SpellID>` (alias `cd`, defaults to Hunter 1130) queries the specified SpellID and GCD candidate 61304. Checks C_Spell.GetSpellCooldown table availability; reads startTime, duration, modRate and optional isActive/isOnGCD with `pcall` and `issecretvalue` checks; returns status strings if unavailable/protected. When all time fields are plain numbers, reports `remainingEstimateMs` as **diagnostic approximation only** (no modRate assumption), not real gameplay-ready evidence.
+- No changes to existing RGB v2/v3/Curve or LGD wire packets; no numeric cooldown/GCD is forwarded to Windows GameState or XML rotation; until Forever is tested, `CooldownMs` and `GcdRemainingMilliseconds` remain Unknown. User needs to provide SavedVariables collected before and after a real spell cast.
+- TOC includes CooldownAudit.lua before the slash command module. README updated. New `Tests/forever_cooldown_audit_test.lua` exercises known, secret, missing, invalid and error outcomes under Lua 5.1 mocks; `.github/workflows/build-windows.yml` now triggers on diagnostic file changes, syntax checks the diagnostic modules and runs the new Lua test.
+- This stage is **addon 0.2.14-dev / diagnostic-only**. Windows UI remains 0.2.13-dev with opt-in XML preview; no new rotation behavior. GitHub Actions must confirm testing and EXE artifact availability separately. Do not label as release or gameplay-verified.
+
 ## 2026-11-19 — 0.2.13-dev XML preview Windows build verified [CI-PASSED / GAME-UNTESTED]
 
 - **Successful workflow run** https://github.com/Vi22Rus/LazyG/actions/runs/44361341115 at preview/test commit `665520bc18e5dd509bf381105d28de509a5719dc`. Both Windows build and Lua 5.1 regression jobs concluded success.
