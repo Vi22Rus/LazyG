@@ -204,7 +204,9 @@ internal static class ConditionEvaluator
     // Entire 5% band must satisfy the threshold. This NEVER equates 0-4% to
     // a nonzero value or presumes the target alive.
     public static Truth TargetBelowBand(Observed<HealthBand> band,int threshold) =>
-        band.Is(x=>x.IsValid && x.Upper<threshold);
+        band.Quality==Knowledge.Known && band.Value is HealthBand value && value.IsValid &&
+        threshold>0 && threshold<=100
+            ? value.Upper<threshold ? Truth.True : Truth.False : Truth.Unknown;
     public static bool CanRecommendExecute(GameState s,int spellId,
         Observed<HealthBand> targetBand,int threshold) =>
         CanRecommendTargetedAttack(s,spellId,TargetBelowBand(targetBand,threshold));
