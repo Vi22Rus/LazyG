@@ -64,9 +64,10 @@ public partial class SetupWizard : Window
             Directory.CreateDirectory(dir);
             try
             {
-                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB panel for setup and connection diagnostics\n## Version: 0.1.8-dev\n## SavedVariables: LazyGPixelPanelDB\nPanel.lua\n",new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB panel for setup and connection diagnostics\n## Version: 0.1.9-dev\n## SavedVariables: LazyGPixelPanelDB\nPanel.lua\nHunterProfile.lua\n",new UTF8Encoding(false));
                 // Embedded addon is maintained as our own source, no WarMate assets.
                 File.WriteAllText(Path.Combine(dir,"Panel.lua"),AddonTemplate.PanelLua,new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(dir,"HunterProfile.lua"),AddonTemplate.HunterProfileLua,new UTF8Encoding(false));
             }
             catch{Directory.Delete(dir,true);throw;}
             Installed=true;InstalledName=AddonName.Text;return true;
