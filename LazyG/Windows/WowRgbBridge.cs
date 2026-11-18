@@ -60,7 +60,16 @@ internal static class WowRgbBridge
 
     public static bool TryRead(out RgbPlayerState? player, out string detail)
     {
+        return TryReadCombined(out player, out _, out detail, out _);
+    }
+
+    // One physical capture for both independent RGB protocols.
+    public static bool TryReadCombined(out RgbPlayerState? player,
+        out RgbV3Packet? telemetry, out string detail, out string v3Detail)
+    {
         player = null;
+        telemetry = null;
+        v3Detail = "RGB v3 not checked.";
         using var game = FindGame();
         if (game == null)
         {
@@ -101,7 +110,9 @@ internal static class WowRgbBridge
             using var bitmap = new Bitmap(width, height);
             using (var g = Graphics.FromImage(bitmap))
                 g.CopyFromScreen(topLeft.X, topLeft.Y, 0, 0, new Size(width, height));
-            return RgbPanelDetector.FindPanel(bitmap, out player, out detail);
+            bool v2 = RgbPanelDetector.FindPanel(bitmap, out player, out detail);
+            RgbV3PanelDetector.FindPanel(bitmap, out telemetry, out v3Detail);
+            return v2;
         }
         catch (Exception ex)
         {
