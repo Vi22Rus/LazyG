@@ -70,7 +70,7 @@
 ## 2026-11-18 — 0.1.9-dev → 0.1.10-dev: Hunter Forever и автоопределение профиля
 
 **Коммиты:**
-- [`36611b0d`](https://github.com/Vi22Rus/LazyG/commit/36611b0d7b336e4e8be78b833905ae4d322629) — первоначальная логика определения Hunter (ссылка-коммит проверяется по истории; при расхождении использовать короткий SHA `36611b0d` в GitHub).
+- [`36611b0d`](https://github.com/Vi22Rus/LazyG/commit/36611b0d) — первоначальная логика определения Hunter.
 - `15c67e8b`, `365a9f58`, `3dedaa33` — встраивание Hunter Lua в EXE, запись `.toc`, документация.
 - `c8b44bb1`, `05401df9`, [`ce38b140`](https://github.com/Vi22Rus/LazyG/commit/ce38b140e7) — исправление определения талантов Forever через `C_ClassTalents` и `C_Traits` вместо устаревших API.
 
