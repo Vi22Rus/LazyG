@@ -194,6 +194,60 @@ local function Byte(n)
   return math.floor(n)
 end
 
+-- The same C_Traits grouping API used by Hunter works for other classes.
+-- Keep an unknown specialization as zero if the client does not expose it.
+local function OtherClassSpec()
+  if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and
+          C_Traits and C_Traits.GetConfigInfo and
+          C_Traits.GetGroupDisplayInfoByTreeID and C_Traits.GetGroupCurrencyInfo) then
+    return 0, 0
+  end
+  local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
+  if not ok or not configID then return 0, 0 end
+  local good, config = pcall(C_Traits.GetConfigInfo, configID)
+  if not good or type(config) ~= "table" or
+     type(config.treeIDs) ~= "table" or not config.treeIDs[1] then return 0, 0 end
+  local groupsOK, groups = pcall(C_Traits.GetGroupDisplayInfoByTreeID, config.treeIDs[1])
+  if not groupsOK or type(groups) ~= "table" then return 0, 0 end
+  local ordered = {}
+  for _, group in pairs(groups) do
+    if type(group) == "table" and type(group.groupID) == "number" then
+      ordered[#ordered + 1] = group
+    end
+  end
+  table.sort(ordered, function(l, r)
+    return (l.orderIndex or 0) < (r.orderIndex or 0)
+  end)
+  if #ordered ~= 3 then return 0, 0 end
+  local ids = { ordered[1].groupID, ordered[2].groupID, ordered[3].groupID }
+  local points = {0, 0, 0}
+  local currencyOK, spent = pcall(C_Traits.GetGroupCurrencyInfo, configID, ids)
+  if not currencyOK or type(spent) ~= "table" then return 0, 0 end
+  for _, group in pairs(spent) do
+    if type(group) == "table" then
+      for i = 1, 3 do
+        if group.traitNodeGroupID == ids[i] then
+          for _, c in pairs(group.currencyInfos or {}) do
+            if type(c) == "table" and type(c.spent) == "number" then
+              points[i] = points[i] + c.spent
+            end
+          end
+        end
+      end
+    end
+  end
+  local highest, best, tied = 0, 0, false
+  for i = 1, 3 do
+    if points[i] > best then
+      highest, best, tied = i, points[i], false
+    elseif points[i] == best and best > 0 then
+      tied = true
+    end
+  end
+  if tied then return 0, 0 end
+  return highest, best
+end
+
 local lastPayload
 local function Refresh()
   local _, class = UnitClass("player")
@@ -211,6 +265,9 @@ local function Refresh()
         points = Byte(talents[spec])
       end
     end
+  else
+    local tree, spent = OtherClassSpec()
+    spec, points = Byte(tree), Byte(spent)
   end
   local version = 1
   local check = (classID * 17 + raceID * 11 + level * 7
