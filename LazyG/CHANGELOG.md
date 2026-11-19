@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.2.17-dev verified build: independent cooldown comparison [CI-PASSED / GAME-UNTESTED]
+
+- **Verified SUCCESS** of exact Actions run https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 on code commit `0ac25a8d6e28a0c87ef7796000d1bce29071de8c`. Windows RGB v3, GameState/XML and spell atlas tests, single-file EXE publish, Windows startup smoke, optional addon packaging, and Lua 5.1 cooldown audit/widget/watch regression all SUCCESS.
+- Verified Artifacts: `LazyGForeverProbe-0.2.17-dev`, id `14489725389`, 10,262 bytes, not expired; `LazyG-Windows-x64`, id `14488613266`, 77,716,296 bytes, not expired. Windows program remains 0.2.13-dev UI (no automatic rotation); the new behavior is in the optional diagnostic addon.
+- Source `CooldownStateProbe.lua` now keeps each widget's 1x1 fully transparent **shown parent**, avoiding the proven hidden-parent visibility confounder. `IsShown()` remains experimental, not authorization. `CooldownWatch.lua` keeps 30s auto recording and logs `SpellActiveWhileGcdInactive` only when the independently queried SpellID flag is Known True and candidate GCD 29515 flag Known False; Unknown produces Unknown. The automated Lua watch regression initially failed because the test counted the word `gcd29515` in both observation and comparison lines; the test was narrowed to `gcd29515 spell=29515`, after which this verified run passed.
+- Next real-game test: run `/lgprobe cdwatch <SpellID>` once for a spell with an independently noticeable 10–30s cooldown; use that spell during the 30s watch, then `/reload`, send SavedVariables. Only this can establish whether SpellID cooldown remains active after candidate GCD 29515 clears. Do not infer GCD millisecond values or unlock XML actions from this build.
+- Preserve rollback: successful 0.2.16-dev run https://github.com/Vi22Rus/LazyG/actions/runs/44367660366 .
+
 ## 2026-11-19 — 0.2.17-dev successful CI and concrete artifacts [CI-PASSED / GAME-UNTESTED]
 
 - Confirmed SUCCESS https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 on commit `0ac25a8d6e28a0c87ef7796000d1bce29071de8c`. Lua 5.1 syntax and mocked cooldown state/widget, cooldown audit, and 30-second automatic watch tests passed. Windows RGB v3, GameState/XML regression, spell assets, single EXE publish, startup smoke and both artifact uploads passed.
