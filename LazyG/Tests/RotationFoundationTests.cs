@@ -5,6 +5,30 @@ using System.Linq;
 using LazyG.Desktop.Engine;
 using LazyGPrototype;
 static void Check(bool value,string message) {if(!value)throw new Exception("Foundation regression: "+message);}
+// Structured XML -> Logitech HID -> WoW observational comparison log.
+var execution=new RotationExecutionTrace(32);
+execution.Start(DateTimeOffset.UtcNow,"forever/hunter/beast-mastery/PvE");
+var execT=DateTimeOffset.UtcNow;
+var recommendedId=execution.Recommend(execT,3044,"arcane-shot-priority");
+Check(recommendedId>0,"XML recommendation is recorded independently");
+var attemptId=execution.Attempt(execT.AddMilliseconds(50),3044,
+    "arcane-shot-priority");
+execution.DriverResult(execT.AddMilliseconds(90),3044,attemptId,true,
+    "DeviceIoControl succeeded; result unknown");
+execution.CastEvent(execT.AddMilliseconds(240),3044,true);
+var compare=execution.ExportSummaryJson();
+Check(compare.Contains("SAME_SPELL_EVENT_CAUSALITY_UNPROVEN") &&
+    compare.Contains("arcane-shot-priority"),"matching LGE is not a cast causality claim");
+execution.CastEvent(execT.AddMilliseconds(310),1130,true);
+execution.Stop(execT.AddSeconds(1),"STOP");
+Check(!execution.Recording && execution.ExportJsonl().Contains("SESSION_STOP"),
+    "trace includes stop and can be exported");
+var idleTrace=new RotationExecutionTrace();
+idleTrace.Start(execT,"test");
+idleTrace.Recommend(execT,3044,"test-rule");
+Check(idleTrace.ExportSummaryJson().Contains("\\"hidAttempts\\": 0"),
+    "XML-only evaluation must not fabricate an input attempt");
+idleTrace.Stop(execT.AddSeconds(1),"DONE");
 var now=DateTimeOffset.UtcNow;
 string xml=File.ReadAllText(Path.Combine("LazyG","Rotations","Forever","Examples","synthetic-v2.xml"));
 var profile=RotationXmlV2.Parse(xml);
