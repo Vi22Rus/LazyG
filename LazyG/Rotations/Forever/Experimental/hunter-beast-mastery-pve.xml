@@ -13,10 +13,10 @@
   </Settings>
   <Rules>
     <Rule id="markMissing" priority="10" spellId="1130" enabledBy="useHuntersMark">
-      <Condition signal="TargetDebuffAbsent" compare="IsTrue" spellId="1130"/>
+      <Condition signal="TargetDebuffAbsent" compare="IsTrue" spellIds="1130,14323,14324,14325"/>
     </Rule>
     <Rule id="stingMissing" priority="20" spellId="1978" enabledBy="useSerpentSting">
-      <Condition signal="TargetDebuffAbsent" compare="IsTrue" spellId="1978"/>
+      <Condition signal="TargetDebuffAbsent" compare="IsTrue" spellIds="1978,13549,13550,13551,13552,13553,13554,13555,25295"/>
       <Condition signal="PowerPercent" compare="AtLeast" settingRef="serpentManaMin"/>
     </Rule>
     <Rule id="arcaneShot" priority="30" spellId="3044" enabledBy="useArcaneShot">
