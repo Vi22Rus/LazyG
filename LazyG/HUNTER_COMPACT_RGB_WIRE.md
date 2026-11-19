@@ -1,3 +1,9 @@
+## 2026-11-19 — XML rule → verified concrete rank (new follow-up)
+
+**Completed DEV:** `RotationFoundation.cs` now resolves Hunter XML rule base SpellID through `HunterSpellFamilies.Find` (which delegates to the canonical `ForeverHunterAbilityCatalog`). Known learned ranks for **every** candidate are required, then the chosen highest rank's usable and cooldown are checked; `RotationRecommendation.SpellId` is the selected concrete rank. Unverified/protected/missing higher rank **blocks**, does not fall back to a lower one. `HunterAuditReadiness` also checks selected rank rather than base ID. Synthetic tests include 14283/14323, unknown higher rank, protected usable and stale. Code CI [44474111071](https://github.com/Vi22Rus/LazyG/actions/runs/44474111071) SUCCESS. This resolves the historical limitation below that XML always queried base rank, but it **does not imply** that live Forever data is now proven readable; no auto-input exists.
+
+---
+
 ## 2026-11-19 — VERIFIED CI checkpoint
 
 **[CI SUCCESS / not user-game-tested]** [GitHub Actions 44473159749](https://github.com/Vi22Rus/LazyG/actions/runs/44473159749) confirms the optional same-row v3 Hunter BM compact sender, Lua source mock, manifest cross-language fingerprint and Windows decoder compiled and tested. Source SHA `5ef2cbfa591baec52046b88c2b5f06d707abcfad`. 43-cell BM extended v3 (24-cell legacy when OFF), old Curve 62 intact, no automatic key inputs. Updated WoW addon Lua is bundled in the Windows **Setup** feature, whereas `LazyGForeverProbe-0.4.0-dev` is the separate diagnostic probe artifact and does not contain this compact adapter. In-game API quality and visual behaviour remain **unverified**. Historical below sections include earlier stage wording ([OFFLINE-only]/[CI pending]) superseded by this checkpoint.
