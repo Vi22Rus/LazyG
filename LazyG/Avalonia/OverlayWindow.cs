@@ -11,6 +11,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using LazyG.Desktop.Engine;
 using Button = Avalonia.Controls.Button;
 using HAlign = Avalonia.Layout.HorizontalAlignment;
 using VAlign = Avalonia.Layout.VerticalAlignment;
@@ -32,6 +33,9 @@ internal sealed class OverlayWindow : Window
     private readonly ArcPath gcdArc;
     private readonly Button aoeButton;
     private readonly Button cdButton;
+    private readonly Button previewButton;
+    private readonly TextBlock rotationLabel;
+    private bool readonlySession;
     private readonly DispatcherTimer gcdTimer;
     private readonly Stopwatch demoClock = new();
     private readonly List<ForeverSpell> demoSpells;
@@ -77,7 +81,8 @@ internal sealed class OverlayWindow : Window
             RuntimeDiagnostics.Add("OVERLAY","Cooldown UI preference "+(cdEnabled?"ON":"OFF")+" (rotation unavailable)");
         });
         Grid.SetColumn(cdButton,3);header.Children.Add(cdButton);
-        var preview=ModeButton("NEXT",NextPreview);
+        previewButton=ModeButton("NEXT",NextPreview);
+        var preview=previewButton;
         Avalonia.Controls.ToolTip.SetTip(preview,"Preview another archived spell and restart 1.5s demo GCD");
         Grid.SetColumn(preview,4);header.Children.Add(preview);
         var exit=ModeButton("×",close);exit.Width=25;
@@ -125,9 +130,9 @@ internal sealed class OverlayWindow : Window
         specStatus=new TextBlock {Text="FOREVER",FontSize=11,
             Foreground=Palette.Muted,VerticalAlignment=VAlign.Center};
         Grid.SetColumn(specStatus,1);statusLine.Children.Add(specStatus);
-        var idle=new TextBlock {Text="ROTATION IDLE",FontSize=11,FontWeight=FontWeight.Bold,
+        rotationLabel=new TextBlock {Text="ROTATION IDLE",FontSize=11,FontWeight=FontWeight.Bold,
             Foreground=Palette.Brush("#5FDCF0"),VerticalAlignment=VAlign.Center};
-        Grid.SetColumn(idle,2);statusLine.Children.Add(idle);
+        Grid.SetColumn(rotationLabel,2);statusLine.Children.Add(rotationLabel);
         outer.Children.Add(statusLine);
 
         var pause=new Grid {ColumnDefinitions=new ColumnDefinitions("Auto,*"),ColumnSpacing=12};
@@ -173,8 +178,52 @@ internal sealed class OverlayWindow : Window
         DisplaySpell(spell,language,false);
         return true;
     }
+    // The live preview contains ONLY the current XML recommendation. No
+    // recommendation means no icon: never substitute a demo or stale spell.
+    // This function never sends any input, even after Start.
+    public void SetReadOnlyRecommendation(bool running,int? spellId,string status)
+    {
+        readonlySession=running;
+        previewButton.IsEnabled=!running;
+        rotationLabel.Text=running?"XML PREVIEW ON":"ROTATION IDLE";
+        pauseReason.Text=running?status:"Read-only preview stopped · no input";
+        if(!running)
+        {
+            if(demoActive)demoClock.Stop();
+            ClearSpell();
+            spellCaption.Text="Start Hunter BM to show an XML recommendation";
+            return;
+        }
+        if(spellId is not int id || id<=0)
+        {
+            ClearSpell();
+            spellTitle.Text="NO RECOMMENDATION";
+            spellCaption.Text="XML conditions not confirmed · no ability selected";
+            return;
+        }
+        var spell=ForeverSpellCatalog.Find("hunter",id);
+        if(spell is null)
+        {
+            var family=HunterSpellFamilies.BaseId(id);
+            if(family is int baseId)
+                spell=ForeverSpellCatalog.Find("hunter",baseId);
+        }
+        if(spell is null)
+        {
+            ClearSpell();
+            spellTitle.Text="SPELL "+id;
+            spellCaption.Text="XML recommendation · icon not in catalog";
+            return;
+        }
+        DisplaySpell(spell,"en",false);
+        spellCaption.Text="XML RECOMMENDATION · SpellID "+id+
+            (spell.SpellId==id?"":" · family icon");
+        gcdLabel.Text="GCD: remaining time unobservable";
+    }
+
     private void NextPreview()
     {
+        if(readonlySession)return;
         if(demoSpells.Count==0) {ClearSpell();return;}
         demoIndex=(demoIndex+1)%demoSpells.Count;
         DisplaySpell(demoSpells[demoIndex],"en",true);
@@ -222,9 +271,10 @@ internal sealed class OverlayWindow : Window
         combatStatus.Text=inCombat?"IN COMBAT":"OUT OF COMBAT";
         specStatus.Text=connected?((gameClass??"FOREVER")+
             (string.IsNullOrEmpty(specName)?"":" · "+specName)):"FOREVER";
-        pauseReason.Text=ready?"No XML rotation configured":
-            connected?"RGB v3 CRC not confirmed · rotation unavailable":
-            "Game data unavailable · rotation paused";
+        if(!readonlySession)
+            pauseReason.Text=ready?"Read-only XML preview not started":
+                connected?"RGB v3 CRC not confirmed · preview unavailable":
+                "Game data unavailable · preview paused";
         // Do NOT overwrite spell preview: it is expressly not a live recommendation.
     }
 }
