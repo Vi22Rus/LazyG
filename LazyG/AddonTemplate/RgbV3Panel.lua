@@ -12,13 +12,14 @@ frame:SetFrameStrata("TOOLTIP")
 frame:SetFrameLevel(101)
 frame:EnableMouse(false)
 local cells = {}
-for i = 1, COLS do
+local function addCell(i)
   local t = frame:CreateTexture(nil, "ARTWORK")
   t:SetTexture("Interface\\Buttons\\WHITE8X8")
   t:SetSize(SIZE, SIZE)
   t:SetPoint("TOPLEFT", frame, "TOPLEFT", (i - 1) * pitch, 0)
   cells[i] = t
 end
+for i = 1, COLS do addCell(i) end
 
 local classes = {
   WARRIOR=1, PALADIN=2, HUNTER=3, ROGUE=4, PRIEST=5, DEATHKNIGHT=6,
@@ -98,11 +99,24 @@ local function Paint()
     -- reasons behind unavailable metrics. This is not combat telemetry.
     packedCore = { [23] = { healthStatus, targetStatus, powerStatus } },
   })
-  local rgb = Encoder.Encode(core, nil, "direct8")
-  for i = 1, COLS do
+  -- Opt-in compact profile extends THIS SAME ROW; old 24-cell wire
+  -- remains the default and is restored by /lazygcompact off.
+  local extension=nil
+  if LazyGHunterCompactCollector and LazyGHunterCompactCollector.Enabled() then
+    local ok,extra=pcall(LazyGHunterCompactCollector.Build)
+    if ok and type(extra)=="table" then extension=extra end
+  end
+  local rgb = Encoder.Encode(core, extension, "direct8")
+  local count=#rgb/3
+  if count>96 then return end
+  for i=#cells+1,count do addCell(i) end
+  for i=count+1,#cells do cells[i]:Hide() end
+  for i = 1, count do
+    cells[i]:Show()
     local j = (i - 1) * 3
     cells[i]:SetVertexColor(rgb[j + 1] / 255, rgb[j + 2] / 255, rgb[j + 3] / 255, 1)
   end
+  frame:SetWidth(count*pitch-GAP)
 end
 frame:SetScript("OnUpdate", function(_, delta)
   elapsed = elapsed + delta
