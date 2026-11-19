@@ -369,7 +369,7 @@ public sealed class MainWindow : Window
         var top=Stack(Orientation.Horizontal,16);top.Children.Add(SpellIcon(spec.Icon,76));
         var identity=Stack(spacing:5);
         identity.Children.Add(Text(spec.Name,25,"#FFFFFF",FontWeight.Bold));
-        identity.Children.Add(Text(cls.Name+" · Forever · Internal XML (read-only preview, no keys)",12,cls.Accent));
+        identity.Children.Add(Text(cls.Name+" · Forever · Internal XML (DEV; live input only for supported profiles)",12,cls.Accent));
         top.Children.Add(identity);body.Children.Add(Pane(top));
         var modeTabs=Stack(Orientation.Horizontal,8);
         modeTabs.Children.Add(Action(mode=="PvE"?"PvE ✓":"PvE",
@@ -405,7 +405,7 @@ public sealed class MainWindow : Window
                 ()=>{RequestStart(cls,spec);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
             body.Children.Add(Text("Start connects Logitech G HUB; Lua automatically reads the WoW action bar bindings through RGB v3. Only a fresh exact SpellID match can send a key. In-game validation required.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
-            body.Children.Add(Text("Для теста: Support → Start Hunter BM audit; Save Hunter audit JSON. Факт успешного применения заклинания текущим RGB не подтверждается.",11,"#B7A88E"));
+            body.Children.Add(Text("Для теста: Start включает XML-аудит; Support сохраняет полный диагностический ZIP. Успешное нажатие Logitech не доказывает каст WoW.",11,"#B7A88E"));
         }
         string settingsFile=Path.Combine(Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
