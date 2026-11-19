@@ -40,7 +40,7 @@ internal sealed class OverlayWindow : Window
     private readonly DispatcherTimer gcdTimer;
     private readonly Stopwatch demoClock = new();
     private readonly List<ForeverSpell> demoSpells;
-    private readonly string recommendationClass;
+    private string recommendationClass;
     private int demoIndex=-1;
     private bool demoActive;
     private bool aoeEnabled;
@@ -50,7 +50,7 @@ internal sealed class OverlayWindow : Window
     {
         recommendationClass=previewClass;
         demoSpells=ForeverSpellCatalog.ForClass(previewClass).ToList();
-        if(demoSpells.Count==0) demoSpells=ForeverSpellCatalog.ForClass("Hunter").ToList();
+        // Do not display a Hunter fallback when the player selected another class.
 
         Title="LazyG Overlay";
         Width=450;Height=264;MinWidth=425;MinHeight=255;
@@ -173,6 +173,24 @@ internal sealed class OverlayWindow : Window
         b.Background=Palette.Brush(on?"#19DEF1":"#0B3048");
     }
 
+    // Keep the overlay aligned with class changes while it stays open.
+    public void SetClass(string className)
+    {
+        if(string.IsNullOrWhiteSpace(className) ||
+           recommendationClass.Equals(className,StringComparison.OrdinalIgnoreCase))
+            return;
+        recommendationClass=className;
+        demoSpells.Clear();
+        demoSpells.AddRange(ForeverSpellCatalog.ForClass(className));
+        demoIndex=-1;
+        if(!readonlySession)
+        {
+            ClearSpell();
+            spellTitle.Text="NO ACTIVE ROTATION";
+            spellCaption.Text="No verified XML recommendation for "+className;
+        }
+        RuntimeDiagnostics.Add("OVERLAY","Class changed: "+className);
+    }
     // Future rotation-engine entry point: class-specific SpellID lookup.
     // No magic ID guessing and no automatic key input.
     public bool SetSpell(string className,int spellId,string language="en")
