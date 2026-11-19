@@ -135,6 +135,39 @@ using (var image = new System.Drawing.Bitmap(800, 45))
         && bands.Resource == "20–24%", "3 independent 5% groups decoded");
 }
 Console.WriteLine("RGB 5% Curve synthetic pixel regression: PASS");
+// Synthetic pixel-level panel acquisition: exercise both actual on-screen
+// formats, not merely the isolated wire decoder.
+byte[] ForPanel(byte[] logical)
+{
+    var packet=(byte[])logical.Clone();
+    packet[15]=0x4c;packet[16]=0x47; // Forever profile
+    ushort check=RgbV3Codec.Crc16(packet.AsSpan(12,23*3-12));
+    packet[^3]=(byte)(check>>8);packet[^2]=(byte)check;
+    return packet;
+}
+void PixelPanel(byte[] data, int pitch, byte expectedEncoding)
+{
+    using var bitmap=new System.Drawing.Bitmap(600,75);
+    using(var graphics=System.Drawing.Graphics.FromImage(bitmap))
+        graphics.Clear(System.Drawing.Color.FromArgb(21,22,23));
+    for(int index=0;index<data.Length/3;index++)
+    {
+        var color=System.Drawing.Color.FromArgb(
+            data[index*3],data[index*3+1],data[index*3+2]);
+        for(int dy=0;dy<3;dy++)
+        for(int dx=0;dx<3;dx++)
+            bitmap.SetPixel(2+index*pitch+dx,18+dy,color);
+    }
+    Check.That(RgbV3PanelDetector.FindPanel(bitmap,out var result,out var description),
+        "real strip detector found encoded layout: "+description);
+    Check.That(result is not null && result.Encoding==expectedEncoding &&
+        result.FrameCounter==7 && result.ProfileHash==0x4c47,
+        "decoded strip matches frame, profile and physical mode");
+}
+PixelPanel(ForPanel(Check.Build()),5,0);
+PixelPanel(Check.Stepped(ForPanel(steppedLogical)),5,1);
+Console.WriteLine("RGB v3 pixel-level detector: PASS (direct8 + stepped4)");
+
 
 Console.WriteLine("RGB v3 codec regression: PASS (CRC, direct8, stepped4, markers, profile and corruption)");
     }
