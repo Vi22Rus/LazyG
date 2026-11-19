@@ -39,5 +39,6 @@
     <Compile Include="../Windows/WowRgbBridge.cs" Link="Bridge/WowRgbBridge.cs" />
     <Compile Include="../Windows/RgbSpellProbeDetector.cs" Link="Bridge/RgbSpellProbeDetector.cs" />
     <Compile Include="../Windows/RgbCooldownProbeDetector.cs" Link="Bridge/RgbCooldownProbeDetector.cs" />
+    <Compile Include="../Windows/RgbCastEventDetector.cs" Link="Bridge/RgbCastEventDetector.cs" />
   </ItemGroup>
 </Project>
