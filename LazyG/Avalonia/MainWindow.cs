@@ -793,6 +793,12 @@ public sealed class MainWindow : Window
             // Safe initial engine snapshot: ONLY v2-confirmed fields; future signals remain Unknown.
             latestGameState=ForeverGameStateBridge.FromRgb(connected?result.state:null,crc,
                 result.capturedAt, crc && (result.packet!.TargetFlags & 4)!=0);
+            // Curve is an independent, coarse 5% band, never exact mana/rage.
+            if(connected && curve && HealthBand.TryParse(result.thresholds!.Resource,
+                out var resourceBand))
+                latestGameState=latestGameState with {
+                    PowerBand=Observed<HealthBand>.Known(resourceBand,result.capturedAt)
+                };
             if(spellDiagnosticEnabled && connected && result.spell is not null)
             {
                 if(lastSpellSequence!=result.spell.Sequence || lastSpellPacket?.SpellId!=result.spell.SpellId)
