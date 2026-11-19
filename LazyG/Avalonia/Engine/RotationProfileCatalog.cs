@@ -11,7 +11,8 @@ internal static class RotationProfileCatalog
     private static readonly IReadOnlyDictionary<(string Class,string Spec,string Mode),string> Profiles=
         new Dictionary<(string,string,string),string> {
             [("paladin","retribution","PvP")]="LazyG.Forever.RetributionPvPExperimental",
-            [("warrior","arms","PvE")]="LazyG.Forever.ArmsPvEExperimental"
+            [("warrior","arms","PvE")]="LazyG.Forever.ArmsPvEExperimental",
+            [("hunter","beast-mastery","PvE")]="LazyG.Forever.HunterBmPvEExperimental"
         };
 
     public static string Status(string classSlug,string specSlug,string mode) =>
