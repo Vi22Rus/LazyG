@@ -23,6 +23,15 @@
 
 ---
 
+## 2026-11-19 — 0.2.19-dev: LGC observed bool state + stale frame invalidation [DEV / CI PENDING / GAME-UNTESTED]
+
+- Responding to user-verified 0.2.18-dev LGC RGB transport, added `Avalonia/Diagnostics/ForeverCooldownObserver.cs`. This is an **independent read-only observation snapshot**, deliberately separate from `GameState.GcdRemainingMilliseconds`, `SpellState.CooldownMs` and XML/input authorization. Fields: selected SpellID, `SpellCooldownActive`, `SpellOnGcd`, `Gcd29515Active`, `Gcd29515OnGcd`, `LastNewFrameAt` and transport quality (`Unknown/Known/Stale`).
+- On a newly decoded LGC sequence, boolean wire codes map to `Observed<bool>` with `True/False/Unknown/Protected`. The packet sequence MUST advance to renew freshness; repeated identical sequence beyond 1200ms invalidates **all** states as `Stale` (even if the RGB strip remains visible). Conflicting data with the same sequence is rejected; clock rollback, missing packet, absent/unverified v2 identity or lost WoW focus resets observations to Unknown immediately. A later new frame can recover.
+- `MainWindow.cs` Support displays the observer's latest read-only values or explicit `LGC STALE` / `LGC unavailable`; LGC ON/OFF explicitly resets its state. UI version `0.2.19-dev`. The unrelated previously inconsistent APP diagnostic version was also aligned. **No automatic casting, millisecond inference, RGB v2/v3/Curve/ LGD wire changes or gameplay engine gate changes.**
+- `GameStateTests.cs` + csproj now test repeated sequences, stale time, fresh-frame recovery, `Protected` and `Unknown`, identity loss, missing packet, clock rollback, same-sequence contradiction and XML fail-closed. Lua diagnostic addon unchanged, remains `LazyGForeverProbe-0.2.18-dev` in the Windows Actions artifact.
+- Next user test: Windows Support LGC ON, WoW `/lgprobe cdstrip 13795`, verify distinct active/expired state; then switch to LazyG and observe `LGC unavailable` rather than stale True/False. Further tests should include a stopped LGC strip while WoW stays foreground to observe `LGC STALE`.
+- Rollback verified: https://github.com/Vi22Rus/LazyG/actions/runs/44439213580 . CI run for new build to be filled after verification.
+
 ## 2026-11-19 — 0.2.18-dev actual Forever LGC RGB capture [USER-TESTED / PARTIAL / DOCS-ONLY]
 
 - User supplied two real test files: Windows Support in-memory diagnostic transcript ("Pasted text.txt", 130 lines) and addon SavedVariables ("LazyGForeverProbe.lua", with `LGC strip ON SpellID=13795`). **Raw user logs are not committed to GitHub.**
