@@ -330,6 +330,40 @@ var hunterState=state with {
             Observed<bool>.Known(true,now),Observed<int>.Missing(),Observed<int>.Missing())
     }
 };
+// Start/Stop arms ONLY a fresh XML recommendation preview; it does not send
+// keys and never replays the last spell when RGB becomes unknown or stale.
+var previewSession=new RotationPreviewSession();
+Check(!previewSession.Running && previewSession.Current is null,
+    "preview starts stopped with no cached recommendation");
+try {
+    previewSession.Start(paladin,new Dictionary<string,int>());
+    throw new Exception("wrong class preview was accepted");
+} catch(InvalidOperationException) {}
+previewSession.Start(hunter,new Dictionary<string,int>());
+Check(previewSession.Running && previewSession.Current is null,
+    "start arms read-only evaluation without a previous suggestion");
+Check(previewSession.Update(hunterState,now)?.SpellId==3044,
+    "preview uses XML recommendation on a confirmed fresh state");
+Check(previewSession.Update(GameState.Empty(now),now) is null &&
+    previewSession.Current is null,
+    "loss of RGB immediately clears old suggested spell");
+Check(previewSession.Update(hunterState,now)?.SpellId==3044,
+    "new known sample can restore a recommendation");
+Check(previewSession.Update(hunterState,now.AddSeconds(2)) is null &&
+    previewSession.Current is null,
+    "stale frame never replays the last suggestion");
+previewSession.Stop();
+Check(!previewSession.Running &&
+    previewSession.Update(hunterState,now) is null &&
+    previewSession.Current is null,
+    "Stop clears all suggestions, even when a valid frame arrives");
+try {
+    previewSession.Start(hunter,new Dictionary<string,int> {
+        ["useArcaneShot"]=1,["useSummonHawk"]=1
+    });
+    throw new Exception("conflicting profile settings started");
+} catch(FormatException) {}
+Check(!previewSession.Running,"invalid settings cannot arm preview");
 var hunterEval=RotationXmlV2.Evaluate(hunter,hunterState,null,now,"PvE");
 Check(hunterEval.Recommendation?.SpellId==3044,"Hunter Arcane Shot selected from 25-29 band");
 Check(hunterEval.Trace.Any(t=>t.Reason.Contains("CurveBand")),
