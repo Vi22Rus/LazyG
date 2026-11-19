@@ -44,6 +44,9 @@ internal sealed record GameState(
     IReadOnlyDictionary<int,SpellState> Spells,
     IReadOnlyDictionary<AuraKey,AuraState> Auras)
 {
+    // Quantized Curve resource evidence; never treat as exact rage/mana/energy.
+    public Observed<HealthBand> PowerBand { get; init; } = Observed<HealthBand>.Missing();
+
     public static GameState Empty(DateTimeOffset now) => new(
         "forever",now,Knowledge.Unknown,
         Observed<int>.Missing(),Observed<int>.Missing(),Observed<int>.Missing(),
@@ -64,7 +67,8 @@ internal sealed record GameState(
         TargetHostile=TargetHostile.At(now,maxAge),TargetAlive=TargetAlive.At(now,maxAge),
         PlayerHealthPercent=PlayerHealthPercent.At(now,maxAge),
         TargetHealthPercent=TargetHealthPercent.At(now,maxAge),
-        PowerPercent=PowerPercent.At(now,maxAge),Moving=Moving.At(now,maxAge),
+        PowerPercent=PowerPercent.At(now,maxAge),PowerBand=PowerBand.At(now,maxAge),
+        Moving=Moving.At(now,maxAge),
         Casting=Casting.At(now,maxAge),GcdRemainingMilliseconds=GcdRemainingMilliseconds.At(now,maxAge),
         Spells=AgeSpells(Spells,now,maxAge), Auras=AgeAuras(Auras,now,maxAge)
     };
