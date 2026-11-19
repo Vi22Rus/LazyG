@@ -140,9 +140,53 @@ Check(ForeverHunterAbilityCatalog.Ranks(1130)
     ForeverHunterAbilityCatalog.Ranks(3044)
     .SequenceEqual(HunterSpellFamilies.Ranks(3044)),
     "first four verified audit families remain consistent with full registry");
+// User switches in a shared cooldown group must be exclusive across pages
+// and cannot be persisted together, even through a corrupted JSON override.
+Check(hunter.Settings["useArcaneShot"].ExclusiveGroup=="arcane" &&
+    hunter.Settings["useSummonHawk"].ExclusiveGroup=="arcane" &&
+    hunter.Settings["useAimedShot"].ExclusiveGroup=="shot" &&
+    hunter.Settings["useMultiShot"].ExclusiveGroup=="shot" &&
+    hunter.Settings["useImmolationTrap"].ExclusiveGroup=="trap" &&
+    hunter.Settings["useExplosiveTrap"].ExclusiveGroup=="trap" &&
+    hunter.Settings["useFreezingTrap"].ExclusiveGroup=="trap" &&
+    hunter.Settings["useFrostTrap"].ExclusiveGroup=="trap",
+    "all Hunter shared cooldown choices have XML groups");
+var selectHawk=RotationSettingsExclusivity.Apply(hunter,
+    new Dictionary<string,int>(),"useSummonHawk",1);
+var hawkValues=RotationXmlV2.Resolve(hunter,selectHawk);
+Check(hawkValues["useSummonHawk"]==1 && hawkValues["useArcaneShot"]==0,
+    "Hawk switch automatically disables default Arcane Shot");
+var selectArcane=RotationSettingsExclusivity.Apply(hunter,selectHawk,"useArcaneShot",1);
+var arcaneValues=RotationXmlV2.Resolve(hunter,selectArcane);
+Check(arcaneValues["useArcaneShot"]==1 && arcaneValues["useSummonHawk"]==0,
+    "Arcane Shot switch automatically disables Hawk");
+var selectMulti=RotationSettingsExclusivity.Apply(hunter,
+    new Dictionary<string,int>(),"useMultiShot",1);
+var selectAimed=RotationSettingsExclusivity.Apply(hunter,selectMulti,"useAimedShot",1);
+Check(RotationXmlV2.Resolve(hunter,selectAimed)["useMultiShot"]==0 &&
+    RotationXmlV2.Resolve(hunter,selectAimed)["useAimedShot"]==1,
+    "Aimed and Multi are mutually exclusive");
+var selectTrap=RotationSettingsExclusivity.Apply(hunter,
+    new Dictionary<string,int>(),"useExplosiveTrap",1);
+var switchTrap=RotationSettingsExclusivity.Apply(hunter,selectTrap,"useFreezingTrap",1);
+Check(new[]{"useImmolationTrap","useExplosiveTrap","useFreezingTrap","useFrostTrap"}
+    .Count(id=>RotationXmlV2.Resolve(hunter,switchTrap)[id]==1)==1 &&
+    RotationXmlV2.Resolve(hunter,switchTrap)["useFreezingTrap"]==1,
+    "changing traps turns off all other trap switches");
+try {
+    RotationXmlV2.Resolve(hunter,new Dictionary<string,int> {
+        ["useSummonHawk"]=1, ["useArcaneShot"]=1
+    });
+    throw new Exception("Conflicting shared cooldown toggles accepted");
+}
+catch(FormatException) {}
+Check(hunter.Settings["serpentManaMin"].Parent=="useSerpentSting" &&
+    hunter.Settings["arcaneManaMin"].Parent=="useArcaneShot" &&
+    hunter.Settings["useHuntersMark"].IconSpellId==1130,
+    "WarMate-style nested sliders and spell icon metadata parsed");
 var manifest=ProfileDataManifestBuilder.Build(hunter);
 Check(manifest.Client=="forever" && manifest.ClassId==3 && manifest.SpecIndex==1 &&
-    manifest.Mode=="PvE" && manifest.SpellFamilies.Count==4 &&
+    manifest.Mode=="PvE" && manifest.SpellFamilies.Count==11 &&
     manifest.AuraFamilies.Count==2 &&
     manifest.Signals.Contains("GcdActive") &&
     manifest.Signals.Contains("TargetEpoch") &&
@@ -169,9 +213,9 @@ Check(ProfileDataManifestBuilder.Build(hunter with {
     Rules=hunter.Rules.Take(3).ToArray()
 }).LayoutHash!=manifest.LayoutHash,
     "profile schema hash changes when ability set changes");
-Check(hunter.Rules.Count==4 && hunter.Settings.Values
+Check(hunter.Rules.Count==11 && hunter.Settings.Values
     .Where(x=>x.Type==RotationSettingType.Integer).All(x=>x.Step==5),
-    "Hunter BM four rules and 5-percent-only resource sliders");
+    "Hunter BM options plus 5-percent-only resource sliders");
 Check(RotationProfileCatalog.Load("hunter","beast-mastery","PvP") is null,
     "Hunter PvP remains unavailable");
 var hunterSpells=new Dictionary<int,SpellState> {
