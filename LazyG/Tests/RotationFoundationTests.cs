@@ -26,6 +26,23 @@ var empty=GameState.Empty(now);
 Check(RotationXmlV2.Evaluate(profile,empty,null,now,"PvE").Recommendation is null,"unknown identity never suggests");
 var spell=new SpellState(Observed<bool>.Known(true,now),Observed<bool>.Known(true,now),
     Observed<bool>.Missing(),Observed<int>.Known(0,now),Observed<int>.Missing());
+// Synthetic fully observed family: the XML engine must see every rank's
+// Learned status before choosing the highest verified usable concrete ID.
+Dictionary<int,SpellState> KnownFamily(int baseId,int selectedRank)
+{
+    return HunterSpellFamilies.Ranks(baseId).ToDictionary(id=>id,id=>
+        spell with {
+            Learned=Observed<bool>.Known(id==selectedRank,now)
+        });
+}
+Dictionary<int,SpellState> KnownHunter(params (int Base,int Rank)[] families)
+{
+    var all=new Dictionary<int,SpellState>();
+    foreach(var (baseId,rank) in families)
+        foreach(var (id,value) in KnownFamily(baseId,rank))
+            all.Add(id,value);
+    return all;
+}
 var state=empty with {
     Transport=Knowledge.Known,ClassId=Observed<int>.Known(3,now),
     SpecIndex=Observed<int>.Known(1,now),
@@ -33,7 +50,7 @@ var state=empty with {
     TargetAlive=Observed<bool>.Known(true,now),GcdRemainingMilliseconds=Observed<int>.Known(0,now),
     PowerPercent=Observed<int>.Known(75,now),
     PowerBand=Observed<HealthBand>.Known(new HealthBand(75,79),now),
-    Spells=new Dictionary<int,SpellState>{{1130,spell}}
+    Spells=KnownFamily(1130,1130)
 };
 Check(RotationXmlV2.Evaluate(profile,state,null,now,"PvE").Recommendation?.SpellId==1130,"simulation suggestion");
 Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"powerThreshold",80}},now,"PvE").Recommendation is null,"slider changes rule");
@@ -296,9 +313,7 @@ Check(hunter.Rules.Count==11 && hunter.Settings.Values
     "Hunter BM options plus 5-percent-only resource sliders");
 Check(RotationProfileCatalog.Load("hunter","beast-mastery","PvP") is null,
     "Hunter PvP remains unavailable");
-var hunterSpells=new Dictionary<int,SpellState> {
-    [1130]=spell,[1978]=spell,[3044]=spell,[75]=spell
-};
+var hunterSpells=KnownHunter((1130,1130),(1978,1978),(3044,3044),(75,75));
 var hunterState=state with {
     Spells=hunterSpells,
     TargetEpoch=Observed<int>.Known(7,now),
@@ -334,6 +349,40 @@ var absentMarkRanks=HunterSpellFamilies.Ranks(1130).ToDictionary(
     id=>new AuraKey("target-epoch-7",id,true),
     id=>new AuraState(Observed<bool>.Known(false,now),
         Observed<int>.Missing(),Observed<int>.Missing()));
+var higherRankHunter=hunterState with {
+    Spells=KnownHunter((1130,14323),(1978,13551),(3044,14283),(75,75))
+};
+Check(RotationXmlV2.Evaluate(hunter,higherRankHunter,null,now,"PvE")
+    .Recommendation?.SpellId==14283,
+    "Hunter Arcane rule recommends confirmed rank 14283 instead of base 3044");
+Check(RotationXmlV2.Evaluate(hunter,higherRankHunter with {
+    Auras=absentMarkRanks
+},null,now,"PvE").Recommendation?.SpellId==14323,
+    "Hunter Mark rule chooses confirmed rank 14323 if debuff fully absent");
+var partialFamily=KnownHunter((1130,14323),(1978,13551),(3044,14283),(75,75));
+partialFamily.Remove(14287);
+Check(RotationXmlV2.Evaluate(hunter,higherRankHunter with {
+    Spells=partialFamily
+},null,now,"PvE").Recommendation?.SpellId==75,
+    "missing possible higher Arcane rank blocks Arcane rather than guessing");
+partialFamily[14287]=partialFamily[14286] with {
+    Learned=Observed<bool>.Missing(Knowledge.Protected)
+};
+Check(RotationXmlV2.Evaluate(hunter,higherRankHunter with {
+    Spells=partialFamily
+},null,now,"PvE").Recommendation?.SpellId==75,
+    "protected rank blocks Arcane while allowing independently verified Auto Shot");
+var rankWithoutUsable=KnownHunter((1130,14323),(1978,13551),(3044,14283),(75,75));
+rankWithoutUsable[14283]=rankWithoutUsable[14283] with {
+    Usable=Observed<bool>.Missing(Knowledge.Protected)
+};
+Check(RotationXmlV2.Evaluate(hunter,higherRankHunter with {
+    Spells=rankWithoutUsable
+},null,now,"PvE").Recommendation?.SpellId==75,
+    "unavailable readiness of highest rank cannot fall back to lower ranks");
+Check(RotationXmlV2.Evaluate(hunter,higherRankHunter,null,
+    now.AddSeconds(2),"PvE").Recommendation is null,
+    "stale verified rank cannot generate a new recommendation");
 Check(RotationXmlV2.Evaluate(hunter,
     hunterState with {Auras=absentMarkRanks},
     null,now,"PvE").Recommendation?.SpellId==1130,
@@ -367,7 +416,11 @@ Reject(File.ReadAllText(Path.Combine("LazyG","Rotations","Forever","Experimental
     "hunter-beast-mastery-pve.xml")).Replace("step=" + (char)34 + "5" + (char)34, "step=" + (char)34 + "3" + (char)34));
 
 // Hunter rank audit: never infer a learned rank from character level or base SpellID.
-var hunterRankUnknown=HunterSpellFamilies.Find(hunterState,1130,now);
+var partialHunterState=hunterState with {
+    Spells=new Dictionary<int,SpellState>{{1130,spell},{1978,spell},
+        {3044,spell},{75,spell}}
+};
+var hunterRankUnknown=HunterSpellFamilies.Find(partialHunterState,1130,now);
 Check(hunterRankUnknown.SelectedRank is null &&
     hunterRankUnknown.Status=="RankSetUnverified","partial rank evidence cannot assert max rank");
 int[] markRanks=HunterSpellFamilies.Ranks(1130);
@@ -386,7 +439,7 @@ var audit=new HunterRotationAudit(3);
 var beforeAudit=audit.Capture(hunter,hunterState,null,now);
 Check(beforeAudit.ExpectedSpellId==3044 &&
     beforeAudit.Verdict==RotationAuditVerdict.Unobservable,"XML expectation is not cast evidence");
-Check(beforeAudit.Conditions.Any(x=>x.Contains("Rank 1130=RankSetUnverified")),
+Check(beforeAudit.Conditions.Any(x=>x.Contains("Rank 1130=VerifiedLearnedRank")),
     "audit identifies unverified Hunter learned rank");
 Check(audit.Observe(new(3044,now.AddMilliseconds(100),
     RotationCastEvidence.None,7,true)) is null,"unverified cast attempt ignored");
@@ -449,7 +502,7 @@ Check(eventOnly?.Verdict==RotationAuditVerdict.EventOnly &&
     "UNIT_SPELLCAST_SUCCEEDED must never prove hit or effect");
 
 // Readiness audit never invents aura/rank/target/GCD from Curve or event hints.
-var missingBefore=HunterAuditReadiness.Missing(hunterState,now);
+var missingBefore=HunterAuditReadiness.Missing(partialHunterState,now);
 Check(missingBefore.Contains("VerifiedRank:1130") &&
       missingBefore.Contains("GcdReady")==false &&
       missingBefore.Contains("TargetDebuffRanks:1130"),
