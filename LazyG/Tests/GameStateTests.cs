@@ -289,5 +289,58 @@ damaged=(byte[])lgc.Clone();
 damaged[0]=0x44; // LGD is NOT LGC
 Assert(!ForeverCooldownRgbCodec.TryDecode(damaged,out _));
 
+// 0.2.19-dev: LGC freshness is independent from GameState readiness gates.
+var lgcObserver=new ForeverCooldownObserver();
+Assert(lgcObserver.Snapshot.Transport==Knowledge.Unknown);
+var firstLgc=new CooldownRgbPacket(10,13795,ProbeCode.True,
+    ProbeCode.False,ProbeCode.False,ProbeCode.Unknown);
+var observed=lgcObserver.Update(true,firstLgc,now);
+Assert(observed.Transport==Knowledge.Known &&
+    observed.SpellCooldownActive.Is(x=>x)==Truth.True &&
+    observed.Gcd29515Active.Is(x=>!x)==Truth.True &&
+    observed.Gcd29515OnGcd.Quality==Knowledge.Unknown);
+Assert(observed.LastNewFrameAt==now);
+// Identical sequence does not refresh the timestamp, even when polled repeatedly.
+var unchanged=lgcObserver.Update(true,firstLgc,now.AddMilliseconds(600));
+Assert(unchanged.LastNewFrameAt==now && unchanged.Transport==Knowledge.Known);
+var frozen=lgcObserver.Update(true,firstLgc,now.AddMilliseconds(1201));
+Assert(frozen.Transport==Knowledge.Stale &&
+    frozen.SpellCooldownActive.Quality==Knowledge.Stale &&
+    frozen.Gcd29515Active.Quality==Knowledge.Stale &&
+    lgcObserver.Describe().Contains("STALE"));
+// A new counter with an unknown or protected quality keeps Unknown or Protected.
+var resumed=new CooldownRgbPacket(11,13795,ProbeCode.Protected,
+    ProbeCode.Unknown,ProbeCode.True,ProbeCode.Protected);
+var resumedAt=now.AddMilliseconds(1400);
+var live=lgcObserver.Update(true,resumed,resumedAt);
+Assert(live.SpellCooldownActive.Quality==Knowledge.Protected &&
+    live.SpellOnGcd.Quality==Knowledge.Unknown &&
+    live.Gcd29515Active.Is(x=>x)==Truth.True &&
+    live.Gcd29515OnGcd.Quality==Knowledge.Protected);
+// Corrupted same-counter content cannot be silently treated as a new frame.
+var conflicting=resumed with { Gcd29515Active=ProbeCode.False };
+Assert(lgcObserver.Update(true,conflicting,resumedAt.AddMilliseconds(100))
+    .Transport==Knowledge.Unknown);
+Assert(lgcObserver.Update(true,resumed,resumedAt.AddMilliseconds(200))
+    .Transport==Knowledge.Known);
+// Foreground loss clears the former 'Known False' immediately.
+Assert(lgcObserver.Update(false,resumed,resumedAt.AddMilliseconds(250))
+    .Transport==Knowledge.Unknown);
+Assert(lgcObserver.Snapshot.Gcd29515Active.Quality==Knowledge.Unknown);
+Assert(lgcObserver.Update(true,firstLgc,resumedAt.AddMilliseconds(400))
+    .Transport==Knowledge.Known);
+Assert(lgcObserver.Update(true,null,resumedAt.AddMilliseconds(410))
+    .Transport==Knowledge.Unknown);
+Assert(lgcObserver.Update(true,firstLgc,resumedAt.AddMilliseconds(420))
+    .Transport==Knowledge.Known);
+Assert(lgcObserver.Update(true,firstLgc,resumedAt.AddMilliseconds(100))
+    .Transport==Knowledge.Unknown); // clock rollback
+lgcObserver.Reset();
+Assert(lgcObserver.Snapshot.Transport==Knowledge.Unknown);
+// No diagnostic outcome is a measured duration or a cast permission.
+Assert(attackBase.GcdRemainingMilliseconds.Quality==Knowledge.Unknown);
+Assert(ConditionEvaluator.GcdReady(attackBase)==Truth.Unknown);
+Assert(XmlRotationDispatcher.Evaluate(parsed,attackBase,band04,now) is null);
+
 Console.WriteLine("GameState, corpse safety, XML dispatch and preview regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
