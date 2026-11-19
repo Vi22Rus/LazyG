@@ -174,11 +174,13 @@ internal static class RotationXmlV2
                     int? number=null;
                     if(key!=null) {
                         if(!settings.TryGetValue(key,out var setting) || setting.Type!=RotationSettingType.Integer ||
-                           setting.Unit!="percent")throw new FormatException("Incompatible parameter");
+                           setting.Unit!="percent" || (signal=="PowerPercent" && setting.Step!=5))
+                            throw new FormatException("Incompatible parameter or non-5% power slider");
                         used.Add(key);
                     } else {
                         if(!int.TryParse(constant,NumberStyles.None,CultureInfo.InvariantCulture,out int v) ||
-                            v<0 || v>100)throw new FormatException("Condition value");
+                            v<0 || v>100 || (signal=="PowerPercent" && v%5!=0))
+                            throw new FormatException("Condition value");
                         number=v;
                     }
                     var gate=(string?)c.Attribute("whenEnabled");
@@ -246,15 +248,31 @@ internal static class RotationXmlV2
                     continue;
                 }
                 int threshold=c.SettingRef is null?c.Constant!.Value:values[c.SettingRef];
-                var observed=c.Signal switch {
-                    "PlayerHealthPercent"=>fresh.PlayerHealthPercent,
-                    "TargetHealthPercent"=>fresh.TargetHealthPercent,
-                    _=>fresh.PowerPercent
-                };
-                var answer=observed.Is(v=>c.Compare=="Below"?v<threshold:v>=threshold);
+                Truth answer;
+                Knowledge quality;
+                if(c.Signal=="PowerPercent")
+                {
+                    // Forever Curve reports bands (e.g. 20..24), never precise power.
+                    // Entire observed interval must satisfy the threshold.
+                    var band=fresh.PowerBand;
+                    quality=band.Quality;
+                    answer=band.Is(v=>v.IsValid &&
+                        (c.Compare=="Below"?v.Upper<threshold:v.Lower>=threshold));
+                    if(band.Quality==Knowledge.Known &&
+                       band.Value is HealthBand invalid && !invalid.IsValid)
+                        answer=Truth.Unknown;
+                    details.Add("CurveBand="+(band.Value?.ToString()??"Unknown"));
+                }
+                else
+                {
+                    var observed=c.Signal=="PlayerHealthPercent"?
+                        fresh.PlayerHealthPercent:fresh.TargetHealthPercent;
+                    quality=observed.Quality;
+                    answer=observed.Is(v=>c.Compare=="Below"?v<threshold:v>=threshold);
+                }
                 result=TruthLogic.And(result,answer);
                 details.Add(c.Signal+" "+c.Compare+" "+(c.SettingRef??"literal")+
-                    "="+threshold+" ("+observed.Quality+" => "+answer+")");
+                    "="+threshold+" ("+quality+" => "+answer+")");
             }
             var readiness=ConditionEvaluator.SpellReady(fresh,rule.SpellId);
             result=TruthLogic.And(result,readiness);
