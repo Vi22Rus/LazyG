@@ -107,6 +107,8 @@ internal sealed record GameState(
 internal readonly record struct HealthBand(int Lower, int Upper)
 {
     public bool IsValid => Lower>=0 && Upper<=100 && Lower<=Upper;
+    public bool IsFivePercentCurveBand => IsValid && Lower%5==0 &&
+        Upper==(Lower==95?100:Lower+4);
     public static bool TryParse(string? text,out HealthBand band)
     {
         band=default;
