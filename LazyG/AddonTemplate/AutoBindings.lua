@@ -155,7 +155,7 @@ local function Scan()
   local sig={}
   for _,v in ipairs(out)do sig[#sig+1]=v.spell..":"..v.modifier..":"..v.key end
   local signature=table.concat(sig,";")
-  if signature~=lastSignature or dirty then
+  if signature~=lastSignature then
     lastSignature=signature
     generation=(generation%255)+1
     cursor=1
@@ -169,7 +169,19 @@ function M.Build()
   -- Rescan on event and periodically for bar add-ons whose pages change
   -- without ACTIONBAR_SLOT_CHANGED, as Sonah does.
   local t=type(GetTime)=="function" and GetTime() or 0
-  if dirty or t-stamp>=2 then stamp=t;pcall(Scan) end
+  if dirty or t-stamp>=2 then
+    stamp=t
+    local ok=pcall(Scan)
+    if not ok then
+      -- Never retain an old action table after a protected/error scan.
+      entries={}
+      generation=(generation%255)+1
+      lastSignature=""
+      dirty=false
+      cursor=1
+      held=0
+    end
+  end
   local n=#entries
   local e=entries[cursor]
   local index=e and cursor or 0
@@ -192,7 +204,7 @@ for _,event in ipairs({
  "PLAYER_LOGIN","PLAYER_ENTERING_WORLD","ACTIONBAR_SLOT_CHANGED",
  "ACTIONBAR_PAGE_CHANGED","UPDATE_BONUS_ACTIONBAR","UPDATE_BINDINGS",
  "UPDATE_MACROS","UPDATE_SHAPESHIFT_FORMS","SPELLS_CHANGED",
- "UPDATE_OVERRIDE_ACTIONBAR","MODIFIER_STATE_CHANGED",
+ "UPDATE_OVERRIDE_ACTIONBAR",
 })do pcall(f.RegisterEvent,f,event)end
 f:SetScript("OnEvent",function()M.Dirty()end)
 LazyGAutoBindings=M
