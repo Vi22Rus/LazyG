@@ -45,9 +45,7 @@ public sealed class MainWindow : Window
     private bool spellDiagnosticEnabled;
     private bool cooldownDiagnosticEnabled;
     private string lastCooldownDiagnostic="";
-    private CooldownRgbPacket? lastCooldownPacket;
-    private byte? lastCooldownSequence;
-    private DateTimeOffset lastCooldownPacketAt;
+    private readonly ForeverCooldownObserver cooldownObserver=new();
     private bool xmlPreviewEnabled;
     private XmlRotationProfile? xmlPreviewProfile;
     private string lastXmlPreview = "";
@@ -59,8 +57,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.18-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.13-dev started · Forever UI");
+        Title = "LazyG · 0.2.19-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.19-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
@@ -414,7 +412,7 @@ public sealed class MainWindow : Window
         }));
         actions.Children.Add(Action("LGC Cooldown RGB ON/OFF",()=>{
             cooldownDiagnosticEnabled=!cooldownDiagnosticEnabled;
-            lastCooldownPacket=null;lastCooldownSequence=null;
+            cooldownObserver.Reset();
             lastCooldownDiagnostic="";
             RuntimeDiagnostics.Add("LGC",cooldownDiagnosticEnabled
                 ?"Read-only capture enabled; use /lgprobe cdstrip 13795 in WoW"
@@ -576,23 +574,16 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("LGD",lgdStatus);
                 lastSpellDiagnostic=lgdStatus;
             }
-            if(cooldownDiagnosticEnabled && connected && result.cooldown is not null)
-            {
-                if(lastCooldownSequence!=result.cooldown.Sequence ||
-                   lastCooldownPacket?.SpellId!=result.cooldown.SpellId)
-                {
-                    lastCooldownPacket=result.cooldown;
-                    lastCooldownSequence=result.cooldown.Sequence;
-                    lastCooldownPacketAt=result.capturedAt;
-                }
-            }
-            // LGC never modifies latestGameState; no derived 0-ms GCD.
+            // Read-only, independent boolean observation. Never writes to
+            // latestGameState GCD/CD-millisecond authorization fields.
+            if(cooldownDiagnosticEnabled)
+                cooldownObserver.Update(connected &&
+                    latestGameState.Transport==Knowledge.Known &&
+                    latestGameState.ClassId.Quality==Knowledge.Known,
+                    result.cooldown,result.capturedAt);
+            else cooldownObserver.Reset();
             string cooldownStatus=!cooldownDiagnosticEnabled?"OFF":
-                !connected?"No RGB v2 identity":
-                ForeverCooldownRgbCodec.Describe(lastCooldownPacket,
-                    lastCooldownPacketAt,result.capturedAt,
-                    TimeSpan.FromSeconds(1.5),crc &&
-                    latestGameState.ClassId.Quality==Knowledge.Known);
+                cooldownObserver.Describe();
             if(cooldownStatus!=lastCooldownDiagnostic)
             {
                 RuntimeDiagnostics.Add("LGC",cooldownStatus);
