@@ -75,7 +75,7 @@ internal sealed class RotationSourceManager
 internal enum RotationSettingType { Boolean, Integer }
 internal sealed record RotationSetting(string Id, RotationSettingType Type, string Unit, int Default,
     int Min, int Max, int Step, string Tier, string Group, string LabelRu, string LabelEn);
-internal sealed record RotationCondition(string Signal, string Compare, string? SettingRef, int? Constant);
+internal sealed record RotationCondition(string Signal, string Compare, string? SettingRef, int? Constant, string? WhenEnabled);
 internal sealed record RotationRuleV2(string Id, int Priority, int SpellId,
     string? EnabledBy, IReadOnlyList<RotationCondition> Conditions);
 internal sealed record RotationProfileV2(string Client, int ClassId, int SpecIndex, string Mode,
@@ -163,7 +163,7 @@ internal static class RotationXmlV2
                 foreach(var c in el.Elements())
                 {
                     if(c.Name!="Condition" || c.HasElements)throw new FormatException("Condition");
-                    Attributes(c,"signal","compare","settingRef","value");
+                    Attributes(c,"signal","compare","settingRef","value","whenEnabled");
                     string signal=Required(c,"signal"),compare=Required(c,"compare");
                     if(signal is not ("PlayerHealthPercent" or "TargetHealthPercent" or "PowerPercent"))
                         throw new FormatException("Unsupported signal");
@@ -181,7 +181,15 @@ internal static class RotationXmlV2
                             v<0 || v>100)throw new FormatException("Condition value");
                         number=v;
                     }
-                    conditions.Add(new(signal,compare,key,number));
+                    var gate=(string?)c.Attribute("whenEnabled");
+                    if(gate is not null)
+                    {
+                        if(!settings.TryGetValue(gate,out var gateSetting) ||
+                           gateSetting.Type!=RotationSettingType.Boolean)
+                            throw new FormatException("whenEnabled must reference bool");
+                        used.Add(gate);
+                    }
+                    conditions.Add(new(signal,compare,key,number,gate));
                     if(conditions.Count>16)throw new FormatException("Too many conditions");
                 }
                 rules.Add(new(id,priority,spell,enabled,conditions));
@@ -229,6 +237,8 @@ internal static class RotationXmlV2
                 values[rule.EnabledBy]==1?Truth.True:Truth.False;
             foreach(var c in rule.Conditions)
             {
+                if(c.WhenEnabled is not null && values[c.WhenEnabled]==0)
+                    continue; // opt-in constraint does not block ordinary use
                 int threshold=c.SettingRef is null?c.Constant!.Value:values[c.SettingRef];
                 var observed=c.Signal switch {
                     "PlayerHealthPercent"=>fresh.PlayerHealthPercent,
