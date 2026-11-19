@@ -87,6 +87,7 @@ internal sealed record GameState(
                 Usable=pair.Value.Usable.At(now,ttl),
                 InRange=pair.Value.InRange.At(now,ttl),
                 CooldownMs=pair.Value.CooldownMs.At(now,ttl),
+                CooldownActive=pair.Value.CooldownActive.At(now,ttl),
                 Charges=pair.Value.Charges.At(now,ttl)
             };
         return result;
@@ -145,7 +146,11 @@ internal sealed record SpellState(
     Observed<bool> Usable,
     Observed<bool> InRange,
     Observed<int> CooldownMs,
-    Observed<int> Charges);
+    Observed<int> Charges)
+{
+    // Independent observed active flag, NEVER numeric cooldown remaining.
+    public Observed<bool> CooldownActive { get; init; }=Observed<bool>.Missing();
+}
 
 internal readonly record struct AuraKey(string UnitId, int SpellId, bool IsDebuff);
 internal sealed record AuraState(
@@ -233,8 +238,11 @@ internal static class ConditionEvaluator
     public static Truth SpellReady(GameState s,int spellId)
     {
         if(!s.Spells.TryGetValue(spellId,out var spell))return Truth.Unknown;
-        return TruthLogic.And(spell.Learned.Is(x=>x),spell.Usable.Is(x=>x),
-            spell.CooldownMs.Is(x=>x<=0));
+        var cooldown=spell.CooldownActive.Quality==Knowledge.Known
+            ? spell.CooldownActive.Is(active=>!active)
+            : spell.CooldownActive.Quality is Knowledge.Protected or Knowledge.Stale
+                ? Truth.Unknown : spell.CooldownMs.Is(ms=>ms<=0);
+        return TruthLogic.And(spell.Learned.Is(x=>x),spell.Usable.Is(x=>x),cooldown);
     }
     public static Truth HasAura(GameState s,AuraKey key)
     {
