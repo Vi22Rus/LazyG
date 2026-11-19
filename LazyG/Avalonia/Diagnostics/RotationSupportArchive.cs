@@ -15,7 +15,7 @@ internal static class RotationSupportArchive
         long RgbStale, int UnknownRules, int BlockedRules);
     private static readonly JsonSerializerOptions JsonOptions=new() { WriteIndented=true };
     public static string Create(string directory,SafeState state,string reason,
-        bool fatal=false,DateTimeOffset? at=null)
+        bool fatal=false,DateTimeOffset? at=null,string? exceptionType=null)
     {
         // User-generated fields are deliberately not exported verbatim.
         var now=at??DateTimeOffset.UtcNow;
@@ -32,7 +32,7 @@ internal static class RotationSupportArchive
         }
         Add("manifest.json",new { Schema=1,CreatedUtc=now.ToUniversalTime(),Mode=fatal?"fatal":"manual",
             Note="Review locally before sharing; never uploaded automatically." });
-        Add("crash.json",new { Fatal=fatal,ReasonCode=NormalizeReason(reason),CorrelationId=id });
+        Add("crash.json",new { Fatal=fatal,ReasonCode=NormalizeReason(reason),ExceptionType=SafeExceptionType(exceptionType),CorrelationId=id });
         Add("rgb-health.json",new { Missing=Math.Max(0,state.RgbMissing),Stale=Math.Max(0,state.RgbStale) });
         Add("rotation-state.json",new { Source=SafeSource(state.Source),Health=NormalizeHealth(state.SourceHealth),
             BlockReason=NormalizeReason(state.BlockReason),UnknownRules=Math.Max(0,state.UnknownRules),
@@ -54,6 +54,11 @@ internal static class RotationSupportArchive
         "UnhandledException" or "ManualSupport" => reason,
         _=>"Unspecified"
     };
+    private static string SafeExceptionType(string? type) =>
+        !string.IsNullOrEmpty(type) && type.Length<=80 &&
+        System.Text.RegularExpressions.Regex.IsMatch(type,@"^[A-Za-z][A-Za-z0-9_]{0,79}$")
+            ? type:"Unknown";
+
     private static string SafeVersion(string? version) =>
         !string.IsNullOrWhiteSpace(version) && version.Length<=32 &&
         System.Text.RegularExpressions.Regex.IsMatch(version,@"^[0-9A-Za-z.\-]+$")
