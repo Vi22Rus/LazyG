@@ -1,3 +1,18 @@
+## 2026-11-19 — 0.4.0-dev: XML-driven specialization settings UI and source audit (DEV)
+
+**Source and scope:** inspected current `main`, all six approved architecture documents, and referenced source archives `Sonah.zip`, `Hekili_Forever.zip`, `JustAC.zip`, `NAG-6.0.6.zip`. The repo had no production-ready rotation profiles. Do not mistake a class catalog for finished rotations.
+
+**Changes:**
+- XML v2 adds optional `whenEnabled` on a numeric condition. This models a PvP ability with a configurable optional HP restriction; a condition skipped by an OFF toggle does not silently apply a fixed 20% hard gate. ON + missing target HP remains Unknown/blocked.
+- Two strictly **Experimental / offline-only** Forever XML examples: Retribution Paladin PvP (Hammer of Justice rank SpellID 853, optional low-HP preference, not an intrinsic requirement) and Warrior Arms PvE (Mortal Strike SpellID 12294; `PowerPercent` explicitly NOT equivalent to absolute Rage). Neither is a complete rotation or game-ready.
+- `RotationProfileCatalog` embeds and resolves only those exact class/spec/mode resources; 52 other spec/mode combinations are `Unavailable` rather than copied generic stubs. `ROTATION_PROFILE_AUDIT.md` inventories all 27 specs × PvE/PvP and identifies missing signals/schema types.
+- `MainWindow.ShowSpec` now generates PvE/PvP, Essentials/Advanced, changed-only and XML-backed Boolean/slider controls directly from real used XML parameters; changes persist through `RotationSettingsStore`; reset requires confirmation. Current source is unconfirmed, so edits are *offline only* and never send keys. Confirmed external provider state locks internal controls without deleting values.
+- UI exposes the referenced XML rule IDs, SpellIDs and signal dependencies for each setting. Diagnostic traces now include the effective thresholds, quality and result; no key injection from XML.
+- Added offline regression for Paladin optional HP control and unknown signal, tested source/resource registry and value trace. RGB v2/v3/Curve/LGD/LGC, existing v1 XML and previous user-tested workflows untouched.
+- Fixed Avalonia-vs-WinForms `CheckBox` type ambiguity found by CI. The complete new UI is being revalidated by [GitHub Actions run 44457093533](https://github.com/Vi22Rus/LazyG/actions/runs/44457093533) at documentation time. Do not call it CI-PASSED until that run succeeds.
+
+**Still missing:** real rotation audit for all 27 specs, exact Rage and other resource units, aura and DoT state, friendly healing, proc/interrupt/target count, typed AND/OR/NOT, all supported SpellID ranks, validated live readiness, source RGB + minimap selector and Hekili/JustAC integration. These cannot be claimed working until gameplay testing. Existing 0.3.0-dev rollback: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
+
 ## 2026-11-19 — Verified CI checkpoint: 0.4.0-dev foundation
 
 **[CI-PASSED, DEV, NOT USER-TESTED]** Commit `61ab9336624007d306fb232bf7ebb815c78e8963`: [GitHub Actions run 44455119810](https://github.com/Vi22Rus/LazyG/actions/runs/44455119810) SUCCESS. Windows .NET 8 build, XML v2 offline schema/evaluator tests, settings overrides, safe ZIP archive tests, RGB v2/v3/Curve and Lua regression, single-file publish and Windows startup smoke passed. Action artifacts: `LazyG-Windows-x64` and unchanged optional `LazyGForeverProbe-0.3.0-dev`. User game test NOT performed; do not treat new XML rules, crash handling, Lua minimap/source provider as operationally validated.
