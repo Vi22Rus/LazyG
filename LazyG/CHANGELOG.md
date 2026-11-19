@@ -23,6 +23,15 @@
 
 ---
 
+## 2026-11-19 — 0.2.18-dev: LGC independent RGB cooldown/GCD diagnostic [DEV / CI IN PROGRESS / GAME-UNTESTED]
+
+- Based on two user-tested Forever SavedVariables journals (1130 and 13795), a **new opt-in diagnostic RGB channel LGC** has been implemented, independent of the existing LGD six-cell spell probe and RGB v2/v3/Curve. Do NOT infer remaining GCD milliseconds or permission to cast from plain `isActive=False`.
+- New `Diagnostics/LazyGForeverProbe/CooldownRgb.lua`: separate six-cell 18-byte packet with magic `LGC`, version 1, sequence, 24-bit selected spell ID, four 0..4 state-quality codes (selected spell `isActive`, `isOnGCD`; independent 29515 `isActive`, `isOnGCD`), reserved-byte guards, A5 sentinel and 8-bit checksum+complement. Pixel strip at x=0, y=-76 (separate from existing LGD y=-65), update interval ~100ms if manually enabled. `/lgprobe cdstrip 13795` selects spell/rank and turns LGC ON; `cdstrip on/off` toggles. Never transmits experimental `Cooldown:IsShown` outcome.
+- Windows: new `Avalonia/Diagnostics/ForeverCooldownRgbCodec.cs` strict standalone decoder and diagnostic-only freshness/identity description; new `Windows/RgbCooldownProbeDetector.cs` captures LGC from the same top-left bitmap; `WowRgbBridge.TryReadCombined` overload preserves existing callers and additionally reads LGC only when requested. Support UI adds `LGC Cooldown RGB ON/OFF`; logs accepted live state transitions and stale/missing packet as evidence **without modifying GameState or XML/rotation/inputs**. Windows UI marked `0.2.18-dev`.
+- Lua 5.1 `Tests/forever_cooldown_rgb_test.lua` covers wire framing, byte layout, checksums, invalid states and enable/disable painting. `GameStateTests.cs` checks corrupt frames, reserved/version, read-only quality and stale/identity rejection, with `GameStateTests.csproj` linked to the new codec. CI syntax-checks the Lua channel, runs regression and publishes separate `LazyGForeverProbe-0.2.18-dev` plus Windows EXE.
+- No user gameplay verification yet for the LGC pixels/Windows scanner, and the proven 29515 candidate is still NOT a fully validated readiness API. Rollback: https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 (0.2.17-dev). Candidate verification run: https://github.com/Vi22Rus/LazyG/actions/runs/44439213580 (confirm conclusion before sharing as successful).
+- **No protected data or full raw user SavedVariables committed.** No cross-version WoW mixing, no auto-casting.
+
 ## 2026-11-19 — WoW Forever real 0.2.17-dev CDWATCH: independent spell cooldown observed [USER-TESTED / PARTIAL]
 
 - User supplied fresh `LazyGForeverProbe.lua` SavedVariables from an actual 0.2.17-dev Forever diagnostic run: `CDWATCH START spell=13795`, `STOP reason=completed samples=417`, +0.000 to +30.015s. Reference: user-provided file in current conversation, **do not upload the raw SavedVariables into GitHub**.
