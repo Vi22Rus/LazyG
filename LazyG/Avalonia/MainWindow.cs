@@ -933,6 +933,14 @@ public sealed class MainWindow : Window
                 if(hunterAudit.Rows.Count%20==0)
                     RuntimeDiagnostics.Add("HUNTERAUDIT",hunterAudit.Summary());
             }
+            if(hunterAuditRecording && !connected && lastCastEventSequence is not null)
+            {
+                // Sequence after a reconnect cannot be compared to a previous
+                // process/session epoch. Re-establish baseline, never replay.
+                lastCastEventSequence=null;
+                lastCastEventSpellId=0;
+                RuntimeDiagnostics.Add("HUNTERAUDIT","LGE disconnected; event baseline invalidated");
+            }
             if(hunterAuditRecording && connected && result.castEvent is not null)
             {
                 var cast=result.castEvent;
@@ -951,6 +959,7 @@ public sealed class MainWindow : Window
                     var correlated=hunterAudit.Observe(new RotationObservedCast(cast.SpellId,
                         result.capturedAt,RotationCastEvidence.UnitSpellcastSucceeded,
                         cast.TargetEpoch,cast.PlayerEvent));
+                    if(correlated is null)hunterAudit.RecordUncorrelatedEvent();
                     RuntimeDiagnostics.Add("HUNTERAUDIT",correlated is null
                         ?"LGE player event observed but no eligible XML frame (not matched)"
                         :"LGE player event "+cast.SpellId+" · "+correlated.Reason);
