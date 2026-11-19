@@ -53,6 +53,7 @@ public sealed class MainWindow : Window
     private readonly RotationPreviewSession rotationPreview=new();
     private readonly GHubDriver ghub=new();
     private readonly RotationCommandGate commandGate=new();
+    private readonly RotationExecutionTrace executionTrace=new();
     private readonly AutoBindingRegistry autoBindings=new();
     private System.Collections.Generic.IReadOnlyDictionary<int,string> activeBindings=
         new System.Collections.Generic.Dictionary<int,string>();
@@ -639,195 +640,104 @@ public sealed class MainWindow : Window
     private void ShowSupport()
     {
         view="support";
-        var b=Stack(spacing:12);
-        b.Children.Add(Text("SUPPORT",15,"#45E5F7",FontWeight.Bold));
-        b.Children.Add(Text("LIVE RGB & APPLICATION DIAGNOSTICS",18,"#F1FAFF",FontWeight.Bold));
-        b.Children.Add(Text("GAMESTATE v1 · verified RGB fields only · UNKNOWN does not authorize casts",12,"#85DDEE"));
+        var body=Stack(spacing:13);
+        body.Children.Add(Text("SUPPORT · ROTATION DIAGNOSTICS",18,"#45E5F7",FontWeight.Bold));
+        body.Children.Add(Text("One report compares XML decisions, Logitech driver IO and independently observed WoW events. An IOCTL call never proves that WoW cast the spell.",12,"#E9B26D"));
         rgbHealthText=Text(rgbMonitor.Summary(),12,"#72D9F3");
-        b.Children.Add(rgbHealthText);
-        b.Children.Add(Text("Rotation source: AwaitingTransport — source RGB/SRC not installed; no external provider confirmed.",12,"#E5B778"));
-        b.Children.Add(Text("Automatic WoW keybinds: "+
-            autoBindings.Bindings(DateTimeOffset.UtcNow).Count+
-            " currently available (RGB v3 CRC; no manual assignments).",12,"#85DDEE"));
-        b.Children.Add(Text("RGB transport: v2 identity, v3 CRC, Curve, LGD, LGC; sequence/age, recovery, capture performance. Read-only.",11,"#99BCCC"));
-        b.Children.Add(Text(ForeverGameStateBridge.Diagnostic(latestGameState),12,"#C5E1EF"));
-        b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#99BCCC"));
-        var actions=Stack(Orientation.Horizontal,9);
-        actions.Children.Add(Action("Clear events",()=>{
-            RuntimeDiagnostics.Clear();rgbMonitor.Reset();lastRgbHealthSignature="";
-            RefreshDiagnosticsView();
-        }));
-        actions.Children.Add(Action("Copy RGB report",async ()=>{
-            var clipboard=TopLevel.GetTopLevel(this)?.Clipboard;
-            if(clipboard is not null)
-                await clipboard.SetTextAsync(rgbMonitor.ExportJson());
-        }));
-        actions.Children.Add(Action("Save RGB report",()=>{
-            try
+        body.Children.Add(Pane(rgbHealthText));
+        body.Children.Add(Text("Auto keybinds: "+autoBindings.Bindings(DateTimeOffset.UtcNow).Count+
+            " · Logitech: "+LastGhubStatus,12,"#C5E1EF"));
+        body.Children.Add(Text("Rotation trace: "+executionTrace.Summary(),12,"#72D9F3"));
+        hunterAuditSummaryText=Text(hunterAudit.Summary(),11,"#C5E1EF");
+        body.Children.Add(hunterAuditSummaryText);
+
+        var actions=Stack(Orientation.Horizontal,8);
+        actions.Children.Add(Action(executionTrace.Recording?"Stop recording":"Start recording",()=>{
+            if(executionTrace.Recording)
             {
-                string folder=Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "LazyG","diagnostics");
-                Directory.CreateDirectory(folder);
-                string filename="RGB-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+".json";
-                File.WriteAllText(Path.Combine(folder,filename),rgbMonitor.ExportJson());
-                RuntimeDiagnostics.Add("RGBMON",
-                    "Saved private report to %LOCALAPPDATA%\\LazyG\\diagnostics\\"+filename);
-            }
-            catch(Exception ex)
-            {
-                RuntimeDiagnostics.Add("RGBMON","Report save failed: "+ex.GetType().Name);
-            }
-            RefreshDiagnosticsView();
-        }));
-        actions.Children.Add(Action("Create support ZIP",()=>{
-            try
-            {
-                string folder=Path.Combine(Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
-                var source=sourceManager.Snapshot(DateTimeOffset.UtcNow);
-                var safe=new RotationSupportArchive.SafeState("0.4.0-dev",
-                    source.Confirmed?.ToString(),source.Health.ToString(),source.Reason,
-                    "forever",null,rgbMonitor.V3.Lost,rgbMonitor.V3.Frozen,0,0);
-                string file=RotationSupportArchive.Create(folder,safe,"ManualSupport");
-                RuntimeDiagnostics.Add("SUPPORT","Local support ZIP created: "+
-                    Path.GetFileName(file)+" (review before sharing; no auto upload)");
-            }
-            catch(Exception ex)
-            {
-                RuntimeDiagnostics.Add("SUPPORT","ZIP creation failed: "+ex.GetType().Name);
-            }
-            RefreshDiagnosticsView(force:true);
-        }));
-        actions.Children.Add(Action(hunterAuditRecording?"Stop Hunter audit":"Start Hunter BM audit",()=>{
-            if(hunterAuditRecording)
-            {
+                executionTrace.Stop(DateTimeOffset.UtcNow,"USER STOP RECORDING");
                 hunterAuditRecording=false;
-                RuntimeDiagnostics.Add("HUNTERAUDIT","Recording stopped; "+hunterAudit.Summary());
             }
             else
             {
-                try
-                {
-                    hunterAuditProfile=RotationProfileCatalog.Load("hunter","beast-mastery","PvE");
-                    if(hunterAuditProfile is null)throw new InvalidDataException("No BM PvE XML");
-                    var path=Path.Combine(Environment.GetFolderPath(
-                        Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
-                        "forever-hunter-beast-mastery-pve.json");
-                    hunterAuditSettings=RotationSettingsStore.Load(path,hunterAuditProfile);
-                    hunterAudit.Clear();
-                    lastHunterAuditSample=default;
-                    lastCastEventSequence=null;
-                    lastCastEventSpellId=0;
-                    hunterAuditRecording=true;
-                    RuntimeDiagnostics.Add("HUNTERAUDIT",
-                        "Started XML snapshot comparison; cast success UNOBSERVABLE with current RGB; keys never sent");
-                }
-                catch(Exception ex) {RuntimeDiagnostics.Add("HUNTERAUDIT",
-                    "Could not start: "+ex.GetType().Name);}
+                executionTrace.Start(DateTimeOffset.UtcNow,
+                    rotationPreview.Running?"Forever Hunter BM PvE":"Forever diagnostic only");
+                if(rotationPreview.Running)StartRotationAudit();
             }
             ShowSupport();
         }));
-        actions.Children.Add(Action("Save Hunter audit JSON",()=>{
+        actions.Children.Add(Action("Export diagnostic ZIP",()=>{
             try
             {
-                string folder=Path.Combine(Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData),"LazyG","diagnostics");
-                Directory.CreateDirectory(folder);
-                string file="HunterBM-Audit-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+".json";
-                File.WriteAllText(Path.Combine(folder,file),hunterAudit.ExportJson());
-                RuntimeDiagnostics.Add("HUNTERAUDIT","Saved local bounded XML audit: "+file+
-                    " (no raw RGB, names, input or cast claims)");
+                var folder=Path.Combine(Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
+                var file=executionTrace.ExportZip(folder,rgbMonitor.ExportJson(),
+                    RuntimeDiagnostics.Snapshot(),hunterAudit.ExportJson());
+                RuntimeDiagnostics.Add("REPORT","Diagnostic ZIP saved to "+
+                    Path.GetFileName(file)+" in %LOCALAPPDATA%\\LazyG\\reports");
             }
-            catch(Exception ex){RuntimeDiagnostics.Add("HUNTERAUDIT",
-                "Save failed: "+ex.GetType().Name);}
-            RefreshDiagnosticsView(force:true);
+            catch(Exception ex)
+            {
+                RuntimeDiagnostics.Add("REPORT","Export failed: "+ex.GetType().Name);
+            }
+            RefreshDiagnosticsView(true);
         }));
-        b.Children.Add(Text("Hunter BM: /lgprobe audit on (in WoW) enables optional LGE player spellcast event strip. Start Hunter BM audit enables Windows comparison; an event is NOT proof of hit/effect or LazyG input.",11,"#E9B26D"));
-        hunterAuditSummaryText=Text(hunterAudit.Summary(),12,"#72D9F3");
-        b.Children.Add(hunterAuditSummaryText);
-        actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
+        actions.Children.Add(Action(fullRgbDiagnosticMode?"Deep RGB OFF":"Deep RGB ON",()=>{
             fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
             spellDiagnosticEnabled=fullRgbDiagnosticMode;
             cooldownDiagnosticEnabled=fullRgbDiagnosticMode;
             lastSpellPacket=null;lastSpellSequence=null;lastSpellDiagnostic="";
             cooldownObserver.Reset();lastCooldownDiagnostic="";
-            rgbMonitor.Reset();lastRgbHealthSignature="";
-            RuntimeDiagnostics.Add("RGBMON",fullRgbDiagnosticMode
-                ?"Full RGB receive diagnostics ON; use /lgprobe diag 13795 in WoW"
-                :"Optional LGD/LGC receive diagnostics OFF; base v2/v3/Curve still monitored");
-            RefreshDiagnosticsView();
+            RuntimeDiagnostics.Add("RGBMON",fullRgbDiagnosticMode?
+                "Deep LGD/LGC capture enabled (in-game probe setup required)":
+                "Optional LGD/LGC capture disabled");
+            ShowSupport();
         }));
-        actions.Children.Add(Action("Refresh",()=>RefreshDiagnosticsView(force:true)));
-        actions.Children.Add(Action("Copy all",async ()=>{
+        body.Children.Add(actions);
+
+        var tools=Stack(Orientation.Horizontal,8);
+        tools.Children.Add(Action("Refresh",()=>RefreshDiagnosticsView(true)));
+        tools.Children.Add(Action("Copy log",async ()=>{
             var clipboard=TopLevel.GetTopLevel(this)?.Clipboard;
             if(clipboard is not null)
                 await clipboard.SetTextAsync(RuntimeDiagnostics.Snapshot());
         }));
-        actions.Children.Add(Action("XML preview ON/OFF",()=>{
-            xmlPreviewEnabled=!xmlPreviewEnabled;
-            lastXmlPreview="";
-            if(xmlPreviewEnabled)
-            {
-                try
-                {
-                    using var stream=typeof(MainWindow).Assembly.GetManifestResourceStream(
-                        "LazyG.ForeverXmlDiagnosticExample");
-                    if(stream is null)throw new InvalidDataException("Embedded XML missing");
-                    using var reader=new StreamReader(stream);
-                    xmlPreviewProfile=XmlRotationDispatcher.Parse(reader.ReadToEnd());
-                    RuntimeDiagnostics.Add("XML","Read-only Forever preview enabled (example only, NO INPUT)");
-                }
-                catch(Exception ex)
-                {
-                    xmlPreviewEnabled=false;
-                    xmlPreviewProfile=null;
-                    RuntimeDiagnostics.Add("XML","Preview unavailable: "+ex.GetType().Name);
-                }
-            }
-            else
-            {
-                xmlPreviewProfile=null;
-                RuntimeDiagnostics.Add("XML","Preview disabled");
-            }
-            RefreshDiagnosticsView();
+        tools.Children.Add(Action("Clear visible log",()=>{
+            RuntimeDiagnostics.Clear();
+            RefreshDiagnosticsView(true);
         }));
-        actions.Children.Add(Action("LGD SpellProbe ON/OFF",()=>{
-            spellDiagnosticEnabled=!spellDiagnosticEnabled;
-            lastSpellPacket=null;lastSpellSequence=null;
-            lastSpellDiagnostic="";
-            RuntimeDiagnostics.Add("LGD",spellDiagnosticEnabled
-                ?"Opt-in capture enabled; use /lgprobe rgb on in WoW"
-                :"Capture disabled");
-            RefreshDiagnosticsView();
-        }));
-        actions.Children.Add(Action("LGC Cooldown RGB ON/OFF",()=>{
-            cooldownDiagnosticEnabled=!cooldownDiagnosticEnabled;
-            cooldownObserver.Reset();
-            lastCooldownDiagnostic="";
-            RuntimeDiagnostics.Add("LGC",cooldownDiagnosticEnabled
-                ?"Read-only capture enabled; use /lgprobe cdstrip 13795 in WoW"
-                :"Capture disabled");
-            RefreshDiagnosticsView();
-        }));
-        b.Children.Add(actions);
+        body.Children.Add(tools);
+        body.Children.Add(Text("For optional WoW spellcast observations enable /lgprobe audit on in game. Without LGE events the report marks results UNOBSERVABLE, never FAILED. XML audit is captured automatically when a rotation runs.",11,"#E9B26D"));
         diagnosticsOutput=new TextBox {
             Text=RuntimeDiagnostics.Snapshot(),
-            IsReadOnly=true,
-            AcceptsReturn=true,
+            IsReadOnly=true,AcceptsReturn=true,
             TextWrapping=TextWrapping.NoWrap,
             FontFamily=new Avalonia.Media.FontFamily("Consolas"),
-            FontSize=12,
-            Foreground=Palette.Brush("#C5E1EF"),
+            FontSize=12,Foreground=Palette.Brush("#C5E1EF"),
             Background=Palette.Brush("#041624"),
-            BorderThickness=new Thickness(0),
-            Height=440
+            BorderThickness=new Thickness(0),Height=285
         };
-        b.Children.Add(Pane(diagnosticsOutput,"#041624",8,"#275B78",new Thickness(12)));
-        b.Children.Add(Text("Select lines with the mouse, Ctrl+C to copy. Live refresh pauses while the log has keyboard focus; Refresh updates it manually.",12,"#99BCCC"));
-        b.Children.Add(Text("RGB v2 / v3 CRC / Curve and Logitech G HUB input diagnostics appear here. DEV: in-game results are not yet verified.",12,"#99BCCC"));
-        Go(Page("SUPPORT","Local live status and event history",Pane(b)));
-        RefreshDiagnosticsView();
+        body.Children.Add(Pane(diagnosticsOutput,"#041624",8,"#275B78",new Thickness(12)));
+        Go(Page("SUPPORT","RGB status · XML versus Logitech versus WoW",Pane(body)));
+        RefreshDiagnosticsView(true);
+    }
+    private void StartRotationAudit()
+    {
+        hunterAuditProfile=RotationProfileCatalog.Load("hunter","beast-mastery","PvE");
+        if(hunterAuditProfile is null)
+        {
+            hunterAuditRecording=false;
+            return;
+        }
+        string path=Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
+            "forever-hunter-beast-mastery-pve.json");
+        hunterAuditSettings=RotationSettingsStore.Load(path,hunterAuditProfile);
+        hunterAudit.Clear();
+        lastHunterAuditSample=default;
+        lastCastEventSequence=null;
+        lastCastEventSpellId=0;
+        hunterAuditRecording=true;
     }
     private void RefreshDiagnosticsView(bool force=false)
     {
