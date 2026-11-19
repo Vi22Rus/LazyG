@@ -242,6 +242,12 @@ byte[] extension={
     0x4c,0x48,1,0xA1,0xB2,0xC3,0xD4,3,1,1,0,7,1,1,2,2,4,0,
     2,1,2,2,0x99,0x09
 };
+// A CRC-valid binding-only v3 frame does not contain GCD/ranks/auras.
+var bindingOnly=new RgbV3Packet(new byte[(23+4+1)*3],0,1,0x4c47,0,4);
+Check(HunterCompactProfileWire.Explain(bindingOnly,compactManifest,now)
+    .StartsWith("BINDINGS_ONLY"),"v3 CRC with binding tail must not imply compact gameplay data");
+Check(HunterCompactProfileWire.Explain(null,compactManifest,now)=="NO_V3_FRAME",
+    "explicit diagnostic when compact frame absent");
 Check(HunterCompactProfileWire.PayloadLength(compactManifest)==24 &&
     HunterCompactProfileWire.ExtensionCells(compactManifest)==8,
     "compact profile packs two spell families and target aura in 8 RGB cells");
