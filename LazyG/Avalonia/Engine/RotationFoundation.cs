@@ -244,9 +244,11 @@ internal static class RotationXmlV2
             fresh.ClassId.Is(x=>x==profile.ClassId)!=Truth.True ||
             fresh.SpecIndex.Is(x=>x==profile.SpecIndex)!=Truth.True)
             return new(null,traces,"Profile identity or mode unknown/mismatch");
-        if(ConditionEvaluator.AttackTarget(fresh)!=Truth.True ||
-           ConditionEvaluator.GcdReady(fresh)!=Truth.True)
-            return new(null,traces,"Target, transport or GCD unknown/blocked");
+        // Always produce an explanatory trace for safe diagnostics, even if the
+        // global gate is Unknown. The resulting Recommendation remains blocked.
+        var targetGate=ConditionEvaluator.AttackTarget(fresh);
+        var gcdGate=ConditionEvaluator.GcdReady(fresh);
+        var globalGate=TruthLogic.And(targetGate,gcdGate);
         var values=Resolve(profile,overrides);
         foreach(var rule in profile.Rules)
         {
@@ -301,6 +303,8 @@ internal static class RotationXmlV2
                 details.Add(c.Signal+" "+c.Compare+" "+(c.SettingRef??"literal")+
                     "="+threshold+" ("+quality+" => "+answer+")");
             }
+            result=TruthLogic.And(result,globalGate);
+            details.Add("TargetGate="+targetGate+"; GcdGate="+gcdGate);
             var readiness=ConditionEvaluator.SpellReady(fresh,rule.SpellId);
             result=TruthLogic.And(result,readiness);
             details.Add("SpellReady="+readiness);
@@ -309,6 +313,7 @@ internal static class RotationXmlV2
             if(result==Truth.True)
                 return new(new(RotationSourceId.Internal,rule.SpellId,rule.Priority,rule.Id,now),traces,"");
         }
-        return new(null,traces,"No eligible rules");
+        return new(null,traces,globalGate!=Truth.True?
+            "Target, transport or GCD unknown/blocked":"No eligible rules");
     }
 }
