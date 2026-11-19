@@ -6,8 +6,8 @@ using System.Text.Json;
 
 namespace LazyG.Desktop.Engine;
 
-// One vendor-neutral command contract. G HUB users may assign their hardware
-// macro/profile keys to the same F-keys; this is not a G HUB SDK connection.
+// Shared XML SpellID → Logitech G HUB HID command. The Logitech virtual bus is
+// the only input backend; no SendInput or alternative executor.
 internal sealed record RotationKeyCommand(int SpellId, string Key, RotationSourceId Source,
     long SourceEpoch, DateTimeOffset SnapshotAt);
 
@@ -23,10 +23,10 @@ internal static class RotationKeyBindings
             if(clean.Length==0 || clean.StartsWith('#'))continue;
             var split=clean.Split('=',2);
             if(split.Length!=2 || !int.TryParse(split[0].Trim(),out int id) ||
-               id<=0 || id>16777215)throw new FormatException("Expected SpellID=F1..F12");
+               id<=0 || id>16777215)throw new FormatException("Expected SpellID=key");
             var key=split[1].Trim().ToUpperInvariant();
-            if(!int.TryParse(key.StartsWith("F",StringComparison.Ordinal)?key[1..]:"",out int f) ||
-                f<1 || f>12)throw new FormatException("Only F1..F12 are supported");
+            if(!GHubKeys.TryParse(key,out _,out _))
+                throw new FormatException("Unsupported Logitech HID key or combination");
             if(!result.TryAdd(id,key))throw new FormatException("Duplicate SpellID");
         }
         if(result.Count>128)throw new FormatException("Too many bindings");
@@ -53,9 +53,8 @@ internal static class RotationKeyBindings
     }
 }
 
-// This is an authorization PLANNER, not an input driver. A positive decision
-// never proves that a key was sent or a spell was cast. No caller in the current
-// 0.4.0-dev build sends keys. The separate verified source transport is a gate.
+// Commands are only authorized from fresh XML/RGB evidence. A plan does not
+// prove that the Logitech virtual bus delivered a key or WoW cast a spell.
 internal sealed class RotationCommandGate
 {
     private DateTimeOffset lastIssuedAt;
@@ -96,7 +95,7 @@ internal sealed class RotationCommandGate
         lastEpoch=source.Epoch;
         lastSnapshotAt=recommendation.At;
         lastIssuedAt=now;
-        reason="PLANNED ONLY / NO INPUT";
+        reason="AUTHORIZED FOR LOGITECH DRIVER";
         return new(recommendation.SpellId,key,recommendation.Source,source.Epoch,
             recommendation.At);
     }
