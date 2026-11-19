@@ -50,6 +50,9 @@ public sealed class MainWindow : Window
     private readonly RgbTransportMonitor rgbMonitor=new();
     private readonly RotationSourceManager sourceManager=new();
     private readonly HunterRotationAudit hunterAudit=new();
+    private readonly RotationPreviewSession rotationPreview=new();
+    private string lastPreviewStatus="";
+    private int? lastPreviewSpell;
     private readonly ProfileDataManifest? hunterCompactManifest;
     private byte? lastCompactFrame;
     private DateTimeOffset lastCompactFrameAt;
@@ -92,7 +95,7 @@ public sealed class MainWindow : Window
         ShowClasses();
         timer.Tick += async (_, _) => await PollBridgeAsync();
         timer.Start();
-        Closed += (_, _) => { finished = true; timer.Stop(); overlay?.Close(); };
+        Closed += (_, _) => { finished = true; rotationPreview.Stop("WINDOW CLOSED"); timer.Stop(); overlay?.Close(); };
         Opened += (_, _) =>
         {
             if (!session.ForeverConfigured)
@@ -266,7 +269,8 @@ public sealed class MainWindow : Window
             labels.Children.Add(Text(lastSpec.Name+"  ·  "+selection.Name,20,"#FFFFFF",FontWeight.SemiBold));
             labels.Children.Add(Text("Your previous specialization · Start requires an installed XML rotation",12,"#A3BCCC"));
             Grid.SetColumn(labels,1);last.Children.Add(labels);
-            var b=Action("Start",()=>RequestStart(selection,lastSpec),true);b.VerticalAlignment=VerticalAlignment.Center;
+            var b=Action(rotationPreview.Running?"Stop Preview":"Start Preview",
+                ()=>RequestStart(selection,lastSpec),true);b.VerticalAlignment=VerticalAlignment.Center;
 
             Grid.SetColumn(b,2);last.Children.Add(b);
             wrap.Children.Add(Pane(last,"#102B41"));
@@ -352,7 +356,7 @@ public sealed class MainWindow : Window
         var top=Stack(Orientation.Horizontal,16);top.Children.Add(SpellIcon(spec.Icon,76));
         var identity=Stack(spacing:5);
         identity.Children.Add(Text(spec.Name,25,"#FFFFFF",FontWeight.Bold));
-        identity.Children.Add(Text(cls.Name+" · Forever · Internal XML (not executing)",12,cls.Accent));
+        identity.Children.Add(Text(cls.Name+" · Forever · Internal XML (read-only preview, no keys)",12,cls.Accent));
         top.Children.Add(identity);body.Children.Add(Pane(top));
         var modeTabs=Stack(Orientation.Horizontal,8);
         modeTabs.Children.Add(Action(mode=="PvE"?"PvE ✓":"PvE",
@@ -384,6 +388,9 @@ public sealed class MainWindow : Window
         body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
         if(cls.Id=="hunter" && spec.Id=="beast-mastery" && mode=="PvE")
         {
+            body.Children.Add(Action(rotationPreview.Running?"Stop XML preview":"Start XML preview",
+                ()=>{RequestStart(cls,spec);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
+            body.Children.Add(Text("Start evaluates XML against fresh RGB. Overlay shows the current recommendation only; no keys or G Hub input.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
             body.Children.Add(Text("Для теста: Support → Start Hunter BM audit; Save Hunter audit JSON. Факт успешного применения заклинания текущим RGB не подтверждается.",11,"#B7A88E"));
         }
@@ -476,6 +483,11 @@ public sealed class MainWindow : Window
                         var updated=RotationSettingsExclusivity.Apply(
                             profile,overrides,setting.Id,newValue);
                         RotationSettingsStore.Save(settingsFile,profile,updated);
+                        if(rotationPreview.Running)
+                        {
+                            rotationPreview.Stop("SETTINGS CHANGED · RESTART PREVIEW");
+                            overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+                        }
                         overrides=new System.Collections.Generic.Dictionary<string,int>(updated);
                         RuntimeDiagnostics.Add("XML2","Setting saved: "+setting.Id+
                             (setting.ExclusiveGroup is null?"":" (exclusive "+setting.ExclusiveGroup+")"));
@@ -569,7 +581,14 @@ public sealed class MainWindow : Window
         var controls=Stack(Orientation.Horizontal,12);
         controls.Children.Add(Action("Cancel",dialog.Close));
         controls.Children.Add(Action("Reset defaults",()=>{
-            try { RotationSettingsStore.Reset(settingsFile,profile); }
+            try {
+                RotationSettingsStore.Reset(settingsFile,profile);
+                if(rotationPreview.Running)
+                {
+                    rotationPreview.Stop("SETTINGS RESET · RESTART PREVIEW");
+                    overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+                }
+            }
             catch(Exception ex) {RuntimeDiagnostics.Add("XML2","Reset failed: "+ex.GetType().Name);}
             dialog.Close();ShowSpec(cls,spec,mode,tier);
         },true));
@@ -801,21 +820,62 @@ public sealed class MainWindow : Window
     }
     private void RequestStart(GameClass cls, Specialization spec)
     {
-        RuntimeDiagnostics.Add("ROTATION", $"Start requested: {cls.Name} / {spec.Name}; XML rotation engine is not installed");
-        RefreshDiagnosticsView();
-        var notice=new Window {
-            Title="LazyG · Start",
-            Width=430,Height=175,CanResize=false,
-            WindowStartupLocation=WindowStartupLocation.CenterOwner,
-            Background=Palette.Surface,Foreground=Palette.White
-        };
-        var content=Stack(spacing:15);
-        content.Margin=new Thickness(24);
-        content.Children.Add(Text("ROTATION NOT AVAILABLE",17,"#4BE2F4",FontWeight.Bold));
-        content.Children.Add(Text("The Start control is reserved for running your selected XML rotation. No rotation engine is implemented in this dev build.",13));
-        content.Children.Add(Action("OK",notice.Close,true));
-        notice.Content=content;
-        notice.ShowDialog(this);
+        if(rotationPreview.Running)
+        {
+            rotationPreview.Stop("STOPPED BY USER");
+            lastPreviewStatus="";
+            lastPreviewSpell=null;
+            overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+            RuntimeDiagnostics.Add("ROTATION","User stopped read-only XML preview; no keys sent");
+            if(view=="classes")ShowClasses();
+            return;
+        }
+        try
+        {
+            var profile=RotationProfileCatalog.Load(cls.Id,spec.Id,"PvE");
+            if(profile is null)throw new InvalidDataException("No embedded XML for specialization");
+            string file=Path.Combine(Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
+                "forever-"+cls.Id+"-"+spec.Id+"-pve.json");
+            var settings=RotationSettingsStore.Load(file,profile);
+            rotationPreview.Start(profile,settings);
+            lastPreviewStatus="";
+            lastPreviewSpell=null;
+            overlay?.SetReadOnlyRecommendation(true,null,rotationPreview.Status);
+            RuntimeDiagnostics.Add("ROTATION","Started Hunter BM read-only XML recommendations; inputs disabled");
+            if(view=="classes")ShowClasses();
+        }
+        catch(Exception ex)
+        {
+            RuntimeDiagnostics.Add("ROTATION","Preview start rejected: "+ex.GetType().Name);
+            var notice=new Window {
+                Title="LazyG · Start preview unavailable",
+                Width=490,Height=180,CanResize=false,
+                WindowStartupLocation=WindowStartupLocation.CenterOwner,
+                Background=Palette.Surface,Foreground=Palette.White
+            };
+            var content=Stack(spacing:14);
+            content.Margin=new Thickness(22);
+            content.Children.Add(Text("READ-ONLY XML PREVIEW NOT STARTED",15,"#4BE2F4",FontWeight.Bold));
+            content.Children.Add(Text(ex is InvalidDataException?
+                "The selected XML rotation or its settings are unavailable.":
+                "This specialization is not supported in the current preview, or the profile is invalid.",13));
+            content.Children.Add(Action("OK",notice.Close,true));
+            notice.Content=content;notice.ShowDialog(this);
+        }
+    }
+    private void UpdateRotationPreview(DateTimeOffset at)
+    {
+        if(!rotationPreview.Running)return;
+        var rec=rotationPreview.Update(latestGameState,at);
+        string status=rotationPreview.Status;
+        if(status!=lastPreviewStatus || rec?.SpellId!=lastPreviewSpell)
+        {
+            RuntimeDiagnostics.Add("ROTATION","Read-only "+status);
+            lastPreviewStatus=status;
+            lastPreviewSpell=rec?.SpellId;
+        }
+        overlay?.SetReadOnlyRecommendation(true,rec?.SpellId,status);
     }
     private void ToggleOverlay()
     {
@@ -839,6 +899,9 @@ public sealed class MainWindow : Window
             if(overlayButton is not null)overlayButton.Content="Overlay OFF";
         };
         overlay.Show();
+        if(rotationPreview.Running)
+            overlay.SetReadOnlyRecommendation(true,rotationPreview.Current?.SpellId,
+                rotationPreview.Status);
         if(overlayButton is not null)overlayButton.Content="Overlay ON";
         RuntimeDiagnostics.Add("OVERLAY",$"Shown · icon preview class {previewClass} · {ForeverSpellCatalog.Count} Forever spell records");
     }
@@ -856,11 +919,14 @@ public sealed class MainWindow : Window
             {
                 clientText.Text="WOW FOREVER";
                 ShowClasses();
+                rotationPreview.Stop("SETUP CHANGED");
                 RuntimeDiagnostics.Add("SETUP","Finished · Forever client active");
             }
             else RuntimeDiagnostics.Add("SETUP","Closed without completing RGB setup");
             if(!finished){Show();Activate();}
         };
+        rotationPreview.Stop("SETUP OPENED");
+        overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
         dialog.Show();
         Hide();
     }
@@ -1115,6 +1181,7 @@ public sealed class MainWindow : Window
                         hunterAuditSummaryText.Text=hunterAudit.Summary();
                 }
             }
+            UpdateRotationPreview(result.capturedAt);
             var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
             if(engineDiagnostic!=lastGameStateDiagnostic)
             {
@@ -1128,6 +1195,11 @@ public sealed class MainWindow : Window
         catch(Exception e)
         {
             statusText.Text="RGB CAPTURE ERROR";
+            if(rotationPreview.Running)
+            {
+                latestGameState=GameState.Empty(DateTimeOffset.UtcNow);
+                UpdateRotationPreview(DateTimeOffset.UtcNow);
+            }
             cooldownObserver.Reset();
             rgbMonitor.Accept(new RgbSample(DateTimeOffset.UtcNow,0,false,
                 false,false,null,false,
