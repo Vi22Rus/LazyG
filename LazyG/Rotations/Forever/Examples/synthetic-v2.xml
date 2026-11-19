@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetic Forever Hunter profile for offline simulation ONLY. Not a live rotation. -->
+<Rotation version="2" client="forever" classId="3" specIndex="1" mode="PvE">
+  <Settings>
+    <Setting id="useExample" type="bool" unit="toggle" default="1" min="0" max="1" step="1" tier="Essentials" group="Rotation" ru="Тестовая способность" en="Example spell"/>
+    <Setting id="powerThreshold" type="int" unit="percent" default="70" min="0" max="100" step="5" tier="Advanced" group="Rotation" ru="Порог ресурса" en="Power threshold"/>
+  </Settings>
+  <Rules>
+    <Rule id="synthetic" priority="10" spellId="1130" enabledBy="useExample">
+      <Condition signal="PowerPercent" compare="AtLeast" settingRef="powerThreshold"/>
+    </Rule>
+  </Rules>
+</Rotation>
