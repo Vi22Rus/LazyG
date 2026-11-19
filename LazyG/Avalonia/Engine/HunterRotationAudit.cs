@@ -49,7 +49,7 @@ internal sealed record RotationObservedCast(int SpellId,DateTimeOffset At,
     RotationCastEvidence Evidence,int? TargetEpoch);
 internal sealed record RotationAuditRow(DateTimeOffset At,int? ExpectedSpellId,
     string? ExpectedRule, int? ObservedSpellId,RotationAuditVerdict Verdict,
-    string Reason,string[] Conditions);
+    string Reason,string[] Conditions,int? TargetEpoch=null);
 
 internal sealed class HunterRotationAudit
 {
@@ -81,7 +81,8 @@ internal sealed class HunterRotationAudit
                 RotationAuditVerdict.Unobservable,
             evaluation.Recommendation is null?
                 (evaluation.BlockReason.Length==0?"UnknownRequiredSignals":evaluation.BlockReason):
-                "NoVerifiedCastEvent",trace);
+                "NoVerifiedCastEvent",trace,
+            state.TargetEpoch.Quality==Knowledge.Known?state.TargetEpoch.Value:null);
         Add(row);
         profile=rotation;
         overrides=settings is null?null:new Dictionary<string,int>(settings);
@@ -100,6 +101,10 @@ internal sealed class HunterRotationAudit
             var row=rows[i];
             if(row.At>observed.At || observed.At-row.At>window || row.ObservedSpellId is not null)
                 continue;
+            // Do not correlate target-specific actions across changing targets.
+            if(row.TargetEpoch is not null &&
+                (observed.TargetEpoch is null || observed.TargetEpoch!=row.TargetEpoch))
+                return null;
             // Compare family rank equivalents: 1130 vs 14323 is the same ability.
             int? expectedFamily=row.ExpectedSpellId is int e?HunterSpellFamilies.BaseId(e):null;
             int? actualFamily=HunterSpellFamilies.BaseId(observed.SpellId);
