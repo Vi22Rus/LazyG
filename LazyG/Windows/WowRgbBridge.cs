@@ -23,15 +23,17 @@ internal static class WowRgbBridge
     [DllImport("user32.dll", SetLastError=true)]
     private static extern uint SendInput(uint count, [In] KeyboardInput[] inputs, int size);
 
-    [StructLayout(LayoutKind.Sequential)]
+    // Win-x64 Win32 INPUT is 40 bytes: DWORD type at 0 and KEYBDINPUT
+    // union member at byte 8 (pointer-aligned). Not portable to win-x86.
+    [StructLayout(LayoutKind.Explicit,Size=40)]
     private struct KeyboardInput
     {
-        public uint Type;
-        public ushort VirtualKey;
-        public ushort Scan;
-        public uint Flags;
-        public uint Time;
-        public IntPtr ExtraInfo;
+        [FieldOffset(0)] public uint Type;
+        [FieldOffset(8)] public ushort VirtualKey;
+        [FieldOffset(10)] public ushort Scan;
+        [FieldOffset(12)] public uint Flags;
+        [FieldOffset(16)] public uint Time;
+        [FieldOffset(24)] public IntPtr ExtraInfo;
     }
 
     // Only explicit opt-in F1..F12 bindings. This does not verify that WoW
