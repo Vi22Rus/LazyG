@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — 0.2.19-dev LGC observer confirmed [CI-PASSED / GAME-UNTESTED]
+
+- GitHub Actions **SUCCESS** for https://github.com/Vi22Rus/LazyG/actions/runs/44440949347 , source commit `c43b8e65b59fdc350974cb7f2e3a27cea876e1dc`. Lua 5.1 regression, Windows RGB and GameState/XML regression (including new LGC snapshot freshness), spell assets, publish single EXE, Windows startup smoke and both uploads passed.
+- Verified downloadable artifacts: `LazyG-Windows-x64` ID `14491450564` (77,720,989 bytes); `LazyGForeverProbe-0.2.18-dev` ID `14491008065` (11,782 bytes). Lua addon remains 0.2.18-dev unchanged; Windows UI is 0.2.19-dev.
+- This build's LGC boolean state and frozen-sequence invalidation are **CI-PASSED, not yet user-tested in WoW**. Previous real gameplay test verified the 0.2.18-dev LGC channel, not 0.2.19-dev freshness behavior. No cast/rotation authorization or numeric GCD/CD durations added. Rollback to earlier verified run https://github.com/Vi22Rus/LazyG/actions/runs/44439213580 .
+
 ## 2026-11-19 — 0.2.19-dev: LGC observed bool state + stale frame invalidation [DEV / CI PENDING / GAME-UNTESTED]
 
 - Responding to user-verified 0.2.18-dev LGC RGB transport, added `Avalonia/Diagnostics/ForeverCooldownObserver.cs`. This is an **independent read-only observation snapshot**, deliberately separate from `GameState.GcdRemainingMilliseconds`, `SpellState.CooldownMs` and XML/input authorization. Fields: selected SpellID, `SpellCooldownActive`, `SpellOnGcd`, `Gcd29515Active`, `Gcd29515OnGcd`, `LastNewFrameAt` and transport quality (`Unknown/Known/Stale`).
