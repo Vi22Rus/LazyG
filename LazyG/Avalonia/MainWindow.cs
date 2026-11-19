@@ -51,6 +51,14 @@ public sealed class MainWindow : Window
     private readonly RotationSourceManager sourceManager=new();
     private readonly HunterRotationAudit hunterAudit=new();
     private readonly RotationPreviewSession rotationPreview=new();
+    private readonly GHubDriver ghub=new();
+    private readonly RotationCommandGate commandGate=new();
+    private System.Collections.Generic.IReadOnlyDictionary<int,string> activeBindings=
+        new System.Collections.Generic.Dictionary<int,string>();
+    private bool ghubArmed;
+    private bool ghubBusy;
+    private long ghubGeneration;
+    private string LastGhubStatus="STOPPED";
     private string lastPreviewStatus="";
     private int? lastPreviewSpell;
     private readonly ProfileDataManifest? hunterCompactManifest;
@@ -95,7 +103,7 @@ public sealed class MainWindow : Window
         ShowClasses();
         timer.Tick += async (_, _) => await PollBridgeAsync();
         timer.Start();
-        Closed += (_, _) => { finished = true; rotationPreview.Stop("WINDOW CLOSED"); timer.Stop(); overlay?.Close(); };
+        Closed += (_, _) => { finished = true; StopGhub("WINDOW CLOSED"); rotationPreview.Stop("WINDOW CLOSED"); timer.Stop(); overlay?.Close(); };
         Opened += (_, _) =>
         {
             if (!session.ForeverConfigured)
@@ -269,7 +277,7 @@ public sealed class MainWindow : Window
             labels.Children.Add(Text(lastSpec.Name+"  ·  "+selection.Name,20,"#FFFFFF",FontWeight.SemiBold));
             labels.Children.Add(Text("Your previous specialization · Start requires an installed XML rotation",12,"#A3BCCC"));
             Grid.SetColumn(labels,1);last.Children.Add(labels);
-            var b=Action(rotationPreview.Running?"Stop Preview":"Start Preview",
+            var b=Action(rotationPreview.Running?"Stop":"Start",
                 ()=>RequestStart(selection,lastSpec),true);b.VerticalAlignment=VerticalAlignment.Center;
 
             Grid.SetColumn(b,2);last.Children.Add(b);
@@ -388,9 +396,9 @@ public sealed class MainWindow : Window
         body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
         if(cls.Id=="hunter" && spec.Id=="beast-mastery" && mode=="PvE")
         {
-            body.Children.Add(Action(rotationPreview.Running?"Stop XML preview":"Start XML preview",
+            body.Children.Add(Action(rotationPreview.Running?"Stop":"Start",
                 ()=>{RequestStart(cls,spec);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
-            body.Children.Add(Text("Start evaluates XML against fresh RGB. Overlay shows the current recommendation only; no keys or G Hub input.",11,"#B7A88E"));
+            body.Children.Add(Text("Start connects Logitech G HUB virtual bus and sends the XML-selected ability key when RGB allows it. Configure SpellID=key under Common. Requires real WoW validation.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
             body.Children.Add(Text("Для теста: Support → Start Hunter BM audit; Save Hunter audit JSON. Факт успешного применения заклинания текущим RGB не подтверждается.",11,"#B7A88E"));
         }
@@ -604,21 +612,21 @@ public sealed class MainWindow : Window
             "LazyG","bindings","forever-fkeys.json");
         var mapping=Stack(spacing:9);
         mapping.Children.Add(Text("UNIVERSAL SPELL → KEY MAPPING (DEV)",15,"#45E5F7",FontWeight.Bold));
-        mapping.Children.Add(Text("One SpellID=F1..F12 per line, e.g. 3044=F1. Bind the same keys in WoW or a Logitech G HUB profile manually. This does NOT connect to G HUB or send keys.",12,"#CDB29C"));
+        mapping.Children.Add(Text("SpellID=key, e.g. 14283=F1 or 14283=CTRL+F2. Set the same ability hotkey in WoW. Start uses the original Logitech G HUB virtual bus directly; no SendInput.",12,"#CDB29C"));
         string initial="";
         try {initial=RotationKeyBindings.Format(RotationKeyBindings.Load(keyFile));}
         catch(Exception ex){RuntimeDiagnostics.Add("BINDINGS","Load rejected: "+ex.GetType().Name);}
         var bindingInput=new TextBox {Text=initial,AcceptsReturn=true,Height=120,
             Watermark="3044=F1",TextWrapping=TextWrapping.NoWrap};
         mapping.Children.Add(bindingInput);
-        var bindingStatus=Text("Executor not armed. No automatic input in this dev stage.",12,"#E5B778");
+        var bindingStatus=Text("Logitech: "+LastGhubStatus+" · Start/Stop controls input.",12,"#E5B778");
         mapping.Children.Add(bindingStatus);
         mapping.Children.Add(Action("Save bindings",()=>{
             try {
                 var parsed=RotationKeyBindings.Parse(bindingInput.Text ?? "");
                 RotationKeyBindings.Save(keyFile,parsed);
-                bindingStatus.Text="Saved "+parsed.Count+" mappings. Commands still disabled.";
-                RuntimeDiagnostics.Add("BINDINGS","Validated mappings saved ("+parsed.Count+") · NO INPUT");
+                bindingStatus.Text="Saved "+parsed.Count+" Logitech mappings. Stop/Start reloads them.";
+                RuntimeDiagnostics.Add("BINDINGS","Validated Logitech mappings saved ("+parsed.Count+")");
             } catch(Exception ex) {
                 bindingStatus.Text="Invalid mapping: "+ex.Message;
                 RuntimeDiagnostics.Add("BINDINGS","Rejected: "+ex.GetType().Name);
@@ -641,7 +649,7 @@ public sealed class MainWindow : Window
             }
             all.Children.Add(Pane(entries));
         }
-        Go(Page("RACIALS & CONSUMABLES","Global Forever settings · UI prepared, no automation is active",all));
+        Go(Page("RACIALS & CONSUMABLES","Logitech G HUB is the only keyboard input backend",all));
     }
     private void ShowSupport()
     {
@@ -829,7 +837,7 @@ public sealed class MainWindow : Window
         };
         b.Children.Add(Pane(diagnosticsOutput,"#041624",8,"#275B78",new Thickness(12)));
         b.Children.Add(Text("Select lines with the mouse, Ctrl+C to copy. Live refresh pauses while the log has keyboard focus; Refresh updates it manually.",12,"#99BCCC"));
-        b.Children.Add(Text("RGB v2 / v3 CRC / Curve, window visibility, Setup and Overlay events appear here. Automatic rotation is not implemented.",12,"#99BCCC"));
+        b.Children.Add(Text("RGB v2 / v3 CRC / Curve and Logitech G HUB input diagnostics appear here. DEV: in-game results are not yet verified.",12,"#99BCCC"));
         Go(Page("SUPPORT","Local live status and event history",Pane(b)));
         RefreshDiagnosticsView();
     }
@@ -847,11 +855,12 @@ public sealed class MainWindow : Window
     {
         if(rotationPreview.Running)
         {
+            StopGhub("STOPPED BY USER");
             rotationPreview.Stop("STOPPED BY USER");
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
-            RuntimeDiagnostics.Add("ROTATION","User stopped read-only XML preview; no keys sent");
+            RuntimeDiagnostics.Add("ROTATION","User stopped XML rotation and Logitech input");
             if(view=="classes")ShowClasses();
             return;
         }
@@ -866,28 +875,42 @@ public sealed class MainWindow : Window
                 Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
                 "forever-"+cls.Id+"-"+spec.Id+"-pve.json");
             var settings=RotationSettingsStore.Load(file,profile);
-            rotationPreview.Start(profile,settings);
+            var fileBindings=Path.Combine(Environment.GetFolderPath(
+                Environment.SpecialFolder.LocalApplicationData),"LazyG","bindings",
+                "forever-fkeys.json");
+            var bindings=RotationKeyBindings.Load(fileBindings);
+            if(bindings.Count==0)throw new InvalidOperationException(
+                "Configure SpellID=key mappings in Common settings first.");
+            ghub.Connect();
+            try { rotationPreview.Start(profile,settings); }
+            catch {ghub.Disconnect();throw;}
+            activeBindings=bindings;
+            commandGate.Reset();
+            ghubGeneration++;
+            ghubArmed=true;
+            LastGhubStatus="CONNECTED / RUNNING";
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(true,null,rotationPreview.Status);
-            RuntimeDiagnostics.Add("ROTATION","Started Hunter BM read-only XML recommendations; inputs disabled");
+            RuntimeDiagnostics.Add("ROTATION","Started XML rotation with Logitech virtual bus · DEV game-untested");
             if(view=="classes")ShowClasses();
         }
         catch(Exception ex)
         {
-            RuntimeDiagnostics.Add("ROTATION","Preview start rejected: "+ex.GetType().Name);
+            StopGhub("START FAILED");
+            RuntimeDiagnostics.Add("ROTATION","Start rejected: "+ex.GetType().Name+" · "+ex.Message);
             var notice=new Window {
-                Title="LazyG · Start preview unavailable",
+                Title="LazyG · Logitech Start unavailable",
                 Width=490,Height=180,CanResize=false,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Background=Palette.Surface,Foreground=Palette.White
             };
             var content=Stack(spacing:14);
             content.Margin=new Thickness(22);
-            content.Children.Add(Text("READ-ONLY XML PREVIEW NOT STARTED",15,"#4BE2F4",FontWeight.Bold));
+            content.Children.Add(Text("LOGITECH ROTATION NOT STARTED",15,"#4BE2F4",FontWeight.Bold));
             content.Children.Add(Text(ex is InvalidDataException?
                 "The selected XML rotation or its settings are unavailable.":
-                "This specialization is not supported in the current preview, or the profile is invalid.",13));
+                ex.Message,13));
             content.Children.Add(Action("OK",notice.Close,true));
             notice.Content=content;notice.ShowDialog(this);
         }
@@ -898,6 +921,7 @@ public sealed class MainWindow : Window
         if(sourceManager.Snapshot(at).Confirmed is
             RotationSourceId.Hekili or RotationSourceId.JustAC)
         {
+            StopGhub("EXTERNAL SOURCE SELECTED");
             rotationPreview.Stop("EXTERNAL SOURCE SELECTED");
             overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
             RuntimeDiagnostics.Add("ROTATION","Internal XML preview stopped: external source");
@@ -912,6 +936,79 @@ public sealed class MainWindow : Window
             lastPreviewSpell=rec?.SpellId;
         }
         overlay?.SetReadOnlyRecommendation(true,rec?.SpellId,status);
+        if(ghubArmed)
+            QueueLogitechCommand(rec,at);
+    }
+    private void StopGhub(string reason)
+    {
+        ghubArmed=false;
+        ghubGeneration++;
+        activeBindings=new System.Collections.Generic.Dictionary<int,string>();
+        commandGate.Reset();
+        LastGhubStatus=reason;
+        // The 12-ms report already in flight always releases its key.
+        // No new report may start after generation invalidation.
+        if(!ghubBusy)ghub.Disconnect();
+        RuntimeDiagnostics.Add("GHUB",reason);
+    }
+    private void QueueLogitechCommand(RotationRecommendation? rec,DateTimeOffset frameAt)
+    {
+        if(!ghubArmed || ghubBusy || rec is null)return;
+        var now=DateTimeOffset.UtcNow;
+        // SRC has not shipped: explicitly running embedded Internal XML may
+        // use only the locally verified internal path + freshly decoded RGB.
+        // A failed/confirmed external provider never qualifies for fallback.
+        var src=sourceManager.Snapshot(now);
+        if(src.Confirmed is not null || src.Health!=RotationSourceHealth.AwaitingTransport)
+        {
+            StopGhub("SOURCE NOT INTERNAL");
+            rotationPreview.Stop("SOURCE NOT INTERNAL");
+            return;
+        }
+        var internalSource=new RotationSourceSnapshot(RotationSourceId.Internal,
+            RotationSourceHealth.Ready,ghubGeneration,0,frameAt,null,
+            "Explicit local XML / fresh RGB");
+        var cmd=commandGate.TryPlan(rec,internalSource,latestGameState,now,
+            ghubArmed,GHubDriver.IsWowForeground(),activeBindings,out var reason);
+        if(cmd is null)
+        {
+            if(reason=="WOW NOT FOREGROUND")
+            {
+                StopGhub("WOW LOST FOCUS");
+                rotationPreview.Stop("WOW LOST FOCUS");
+                overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+            }
+            return;
+        }
+        if(!GHubKeys.TryParse(cmd.Key,out var mod,out var usage))return;
+        ghubBusy=true;
+        long generation=ghubGeneration;
+        _=Task.Run(()=>{
+            try
+            {
+                // No queued stale keystrokes and a second foreground check
+                // inside TapKey at the moment of DeviceIoControl.
+                if(generation==System.Threading.Interlocked.Read(ref ghubGeneration) &&
+                   ghubArmed && ghub.Connected)
+                    ghub.TapKey(mod,usage);
+            }
+            catch(Exception ex)
+            {
+                Dispatcher.UIThread.Post(()=>{
+                    if(generation!=ghubGeneration)return;
+                    StopGhub("LOGITECH ERROR: "+ex.GetType().Name);
+                    rotationPreview.Stop("LOGITECH DISCONNECTED");
+                    overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+                });
+            }
+            finally
+            {
+                Dispatcher.UIThread.Post(()=>{
+                    ghubBusy=false;
+                    if(!ghubArmed)ghub.Disconnect();
+                });
+            }
+        });
     }
     private void ToggleOverlay()
     {
@@ -955,12 +1052,14 @@ public sealed class MainWindow : Window
             {
                 clientText.Text="WOW FOREVER";
                 ShowClasses();
+                StopGhub("SETUP CHANGED");
                 rotationPreview.Stop("SETUP CHANGED");
                 RuntimeDiagnostics.Add("SETUP","Finished · Forever client active");
             }
             else RuntimeDiagnostics.Add("SETUP","Closed without completing RGB setup");
             if(!finished){Show();Activate();}
         };
+        StopGhub("SETUP OPENED");
         rotationPreview.Stop("SETUP OPENED");
         overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
         dialog.Show();
