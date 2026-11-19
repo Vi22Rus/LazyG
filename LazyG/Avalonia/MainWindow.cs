@@ -832,6 +832,9 @@ public sealed class MainWindow : Window
         }
         try
         {
+            if(sourceManager.Snapshot(DateTimeOffset.UtcNow).Confirmed is
+                RotationSourceId.Hekili or RotationSourceId.JustAC)
+                throw new InvalidOperationException("External rotation source selected");
             var profile=RotationProfileCatalog.Load(cls.Id,spec.Id,"PvE");
             if(profile is null)throw new InvalidDataException("No embedded XML for specialization");
             string file=Path.Combine(Environment.GetFolderPath(
@@ -867,6 +870,14 @@ public sealed class MainWindow : Window
     private void UpdateRotationPreview(DateTimeOffset at)
     {
         if(!rotationPreview.Running)return;
+        if(sourceManager.Snapshot(at).Confirmed is
+            RotationSourceId.Hekili or RotationSourceId.JustAC)
+        {
+            rotationPreview.Stop("EXTERNAL SOURCE SELECTED");
+            overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+            RuntimeDiagnostics.Add("ROTATION","Internal XML preview stopped: external source");
+            return;
+        }
         var rec=rotationPreview.Update(latestGameState,at);
         string status=rotationPreview.Status;
         if(status!=lastPreviewStatus || rec?.SpellId!=lastPreviewSpell)
