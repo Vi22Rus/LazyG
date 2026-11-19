@@ -59,6 +59,10 @@ internal sealed class HunterRotationAudit
     private RotationProfileV2? profile;
     private IReadOnlyDictionary<string,int>? overrides;
     private DateTimeOffset lastCapture;
+    private int orphanEvents;
+    private int duplicateEvents;
+    private int eventSameFamily;
+    private int eventDifferentFamily;
     public HunterRotationAudit(int capacity=1500,TimeSpan? matchWindow=null)
     {
         if(capacity is <1 or >2000)throw new ArgumentOutOfRangeException(nameof(capacity));
@@ -66,7 +70,13 @@ internal sealed class HunterRotationAudit
         window=matchWindow??TimeSpan.FromMilliseconds(1200);
     }
     public IReadOnlyList<RotationAuditRow> Rows=>rows.ToArray();
-    public void Clear(){rows.Clear();lastCapture=default;profile=null;overrides=null;}
+    public void Clear()
+    {
+        rows.Clear();lastCapture=default;profile=null;overrides=null;
+        orphanEvents=duplicateEvents=eventSameFamily=eventDifferentFamily=0;
+    }
+    public void RecordUncorrelatedEvent()=>orphanEvents++;
+    public void RecordDuplicateEvent()=>duplicateEvents++;
     // One diagnostic snapshot per polling interval; do not fabricate an execution.
     public RotationAuditRow Capture(RotationProfileV2 rotation,GameState state,
         IReadOnlyDictionary<string,int>? settings,DateTimeOffset at)
@@ -119,6 +129,10 @@ internal sealed class HunterRotationAudit
                  (expectedFamily is not null && expectedFamily==actualFamily));
             // Different cast during this window may be a manually triggered skill,
             // so "Mismatch" means observed != expected, NOT proven LazyG failure.
+            if(observed.Evidence==RotationCastEvidence.UnitSpellcastSucceeded)
+            {
+                if(matched)eventSameFamily++;else eventDifferentFamily++;
+            }
             var verdict=observed.Evidence==RotationCastEvidence.UnitSpellcastSucceeded
                 ? RotationAuditVerdict.EventOnly
                 : row.ExpectedSpellId is null?RotationAuditVerdict.Blocked:
@@ -154,6 +168,13 @@ internal sealed class HunterRotationAudit
         return JsonSerializer.Serialize(new {
             schema=1,client="forever",spec="hunter-beast-mastery",mode="PvE",
             note="Diagnostic only; absence of cast evidence is not an execution failure. No automatic input.",
+            eventSummary=new {
+                SameRuleFamily=eventSameFamily,
+                DifferentOrBlocked=eventDifferentFamily,
+                Uncorrelated=orphanEvents,
+                Duplicate=duplicateEvents,
+                Note="Events are not proof of impact or LazyG-originated input."
+            },
             rows=items
         },new JsonSerializerOptions {WriteIndented=true});
     }
@@ -166,7 +187,9 @@ internal sealed class HunterRotationAudit
         int unverified=rows.Count(r=>r.Verdict==RotationAuditVerdict.Unobservable);
         return "Hunter BM XML audit: "+rows.Count+" samples | observed matches="+matches+
             " | differences="+mismatches+" (attribution unproven) | player cast events="+events+
-            " (effect unverified) | rule blocked="+blocked+
+            " (effect unverified; same family="+eventSameFamily+
+            ", different/blocked="+eventDifferentFamily+") | unmatched="+orphanEvents+
+            " | duplicate="+duplicateEvents+" | rule blocked="+blocked+
             " | cast unobservable="+unverified;
     }
 }
