@@ -1,3 +1,16 @@
+## 2026-11-19 — Sonah/Aster automatic keybind integration FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
+
+**[CI SUCCESS]** [GitHub Actions 44483489729](https://github.com/Vi22Rus/LazyG/actions/runs/44483489729), tested source SHA `8ab1861db0ad8ecd5552dfad7c2b0b31faa3bd07`. All Lua 5.1 syntax and automatic bindings mock tests, C# rotation/auto HID codec regressions, RGB v3, embedded asset tests, Windows x64 self-contained single EXE publishing and Windows startup smoke passed. `LazyG-Windows-x64` artifact **14509123943**; separate `LazyGForeverProbe-0.4.0-dev` artifact **14509063998** (not a replacement for installed main Lua addon). New binding rows are packed into the same CRC16-protected v3 row and accumulate at runtime; unchanged v2/Curve/diagnostics and no extra strip. MainWindow no longer reads manual bindings for autorun; exact active SpellID needs confirmed RGB mapping. Logitech G HUB driver remains sole keyboard input backend.
+
+**Status boundaries:** CI PASS ≠ GAME-TESTED. The automatic keybind scanner is based on directly inspected Sonah/Aster source, but **not yet proven with actual installed Forever action bars, Logitech driver, complex macro, or all key layouts**. Auto-binding supports conservative unambiguous direct-spell slot matches; conditional macros and unsupported mouse buttons never grant input; wrong/missing rank or Unknown state means zero keypress. Source transport SRC and full Hunter BM combat verification are independent unfinished items. To run in WoW, download and install the new Windows EXE, run Setup to regenerate/install Forever Lua addon (AutoBindings.lua is newly added), reload the game addon/UI, and then test. Old addon does not send binding records. Rollback pre-auto-key mapping: [44480181452](https://github.com/Vi22Rus/LazyG/actions/runs/44480181452). Not a release.
+
+**PowerShell single EXE from repo root:**
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — Автоматическое определение клавиш WoW Forever через Sonah + Aster RGB [DEV / GAME-UNTESTED]
 
 **Решение пользователя:** больше не запрашивать ручные соответствия `SpellID=F1`. Определение клавиш — по реальным кнопкам WoW, как в предоставленном **Sonah/Core/Atoms/ActionSlots.lua** и **Sonah/UI/ActionBars.lua** (сверено с ZIP); кодирование HID-клавиши и битов Ctrl/Alt/Shift в маленький RGB-пакет — по принципу предоставленного **oharaaster/Utils/BindingV2.lua**, **ProtocolV2.lua** (сверено с ZIP), но собственный формат с CRC v3. Windows посылает клавишу **только** через действующий `GHubDriver` и только при известном точном SpellID/валидном состоянии. Код/дизайн референсов не копируются буквально.
