@@ -1,3 +1,9 @@
+## 2026-11-19 — VERIFIED CI checkpoint
+
+**[CI SUCCESS / not user-game-tested]** [GitHub Actions 44473159749](https://github.com/Vi22Rus/LazyG/actions/runs/44473159749) confirms the optional same-row v3 Hunter BM compact sender, Lua source mock, manifest cross-language fingerprint and Windows decoder compiled and tested. Source SHA `5ef2cbfa591baec52046b88c2b5f06d707abcfad`. 43-cell BM extended v3 (24-cell legacy when OFF), old Curve 62 intact, no automatic key inputs. Updated WoW addon Lua is bundled in the Windows **Setup** feature, whereas `LazyGForeverProbe-0.4.0-dev` is the separate diagnostic probe artifact and does not contain this compact adapter. In-game API quality and visual behaviour remain **unverified**. Historical below sections include earlier stage wording ([OFFLINE-only]/[CI pending]) superseded by this checkpoint.
+
+---
+
 ## 2026-11-19 — Optional live transport connected [DEV, CI pending, WoW USER TEST PENDING]
 
 **Update to the earlier OFFLINE-only sections below:** This is now **an opt-in live experimental sender/receiver**, still **not game-verified** and still **without automatic input**. The historical OFFLINE-only statements in the original specification describe the previous stage, not the present status.
