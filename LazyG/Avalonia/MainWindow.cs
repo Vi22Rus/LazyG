@@ -49,6 +49,11 @@ public sealed class MainWindow : Window
     private readonly ForeverCooldownObserver cooldownObserver=new();
     private readonly RgbTransportMonitor rgbMonitor=new();
     private readonly RotationSourceManager sourceManager=new();
+    private readonly HunterRotationAudit hunterAudit=new();
+    private bool hunterAuditRecording;
+    private DateTimeOffset lastHunterAuditSample;
+    private RotationProfileV2? hunterAuditProfile;
+    private System.Collections.Generic.IReadOnlyDictionary<string,int>? hunterAuditSettings;
     private TextBlock? rgbHealthText;
     private string lastRgbHealthSignature="";
     private bool fullRgbDiagnosticMode;
@@ -562,6 +567,50 @@ public sealed class MainWindow : Window
             }
             RefreshDiagnosticsView(force:true);
         }));
+        actions.Children.Add(Action(hunterAuditRecording?"Stop Hunter audit":"Start Hunter BM audit",()=>{
+            if(hunterAuditRecording)
+            {
+                hunterAuditRecording=false;
+                RuntimeDiagnostics.Add("HUNTERAUDIT","Recording stopped; "+hunterAudit.Summary());
+            }
+            else
+            {
+                try
+                {
+                    hunterAuditProfile=RotationProfileCatalog.Load("hunter","beast-mastery","PvE");
+                    if(hunterAuditProfile is null)throw new InvalidDataException("No BM PvE XML");
+                    var path=Path.Combine(Environment.GetFolderPath(
+                        Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
+                        "forever-hunter-beast-mastery-pve.json");
+                    hunterAuditSettings=RotationSettingsStore.Load(path,hunterAuditProfile);
+                    hunterAudit.Clear();
+                    lastHunterAuditSample=default;
+                    hunterAuditRecording=true;
+                    RuntimeDiagnostics.Add("HUNTERAUDIT",
+                        "Started XML snapshot comparison; cast success UNOBSERVABLE with current RGB; keys never sent");
+                }
+                catch(Exception ex) {RuntimeDiagnostics.Add("HUNTERAUDIT",
+                    "Could not start: "+ex.GetType().Name);}
+            }
+            ShowSupport();
+        }));
+        actions.Children.Add(Action("Save Hunter audit JSON",()=>{
+            try
+            {
+                string folder=Path.Combine(Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),"LazyG","diagnostics");
+                Directory.CreateDirectory(folder);
+                string file="HunterBM-Audit-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+".json";
+                File.WriteAllText(Path.Combine(folder,file),hunterAudit.ExportJson());
+                RuntimeDiagnostics.Add("HUNTERAUDIT","Saved local bounded XML audit: "+file+
+                    " (no raw RGB, names, input or cast claims)");
+            }
+            catch(Exception ex){RuntimeDiagnostics.Add("HUNTERAUDIT",
+                "Save failed: "+ex.GetType().Name);}
+            RefreshDiagnosticsView(force:true);
+        }));
+        b.Children.Add(Text("Hunter BM audit is OPT-IN; compares XML rule evaluations with future verified cast events. RGB does NOT currently prove execution. Unknown is not a mismatch.",11,"#E9B26D"));
+        b.Children.Add(Text(hunterAudit.Summary(),12,"#72D9F3"));
         actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
             fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
             spellDiagnosticEnabled=fullRgbDiagnosticMode;
@@ -857,6 +906,18 @@ public sealed class MainWindow : Window
                     RuntimeDiagnostics.Add("XML",preview);
                     lastXmlPreview=preview;
                 }
+            }
+            if(hunterAuditRecording && hunterAuditProfile is not null &&
+                (lastHunterAuditSample==default ||
+                 result.capturedAt-lastHunterAuditSample>=TimeSpan.FromMilliseconds(400)))
+            {
+                // Record a bounded, read-only evaluation even when the game state is
+                // incomplete. Never convert an LGD/LGC change into a cast event.
+                hunterAudit.Capture(hunterAuditProfile,latestGameState,
+                    hunterAuditSettings,result.capturedAt);
+                lastHunterAuditSample=result.capturedAt;
+                if(hunterAudit.Rows.Count%20==0)
+                    RuntimeDiagnostics.Add("HUNTERAUDIT",hunterAudit.Summary());
             }
             var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
             if(engineDiagnostic!=lastGameStateDiagnostic)
