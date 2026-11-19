@@ -7,5 +7,6 @@
     <Compile Include="../Avalonia/Diagnostics/ForeverSpellProbeCodec.cs" Link="ForeverSpellProbeCodec.cs" />
     <Compile Include="../Avalonia/Diagnostics/ForeverCooldownRgbCodec.cs" Link="ForeverCooldownRgbCodec.cs" />
     <Compile Include="../Avalonia/Diagnostics/ForeverCooldownObserver.cs" Link="ForeverCooldownObserver.cs" />
+    <Compile Include="../Avalonia/Diagnostics/RgbTransportMonitor.cs" Link="RgbTransportMonitor.cs" />
     <Compile Include="../Avalonia/Diagnostics/ForeverCombatTracker.cs" Link="ForeverCombatTracker.cs" /></ItemGroup>
 </Project>
