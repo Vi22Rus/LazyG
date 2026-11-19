@@ -17,6 +17,8 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="../AddonTemplate/RgbV3Encoder.lua" LogicalName="LazyG.RgbV3Encoder.lua" />
+    <EmbeddedResource Include="../Rotations/Forever/Experimental/paladin-retribution-pvp.xml" LogicalName="LazyG.Forever.RetributionPvPExperimental" />
+    <EmbeddedResource Include="../Rotations/Forever/Experimental/warrior-arms-pve.xml" LogicalName="LazyG.Forever.ArmsPvEExperimental" />
     <EmbeddedResource Include="../Rotations/Forever/Examples/synthetic-v2.xml" LogicalName="LazyG.ForeverXmlV2SyntheticExample" />
     <EmbeddedResource Include="../Rotations/Forever/Examples/diagnostic-hunter.xml" LogicalName="LazyG.ForeverXmlDiagnosticExample" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
