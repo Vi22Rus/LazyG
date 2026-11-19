@@ -1,3 +1,12 @@
+## 0.4.0-dev — Hunter BM read-only spellcast event channel
+
+This new dev probe artifact is separate from previous 0.3.0-dev and the production RGB addon. Install the full LazyGForeverProbe folder, including CastEventRgb.lua, under WoW Forever Interface/AddOns. It is OFF by default. In the game run `/lgprobe audit on` to show six-cell LGE at y=87; `/lgprobe audit off` turns it off.
+
+In Windows Support use Start Hunter BM audit, then Stop Hunter audit and Save Hunter audit JSON. The report is under `%LOCALAPPDATA%\LazyG\diagnostics\`.
+
+Only `UNIT_SPELLCAST_SUCCEEDED` for `unit=player` and a readable numeric *third-argument* SpellID can be reported. Different event signatures, secret values and unsupported API return no event, never a guessed cast. The payload contains just seq, SpellID, local target-change epoch and checksum; no names, GUIDs, health or input history. An idle baseline prevents dropping the first fresh cast. UNIT_SPELLCAST_SUCCEEDED is an **event**, not evidence of hit/debuff or LazyG key execution. Windows calls it `EventOnly`, not `Match`. Existing RGB wire formats are unchanged. See `HUNTER_BM_GAMEPLAY_AUDIT.md`.
+
+---
 # LazyGForeverProbe — WoW Forever manual API audit (0.2.18-dev)
 
 This is an isolated optional diagnostic addon, **not** installed by LazyG.exe. Its only purpose is to identify which Blizzard functions are present, return ordinary values, expose protected/unknown results, and which cast/aura events arrive in the exact user's Forever build. It does **not** bypass secret values, access their content, or drive rotations.
