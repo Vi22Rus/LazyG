@@ -201,6 +201,8 @@ var audit=new HunterRotationAudit(3);
 var beforeAudit=audit.Capture(hunter,hunterState,null,now);
 Check(beforeAudit.ExpectedSpellId==3044 &&
     beforeAudit.Verdict==RotationAuditVerdict.Unobservable,"XML expectation is not cast evidence");
+Check(beforeAudit.Conditions.Any(x=>x.Contains("Rank 1130=RankSetUnverified")),
+    "audit identifies unverified Hunter learned rank");
 Check(audit.Observe(new(3044,now.AddMilliseconds(100),
     RotationCastEvidence.None,7,true)) is null,"unverified cast attempt ignored");
 Check(audit.Observe(new(3044,now.AddMilliseconds(100),
