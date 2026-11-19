@@ -169,6 +169,41 @@ PixelPanel(Check.Stepped(ForPanel(steppedLogical)),5,1);
 Console.WriteLine("RGB v3 pixel-level detector: PASS (direct8 + stepped4)");
 
 
+// Profile-aware scanner reads the SAME v3 row as legacy, with its negotiated
+// number of extra cells. Legacy decoder must not accept its truncated footer.
+var profilePixels=Check.Build(8);
+profilePixels[15]=0x4c;profilePixels[16]=0x47;
+byte[] compactPayload={
+    0x4c,0x48,1,0xA1,0xB2,0xC3,0xD4,3,1,1,0,7,1,1,2,2,4,0,
+    2,1,2,2,0x99,0x09
+};
+Array.Copy(compactPayload,0,profilePixels,23*3,compactPayload.Length);
+int profileEnd=31*3;
+ushort profileCrc=RgbV3Codec.Crc16(profilePixels.AsSpan(12,profileEnd-12));
+profilePixels[profileEnd]=(byte)(profileCrc>>8);
+profilePixels[profileEnd+1]=(byte)profileCrc;
+using(var image=new System.Drawing.Bitmap(450,50))
+{
+    using(var graphics=System.Drawing.Graphics.FromImage(image))
+        graphics.Clear(System.Drawing.Color.Black);
+    const int pitch=5;
+    for(int index=0;index<32;index++)
+    {
+        var c=System.Drawing.Color.FromArgb(
+            profilePixels[index*3],profilePixels[index*3+1],profilePixels[index*3+2]);
+        for(int dy=0;dy<3;dy++)
+        for(int dx=0;dx<3;dx++)
+            image.SetPixel(2+index*pitch+dx,18+dy,c);
+    }
+    Check.That(!RgbV3PanelDetector.FindPanel(image,out _,out _),
+        "legacy v3 detector rejects extended footer");
+    Check.That(RgbV3PanelDetector.FindProfilePanel(image,8,out var extended,
+        out var detail) && extended!.ExtensionCells==8 &&
+        extended.GetCell(23).R==0x4c,"compact v3 decoder finds extension in SAME RGB row: "+detail);
+    Check.That(!RgbV3PanelDetector.FindProfilePanel(image,9,out _,out _),
+        "wrong extension count never reinterprets profile layout");
+}
+Console.WriteLine("Hunter compact v3 pixel detector regression: PASS");
 Console.WriteLine("RGB v3 codec regression: PASS (CRC, direct8, stepped4, markers, profile and corruption)");
     }
 }
