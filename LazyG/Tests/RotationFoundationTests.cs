@@ -120,6 +120,35 @@ Check(RotationXmlV2.Evaluate(paladin,paladinState,
 
 // Hunter BM at level 30: RGB Curve 5%-range threshold tests, never raw exact power.
 var hunter=RotationProfileCatalog.Load("hunter","beast-mastery","PvE")!;
+var manifest=ProfileDataManifestBuilder.Build(hunter);
+Check(manifest.Client=="forever" && manifest.ClassId==3 && manifest.SpecIndex==1 &&
+    manifest.Mode=="PvE" && manifest.SpellFamilies.Count==4 &&
+    manifest.AuraFamilies.Count==2 &&
+    manifest.Signals.Contains("GcdActive") &&
+    manifest.Signals.Contains("TargetEpoch") &&
+    manifest.Signals.Contains("PowerBand5"),
+    "Hunter BM profile manifest extracts spell ranks, aura families, GCD and Curve requirements");
+Check(manifest.SpellFamilies.Single(x=>x.BaseSpellId==3044)
+    .RankSpellIds.SequenceEqual(HunterSpellFamilies.Ranks(3044)),
+    "manifest contains all Arcane Shot ranks, never only base SpellID");
+Check(manifest.AuraFamilies.Single(x=>x.RankSpellIds.Contains(1130))
+    .RankSpellIds.SequenceEqual(HunterSpellFamilies.Ranks(1130)),
+    "manifest preserves every Hunter Mark debuff rank");
+Check(manifest.CompatibleWith("forever",3,1,"PvE",manifest.LayoutHash) &&
+    !manifest.CompatibleWith("forever",3,2,"PvE",manifest.LayoutHash) &&
+    !manifest.CompatibleWith("335",3,1,"PvE",manifest.LayoutHash) &&
+    !manifest.CompatibleWith("forever",3,1,"PvE",manifest.LayoutHash^1),
+    "schema hash and client/spec mismatch rejected");
+Check(ProfileDataManifestBuilder.Build(hunter).LayoutHash==manifest.LayoutHash,
+    "profile schema hash deterministic");
+Check(ProfileDataManifestBuilder.Build(hunter with {
+    Rules=hunter.Rules.Reverse().ToArray()
+}).LayoutHash==manifest.LayoutHash,
+    "schema hash independent of XML priority order");
+Check(ProfileDataManifestBuilder.Build(hunter with {
+    Rules=hunter.Rules.Take(3).ToArray()
+}).LayoutHash!=manifest.LayoutHash,
+    "profile schema hash changes when ability set changes");
 Check(hunter.Rules.Count==4 && hunter.Settings.Values
     .Where(x=>x.Type==RotationSettingType.Integer).All(x=>x.Step==5),
     "Hunter BM four rules and 5-percent-only resource sliders");
