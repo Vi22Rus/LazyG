@@ -5,6 +5,8 @@
     <Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" />
     <Compile Include="../Avalonia/Engine/RotationFoundation.cs" Link="RotationFoundation.cs" />
     <Compile Include="../Avalonia/Engine/ProfileDataManifest.cs" Link="ProfileDataManifest.cs" />
+    <Compile Include="../Avalonia/Engine/HunterCompactProfileWire.cs" Link="HunterCompactProfileWire.cs" />
+    <Compile Include="../Windows/RgbV3Codec.cs" Link="RgbV3Codec.cs" />
     <Compile Include="../Avalonia/Engine/ForeverHunterAbilityCatalog.cs" Link="ForeverHunterAbilityCatalog.cs" />
     <Compile Include="../Avalonia/Engine/HunterRotationAudit.cs" Link="HunterRotationAudit.cs" />
     <Compile Include="../Avalonia/Diagnostics/ForeverCastEventCodec.cs" Link="ForeverCastEventCodec.cs" />
