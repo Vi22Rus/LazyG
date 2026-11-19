@@ -1151,11 +1151,13 @@ public sealed class MainWindow : Window
                             latestGameState,compact);
                 }
             }
-            string compactDiagnostic=compactValid
-                ?(compactSequenceEstablished?"PROFILE LIVE (read-only)":"PROFILE BASELINE")
-                :"PROFILE NOT PRESENT / STALE";
+            string compactDiagnostic=HunterCompactProfileWire.Explain(
+                connected?result.packet:null,hunterCompactManifest,result.capturedAt)+
+                (compactValid?(compactSequenceEstablished?" / SEQUENCE LIVE":
+                    " / AWAITING SECOND FRAME"):" / NO GAMESTATE APPLICATION");
             if(lastCompactDiagnostic!=compactDiagnostic)
             {
+                executionTrace.Add(result.capturedAt,"COMPACT",null,compactDiagnostic);
                 RuntimeDiagnostics.Add("COMPACT",compactDiagnostic);
                 lastCompactDiagnostic=compactDiagnostic;
             }
