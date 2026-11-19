@@ -85,8 +85,13 @@ local function aurasRestricted()
     local ok,v=pcall(C_Secrets.ShouldAurasBeSecret)
     if ok and plain(v) and type(v)=="boolean" then return v end
   end
-  -- Unknown is deliberately treated as restricted for an absent-name query.
-  -- A positive direct aura lookup remains valid even under restrictions.
+  -- An absent aura can only be trusted when restrictions are demonstrably OFF.
+  -- Without C_Secrets, an out-of-combat read may prove absence; in combat
+  -- assume unknown instead of inventing false.
+  if type(UnitAffectingCombat)=="function" then
+    local v=safeBool(UnitAffectingCombat,"player")
+    if v==false then return false end
+  end
   return nil
 end
 local function plainAuraId(info)
@@ -101,13 +106,15 @@ local function scanDebuffs()
   if exists~=true then return result end
   if not C_UnitAuras then return result end
   local allIds={}
+  for _,family in ipairs(manifest.auras) do
+    for _,id in ipairs(family.ranks) do allIds[id]=true end
+  end
   local byName=C_UnitAuras.GetAuraDataBySpellName
   -- Sonah: direct name lookup supports per-aura access when index iteration is
   -- denied. Positive SpellID is evidence; nil under secrecy is NOT absence.
   if type(byName)=="function" then
     for _,family in ipairs(manifest.auras) do
       for _,id in ipairs(family.ranks) do
-        allIds[id]=true
         local name=spellName(id)
         if name then
           local ok,info=pcall(byName,"target",name,"HARMFUL")
@@ -120,10 +127,6 @@ local function scanDebuffs()
           end
         end
       end
-    end
-  else
-    for _,family in ipairs(manifest.auras) do
-      for _,id in ipairs(family.ranks) do allIds[id]=true end
     end
   end
   -- JustAC: batch query avoids denied indexed access; only safe fields count.
