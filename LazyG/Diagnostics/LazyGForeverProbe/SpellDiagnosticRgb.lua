@@ -3,13 +3,21 @@
 -- never feeds the RGB strip or Windows GameState.
 -- Not shipped/installed by default. No effect on existing v2/v3/Curve strips.
 -- Select a spell ID for the current client/profile before testing.
-local SPELL_ID = 1130 -- Hunter's Mark only for the Hunter test profile.
+local selectedId=1130 -- default for compatibility, change via /lgprobe rgb <ID>.
 LazyGSpellDiagnostic = LazyGSpellDiagnostic or {}
 local enabled=false
 function LazyGSpellDiagnostic.SetEnabled(value)
   enabled = value==true
   if LazyGSpellDiagnostic.Frame then LazyGSpellDiagnostic.Frame:SetShown(enabled) end
 end
+function LazyGSpellDiagnostic.IsEnabled() return enabled end
+function LazyGSpellDiagnostic.SetSpellId(id)
+  if type(id)~="number" or id~=math.floor(id) or id<1 or
+     id>16777215 then return false end
+  selectedId=id
+  return true
+end
+function LazyGSpellDiagnostic.GetSpellId() return selectedId end
 local C, SIZE, STEP = 6, 4, 5
 local f = CreateFrame("Frame", "LazyGSpellDiagnosticStrip", UIParent)
 f:SetSize(C*STEP-1,SIZE)
@@ -47,17 +55,19 @@ end
 local seq=0
 local function paint()
   seq=(seq+1)%256
-  local learned=probe(IsPlayerSpell,SPELL_ID)
-  local canUse=usable(SPELL_ID)
+  local learned=probe(IsPlayerSpell,selectedId)
+  local canUse=usable(selectedId)
   local onCooldown,gcd
   if LazyGCooldownStateProbe and LazyGCooldownStateProbe.Flags then
-    onCooldown=select(1,LazyGCooldownStateProbe.Flags(SPELL_ID))
-    gcd=LazyGCooldownStateProbe.Gcd()
+    onCooldown=select(1,LazyGCooldownStateProbe.Flags(selectedId))
+    -- Real Forever captures measured 29515 as the GCD-active candidate;
+    -- 61304 was Unknown. Still diagnostic only, NOT cast permission.
+    gcd=select(1,LazyGCooldownStateProbe.Flags(29515))
   else
     -- An absent diagnostic module is never evidence of a ready spell.
     onCooldown,gcd=0,0
   end
-  local id=SPELL_ID
+  local id=selectedId
   local b={0x4C,0x47,0x44,1,seq,0,math.floor(id/65536)%256,
     math.floor(id/256)%256,id%256,learned,canUse,onCooldown,gcd,0,0,0xA5}
   local sum=0
