@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hunter level 30 Beast Mastery: EXPERIMENTAL OFFLINE DIAGNOSTIC ONLY.
+     Spell IDs are base ranks, not an auto-rank resolver. No keyboard execution.
+     Target debuffs require epoch-qualified evidence currently unavailable live. -->
+<Rotation version="2" client="forever" classId="3" specIndex="1" mode="PvE">
+  <Settings>
+    <Setting id="useHuntersMark" type="bool" unit="toggle" default="1" min="0" max="1" step="1" tier="Essentials" group="Utility" ru="Поддерживать Метку охотника" en="Maintain Hunter's Mark"/>
+    <Setting id="useSerpentSting" type="bool" unit="toggle" default="1" min="0" max="1" step="1" tier="Essentials" group="Rotation" ru="Поддерживать Укус змеи" en="Maintain Serpent Sting"/>
+    <Setting id="useArcaneShot" type="bool" unit="toggle" default="1" min="0" max="1" step="1" tier="Essentials" group="Rotation" ru="Использовать Чародейский выстрел" en="Use Arcane Shot"/>
+    <Setting id="useAutoShot" type="bool" unit="toggle" default="1" min="0" max="1" step="1" tier="Essentials" group="Rotation" ru="Разрешить Автоматическую стрельбу" en="Allow Auto Shot"/>
+    <Setting id="serpentManaMin" type="int" unit="percent" default="30" min="0" max="100" step="5" tier="Advanced" group="Resource" ru="Минимальная полоса маны для Укуса змеи" en="Minimum mana band for Serpent Sting"/>
+    <Setting id="arcaneManaMin" type="int" unit="percent" default="25" min="0" max="100" step="5" tier="Advanced" group="Resource" ru="Минимальная полоса маны для Чародейского выстрела" en="Minimum mana band for Arcane Shot"/>
+  </Settings>
+  <Rules>
+    <Rule id="markMissing" priority="10" spellId="1130" enabledBy="useHuntersMark">
+      <Condition signal="TargetDebuffAbsent" compare="IsTrue" spellId="1130"/>
+    </Rule>
+    <Rule id="stingMissing" priority="20" spellId="1978" enabledBy="useSerpentSting">
+      <Condition signal="TargetDebuffAbsent" compare="IsTrue" spellId="1978"/>
+      <Condition signal="PowerPercent" compare="AtLeast" settingRef="serpentManaMin"/>
+    </Rule>
+    <Rule id="arcaneShot" priority="30" spellId="3044" enabledBy="useArcaneShot">
+      <Condition signal="PowerPercent" compare="AtLeast" settingRef="arcaneManaMin"/>
+    </Rule>
+    <Rule id="autoShot" priority="40" spellId="75" enabledBy="useAutoShot"/>
+  </Rules>
+</Rotation>
