@@ -213,7 +213,7 @@ internal sealed class HunterRotationAudit
         }).ToArray();
         return JsonSerializer.Serialize(new {
             schema=1,client="forever",spec="hunter-beast-mastery",mode="PvE",
-            note="Diagnostic only; absence of cast evidence is not an execution failure. No automatic input.",
+            note="Diagnostic-only XML evaluation; actual Logitech IO is tracked in rotation-trace.jsonl. Absence of cast evidence is not an execution failure.",
             missingCapabilities=latestMissing,
             eventSummary=new {
                 SameRuleFamily=eventSameFamily,
