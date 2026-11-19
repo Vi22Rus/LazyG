@@ -4,7 +4,10 @@
     <Compile Include="RotationFoundationTests.cs" />
     <Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" />
     <Compile Include="../Avalonia/Engine/RotationFoundation.cs" Link="RotationFoundation.cs" />
+    <Compile Include="../Avalonia/Engine/RotationProfileCatalog.cs" Link="RotationProfileCatalog.cs" />
     <Compile Include="../Avalonia/Engine/RotationSettingsStore.cs" Link="RotationSettingsStore.cs" />
     <Compile Include="../Avalonia/Diagnostics/RotationSupportArchive.cs" Link="RotationSupportArchive.cs" />
+    <EmbeddedResource Include="../Rotations/Forever/Experimental/paladin-retribution-pvp.xml" LogicalName="LazyG.Forever.RetributionPvPExperimental" />
+    <EmbeddedResource Include="../Rotations/Forever/Experimental/warrior-arms-pve.xml" LogicalName="LazyG.Forever.ArmsPvEExperimental" />
   </ItemGroup>
 </Project>
