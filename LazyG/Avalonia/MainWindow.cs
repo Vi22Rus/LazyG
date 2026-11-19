@@ -400,8 +400,17 @@ public sealed class MainWindow : Window
             var settingLocal=setting;
             var pane=Stack(spacing:7);
             pane.Children.Add(Text(setting.LabelRu+" / "+setting.LabelEn,14,"#E9F9FF",FontWeight.SemiBold));
+            var referencedRules=profile.Rules.Where(rule=>rule.EnabledBy==setting.Id ||
+                rule.Conditions.Any(cond=>cond.SettingRef==setting.Id ||
+                    cond.WhenEnabled==setting.Id)).ToArray();
+            var referencedSignals=referencedRules.SelectMany(rule=>rule.Conditions)
+                .Select(cond=>cond.Signal).Distinct().ToArray();
             pane.Children.Add(Text(setting.Group+" · "+setting.Unit+" · default "+setting.Default+
-                " · used by XML rules · live signal may be Unknown",11,"#8CAEC1"));
+                " · rules: "+string.Join(", ",referencedRules.Select(rule=>
+                    rule.Id+" (SpellID "+rule.SpellId+")")),11,"#8CAEC1"));
+            pane.Children.Add(Text("Signals: "+
+                (referencedSignals.Length==0?"spell/GCD/target proof":string.Join(", ",referencedSignals))+
+                " · Live readiness unverified (Unknown blocks).",11,"#B7A88E"));
             int current=overrides.TryGetValue(setting.Id,out var saved)?saved:setting.Default;
             void SaveSetting(int newValue)
             {
