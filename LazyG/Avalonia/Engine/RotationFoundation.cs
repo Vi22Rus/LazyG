@@ -18,6 +18,10 @@ internal sealed record RotationSourceSnapshot(RotationSourceId? Confirmed, Rotat
 internal sealed class RotationSourceManager
 {
     private readonly TimeSpan _maxAge;
+    private bool _hasWatermark;
+    private long _lastEpoch;
+    private uint _lastSequence;
+    private RotationSourceId _lastSource;
     private RotationSourceSnapshot _state = new(null,RotationSourceHealth.AwaitingTransport,0,0,default,null,"Source RGB not implemented");
     public RotationSourceManager(TimeSpan? maxAge=null) => _maxAge=maxAge ?? TimeSpan.FromMilliseconds(900);
     public RotationSourceSnapshot Snapshot(DateTimeOffset now)
@@ -34,13 +38,18 @@ internal sealed class RotationSourceManager
         long epoch, uint sequence, int? spellId, DateTimeOffset receivedAt)
     {
         if (!Enum.IsDefined(source) || epoch<0 || receivedAt==default) { Disconnect("Invalid provider metadata"); return false; }
-        var previous=_state;
-        if (previous.Confirmed is not null && epoch==previous.Epoch &&
-            (source!=previous.Confirmed || sequence<=previous.Sequence))
+        // Keep the high-water mark even after disconnection: a stale duplicate
+        // cannot re-authorize a source just because Confirmed was cleared.
+        if (_hasWatermark && (epoch<_lastEpoch ||
+            (epoch==_lastEpoch && (source!=_lastSource || sequence<=_lastSequence))))
         {
-            Disconnect("Nonmonotonic sequence or unconfirmed source change"); return false;
+            Disconnect("Replay, nonmonotonic sequence or unconfirmed source change");
+            return false;
         }
-        if (previous.Confirmed is not null && epoch<previous.Epoch) { Disconnect("Old epoch"); return false; }
+        _hasWatermark=true;
+        _lastEpoch=epoch;
+        _lastSequence=sequence;
+        _lastSource=source;
         var health=!compatible?RotationSourceHealth.Incompatible:
             !providerReady?RotationSourceHealth.Unavailable:
             spellId is null && source!=RotationSourceId.Internal?RotationSourceHealth.NoRecommendation:
