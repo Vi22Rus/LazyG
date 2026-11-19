@@ -88,6 +88,21 @@ internal static class WowRgbBridge
         out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe,
         bool readCooldownProbe,out LazyG.Desktop.Diagnostics.CooldownRgbPacket? cooldownProbe)
     {
+        return TryReadCombined(out player,out telemetry,out detail,out v3Detail,
+            out thresholds,readSpellProbe,out spellProbe,readCooldownProbe,
+            out cooldownProbe,false,out _);
+    }
+
+    // Optional LGE event strip shares the same captured bitmap and never alters
+    // existing return contracts. Callers must opt in explicitly.
+    public static bool TryReadCombined(out RgbPlayerState? player,
+        out RgbV3Packet? telemetry,out string detail,out string v3Detail,
+        out RgbThresholdProbe? thresholds,bool readSpellProbe,
+        out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe,
+        bool readCooldownProbe,out LazyG.Desktop.Diagnostics.CooldownRgbPacket? cooldownProbe,
+        bool readCastEvent,out LazyG.Desktop.Diagnostics.ForeverCastEventPacket? castEvent)
+    {
+        castEvent=null;
         cooldownProbe=null;
         spellProbe=null;
         player = null;
@@ -142,6 +157,8 @@ internal static class WowRgbBridge
                 RgbSpellProbeDetector.FindPanel(bitmap,out spellProbe);
             if (readCooldownProbe)
                 RgbCooldownProbeDetector.FindPanel(bitmap,out cooldownProbe);
+            if (v2 && readCastEvent)
+                RgbCastEventDetector.FindPanel(bitmap,out castEvent);
             return v2;
         }
         catch (Exception ex)
