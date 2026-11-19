@@ -1,3 +1,16 @@
+## 2026-11-19 — Hunter Mark/Sting debuff confirmation FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
+
+**[CI SUCCESS]** [Actions 44490976300](https://github.com/Vi22Rus/LazyG/actions/runs/44490976300), code SHA `a0fff4b79486409f88e183a801cf40a38764770f`. Both Windows build/tests (including `RotationFoundationTests` with new debuff confirmation state-machine assertions), self-contained single-file EXE publish, Windows startup smoke, and Lua 5.1 diagnostic regression succeeded. Windows artifact **LazyG-Windows-x64** ID **14512454786**; optional Forever probe addon artifact ID **14513610004**. Subsequent documentation-only commits do not alter build. This is NOT a release and no in-game success has been verified.
+
+**Critical behavior:** after an actual `TapKey` returns for Mark or Sting, XML's next action is gated until same-target aura observation confirms the debuff; if all aura ranks are positively absent, retrying the same spell is possible after 900ms pacing *and* existing real GCD/XML authorization. Unknown blocks unrelated input and overlay hides any misleading next spell icon. On target epoch change, pending action invalidates. No fixed 1.5s GCD. Macro action-slot automatic bindings remain unsupported; use direct spell on action bar for this test. The old log did not prove driver events were real casts or WoW knew the debuff.
+
+**Rollback** previous stable dev CI [44488152290](https://github.com/Vi22Rus/LazyG/actions/runs/44488152290). **PowerShell single EXE**:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — Hunter Mark/Sting confirmation after Logitech IO [0.4.0-dev / GAME-UNTESTED]
 
 **Observed in actual user test:** in `LazyG-Diagnostic-20261119-083929-643.zip`, the XML recommended Mark `markMissing`, and eventually the G Hub virtual driver completed reports for concrete Mark rank `14323` (e.g. 08:38:27, 08:38:53). Shortly after, the compact aura quality went from `auraFlags=13` to `auraFlags=0` and the XML could pick later rules. The log does NOT prove Mark landed: `HID_IO_COMPLETED` is a driver return only; no independently confirmed LGE player spellcast. Also Lua excludes macro action slots from automatic binding: a macro-mounted Mark was unavailable; regular spell-slot Mark allowed matching. No exact claim that XML internally sets Mark present from keypress: issue is lack of explicit **pending mandatory debuff confirmation** across samples.
