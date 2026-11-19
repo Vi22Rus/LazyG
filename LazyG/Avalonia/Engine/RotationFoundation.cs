@@ -391,13 +391,30 @@ internal static class RotationXmlV2
             }
             result=TruthLogic.And(result,globalGate);
             details.Add("TargetGate="+targetGate+"; GcdGate="+gcdGate);
-            var readiness=ConditionEvaluator.SpellReady(fresh,rule.SpellId);
+            // Hunter XML references family/base IDs. Live compact RGB observes
+            // individual ranks: use ONLY a completely verified learned family,
+            // never assume the base rank is known or highest by player level.
+            int chosenSpellId=rule.SpellId;
+            Truth readiness;
+            if(profile.Client=="forever" && profile.ClassId==3)
+            {
+                var finding=HunterSpellFamilies.Find(fresh,rule.SpellId,now);
+                if(finding.SelectedRank is int verifiedRank)
+                {
+                    chosenSpellId=verifiedRank;
+                    readiness=ConditionEvaluator.SpellReady(fresh,verifiedRank);
+                }
+                else readiness=Truth.Unknown;
+                details.Add("HunterRank="+finding.Status+
+                    (finding.SelectedRank is int rankId?" selected="+rankId:""));
+            }
+            else readiness=ConditionEvaluator.SpellReady(fresh,rule.SpellId);
             result=TruthLogic.And(result,readiness);
             details.Add("SpellReady="+readiness);
-            traces.Add(new(rule.Id,rule.SpellId,result,
+            traces.Add(new(rule.Id,chosenSpellId,result,
                 string.Join("; ",details)+"; outcome="+result+"; diagnostic only"));
             if(result==Truth.True)
-                return new(new(RotationSourceId.Internal,rule.SpellId,rule.Priority,rule.Id,now),traces,"");
+                return new(new(RotationSourceId.Internal,chosenSpellId,rule.Priority,rule.Id,now),traces,"");
         }
         return new(null,traces,globalGate!=Truth.True?
             "Target, transport or GCD unknown/blocked":"No eligible rules");
