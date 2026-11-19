@@ -390,7 +390,7 @@ public sealed class MainWindow : Window
             cooldownObserver.Reset();lastCooldownDiagnostic="";
             rgbMonitor.Reset();lastRgbHealthSignature="";
             RuntimeDiagnostics.Add("RGBMON",fullRgbDiagnosticMode
-                ?"Full receive diagnostics ON (enable optional LGD/LGC strips in WoW)"
+                ?"Full RGB receive diagnostics ON; use /lgprobe diag 13795 in WoW"
                 :"Optional LGD/LGC receive diagnostics OFF; base v2/v3/Curve still monitored");
             RefreshDiagnosticsView();
         }));
@@ -572,6 +572,21 @@ public sealed class MainWindow : Window
                 spellDiagnosticEnabled,result.spell is not null,result.spell?.Sequence,
                 cooldownDiagnosticEnabled,result.cooldown is not null,result.cooldown?.Sequence,
                 reason));
+            rgbMonitor.SetDecoded(connected ? new RgbDecodedView(
+                result.state?.ClassId,result.state?.RaceId,
+                result.state?.Level,result.state?.SpecIndex,result.state?.CombatFlags,
+                result.packet?.ProfileHash,result.packet?.PlayerHealth,
+                result.packet?.TargetHealth,result.packet?.PlayerPower,
+                result.packet?.CombatFlags,result.packet?.TargetFlags,
+                result.thresholds?.PlayerHp,result.thresholds?.TargetHp,
+                result.thresholds?.Resource,
+                result.spell?.SpellId,result.spell?.Learned.ToString(),
+                result.spell?.Usable.ToString(),result.spell?.CooldownActive.ToString(),
+                result.spell?.GcdActive.ToString(),
+                result.cooldown?.SpellId,result.cooldown?.SpellActive.ToString(),
+                result.cooldown?.SpellOnGcd.ToString(),
+                result.cooldown?.Gcd29515Active.ToString(),
+                result.cooldown?.Gcd29515OnGcd.ToString()) : null);
             var rgbHealth=rgbMonitor.Summary();
             if(rgbHealthText is not null)rgbHealthText.Text=rgbHealth;
             // Suppress per-frame event spam while preserving transitions and counters.
@@ -675,6 +690,7 @@ public sealed class MainWindow : Window
                 false,false,null,false,
                 spellDiagnosticEnabled,false,null,
                 cooldownDiagnosticEnabled,false,null,"Exception"));
+            rgbMonitor.SetDecoded(null);
             if(rgbHealthText is not null)rgbHealthText.Text=rgbMonitor.Summary();
             if(lastBridgeState!="RGB CAPTURE ERROR")
                 RuntimeDiagnostics.Add("ERROR","RGB capture: "+e.GetType().Name);
