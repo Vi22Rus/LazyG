@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.3.0-dev integrated user game capture and Firefox security warning [USER-TESTED / PARTIAL / SECURITY REVIEW OPEN / DOCS-ONLY]
+
+- User supplied real Forever SavedVariables and 150-line Windows Support log for consolidated 0.3.0-dev. Addon recorded `RGB DIAGNOSTICS ON SpellID=13795` with saved `lgdEnabled=true,lgcEnabled=true,lgdSpellId=13795,lgcSpellId=13795`. **No `LGD/LGC strip RESTORED` event is present; actual persisted reload restoration is NOT proved by these two files.** No raw user data committed.
+- All five existing diagnostic channels appear in live logs: v2 known class 3/spec 1, RGB v3 CRC PASS and frame progression, Curve HP/target/resource 5%-bands, LGD selected spell learned=True/cooldown active states with usable=Unknown, and LGC selected spell CD/GCD29515 independently transitioning True/False. Example 09:55:56 LGC CD=False/GCD=False, 09:55:58 both True; exact durations unproved.
+- **LGC reacquisition confirmed:** after 09:55:34–35 `LGC STALE` then v2 loss, by 09:55:49 monitors report v2/v3/Curve/LGD/LGC Live and LGC recovery=1; at 09:56:02 recovery=2; 09:56:09 recovery=3. At 09:56:46 monitor summary: 318 polls, 271 base v2, 265 v3 unique advances, 271 simultaneous Curve frames, LGC recovery=3, stale=1, lost=4. `RGBMON` transport does not authorize casting; `GAMESTATE GCD Unknown SpellReady Unknown` remains.
+- User additionally reported **both GitHub Actions artifact ZIP downloads are flagged by Firefox with exact text equivalent to 'This file contains a virus or malware', with manual Allow Download available.** Per Mozilla official documentation this is a malware-classification warning, **distinct from 'not commonly downloaded'**. No basis to label as false positive or confirm malware from the user logs. Do not ask user to bypass warnings, disable protection, or blindly execute. Follow-up security review: verify local Defender threat name/scans, hashes of downloaded artifacts, build provenance/dependencies, and submit suspected false positives only when justified. Do not repackage to evade detection or silently disable security.
+- Source code unchanged in this review; current built artifact https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 remains CI-passed and now user-tested for RGB transport/reacquisition only, **security warning unresolved**.
+
 ## 2026-11-19 — 0.3.0-dev complete RGB diagnostics batch [CI-PASSED / GAME-UNTESTED]
 
 - **Verified SUCCESS**: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 , application code commit 9dbb60625cafc9dbd6cd8f63580368b9ddde96fc. Both Windows and Lua 5.1 CI jobs passed, including v3 direct8 and stepped4 CRC/pixel scanner, Curve 5% bands, GameState/XML action safety, transport monitor state transitions, LGC/LGD selected SpellID, one-command diagnostics, reload restoration, single-file Windows publish and startup smoke.
