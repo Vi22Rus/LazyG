@@ -1,3 +1,7 @@
+### 2026-11-19 — SRC replay hardening (0.4.0-dev foundation)
+
+`RotationSourceManager` keeps the last valid (source, epoch, sequence) watermark across disconnects. Same-epoch duplicate/old sequence or source change without a new epoch rejects and clears recommendations instead of reactivating a prior source. Added offline replay regression in `RotationFoundationTests.cs`. No live SRC channel or Lua selector shipped. Current full regression/build run for code commit: https://github.com/Vi22Rus/LazyG/actions/runs/44455119810 . Rollback: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
+
 ### 0.4.0-dev foundation: Support UI and crash handling integration
 
 - Added `Create support ZIP` on existing Avalonia Support page; values are allowlisted and stored locally under `%LOCALAPPDATA%\\LazyG\\reports`. The page explicitly displays that rotation source SRC is not yet connected; provider mode cannot be selected in Windows. Current RGB diagnostics remain intact.
