@@ -6,6 +6,7 @@
     <Compile Include="../Avalonia/Engine/RotationFoundation.cs" Link="RotationFoundation.cs" />
     <Compile Include="../Avalonia/Engine/RotationPreviewSession.cs" Link="RotationPreviewSession.cs" />
     <Compile Include="../Avalonia/Engine/RotationCommandPipeline.cs" Link="RotationCommandPipeline.cs" />
+    <Compile Include="../Avalonia/Engine/RotationExecutionTrace.cs" Link="RotationExecutionTrace.cs" />
     <Compile Include="../Avalonia/Engine/GHubDriver.cs" Link="GHubDriver.cs" />
     <Compile Include="../Avalonia/Engine/AutoBindingRegistry.cs" Link="AutoBindingRegistry.cs" />
     <Compile Include="../Avalonia/Engine/ProfileDataManifest.cs" Link="ProfileDataManifest.cs" />
