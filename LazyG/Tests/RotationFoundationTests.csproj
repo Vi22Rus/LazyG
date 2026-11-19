@@ -4,6 +4,7 @@
     <Compile Include="RotationFoundationTests.cs" />
     <Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" />
     <Compile Include="../Avalonia/Engine/RotationFoundation.cs" Link="RotationFoundation.cs" />
+    <Compile Include="../Avalonia/Engine/RotationPreviewSession.cs" Link="RotationPreviewSession.cs" />
     <Compile Include="../Avalonia/Engine/ProfileDataManifest.cs" Link="ProfileDataManifest.cs" />
     <Compile Include="../Avalonia/Engine/HunterCompactProfileWire.cs" Link="HunterCompactProfileWire.cs" />
     <Compile Include="../Windows/RgbV3Codec.cs" Link="RgbV3Codec.cs" />
