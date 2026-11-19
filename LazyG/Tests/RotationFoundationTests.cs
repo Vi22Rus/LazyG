@@ -277,4 +277,27 @@ Check(eventOnly?.Verdict==RotationAuditVerdict.EventOnly &&
     eventOnly.Reason.Contains("EffectUnverified"),
     "UNIT_SPELLCAST_SUCCEEDED must never prove hit or effect");
 
+// Readiness audit never invents aura/rank/target/GCD from Curve or event hints.
+var missingBefore=HunterAuditReadiness.Missing(hunterState,now);
+Check(missingBefore.Contains("VerifiedRank:1130") &&
+      missingBefore.Contains("GcdReady")==false &&
+      missingBefore.Contains("TargetDebuffRanks:1130")==false,
+      "readiness distinguishes verified synthetic global gate from missing rank evidence");
+Check(HunterAuditReadiness.Missing(GameState.Empty(now),now).Contains("CurveManaBand"),
+    "unknown Curve explicitly reported");
+Check(HunterAuditReadiness.Missing(hunterState,now.AddSeconds(2)).Contains("GcdReady"),
+    "stale GCD explicitly reported");
+var eventCategories=new HunterRotationAudit();
+eventCategories.Capture(hunter,hunterState,null,now);
+var aligned=eventCategories.Observe(new(14281,now.AddMilliseconds(100),
+    RotationCastEvidence.UnitSpellcastSucceeded,7,true));
+Check(aligned?.Verdict==RotationAuditVerdict.EventOnly &&
+      aligned.Reason.Contains("SameFamily"),"same-family event is still effect unverified");
+eventCategories.RecordUncorrelatedEvent();
+eventCategories.RecordDuplicateEvent();
+Check(eventCategories.ExportJson().Contains("SameRuleFamily") &&
+      eventCategories.ExportJson().Contains("missingCapabilities") &&
+      eventCategories.Summary().Contains("unmatched=1"),
+      "audit distinguishes aligned player event, gaps and unmatched traffic");
+
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
