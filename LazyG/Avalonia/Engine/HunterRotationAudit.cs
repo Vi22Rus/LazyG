@@ -59,7 +59,7 @@ internal sealed class HunterRotationAudit
     private RotationProfileV2? profile;
     private IReadOnlyDictionary<string,int>? overrides;
     private DateTimeOffset lastCapture;
-    public HunterRotationAudit(int capacity=200,TimeSpan? matchWindow=null)
+    public HunterRotationAudit(int capacity=1500,TimeSpan? matchWindow=null)
     {
         if(capacity is <1 or >2000)throw new ArgumentOutOfRangeException(nameof(capacity));
         this.capacity=capacity;
