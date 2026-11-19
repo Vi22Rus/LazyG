@@ -90,7 +90,7 @@ jobs:
       - name: Upload ready-to-install Forever diagnostic addon
         uses: actions/upload-artifact@v4
         with:
-          name: LazyGForeverProbe-0.2.18-dev
+          name: LazyGForeverProbe-0.2.20-dev
           path: release-addon/
           if-no-files-found: error
           retention-days: 30
@@ -130,3 +130,6 @@ jobs:
 
       - name: Verify Forever cooldown RGB v1 wire vectors
         run: lua5.1 LazyG/Tests/forever_cooldown_rgb_test.lua
+
+      - name: Verify LGC explicit opt-in restores on addon reload
+        run: lua5.1 LazyG/Tests/forever_cooldown_rgb_reload_test.lua
