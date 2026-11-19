@@ -75,7 +75,7 @@ internal sealed class RotationSourceManager
 internal enum RotationSettingType { Boolean, Integer }
 internal sealed record RotationSetting(string Id, RotationSettingType Type, string Unit, int Default,
     int Min, int Max, int Step, string Tier, string Group, string LabelRu, string LabelEn);
-internal sealed record RotationCondition(string Signal, string Compare, string? SettingRef, int? Constant, string? WhenEnabled, int? AuraSpellId = null);
+internal sealed record RotationCondition(string Signal, string Compare, string? SettingRef, int? Constant, string? WhenEnabled, int? AuraSpellId = null, IReadOnlyList<int>? AuraRanks = null);
 internal sealed record RotationRuleV2(string Id, int Priority, int SpellId,
     string? EnabledBy, IReadOnlyList<RotationCondition> Conditions);
 internal sealed record RotationProfileV2(string Client, int ClassId, int SpecIndex, string Mode,
@@ -163,7 +163,7 @@ internal static class RotationXmlV2
                 foreach(var c in el.Elements())
                 {
                     if(c.Name!="Condition" || c.HasElements)throw new FormatException("Condition");
-                    Attributes(c,"signal","compare","settingRef","value","whenEnabled","spellId");
+                    Attributes(c,"signal","compare","settingRef","value","whenEnabled","spellId","spellIds");
                     string signal=Required(c,"signal");
                     if(signal=="TargetDebuffAbsent")
                     {
@@ -172,13 +172,35 @@ internal static class RotationXmlV2
                             c.Attribute("value") is not null ||
                             c.Attribute("whenEnabled") is not null)
                             throw new FormatException("TargetDebuffAbsent syntax");
-                        int auraId=Number(c,"spellId");
-                        if(auraId is <1 or >16777215)throw new FormatException("Aura SpellID");
-                        conditions.Add(new(signal,"IsTrue",null,null,null,auraId));
+                        var single=(string?)c.Attribute("spellId");
+                        var family=(string?)c.Attribute("spellIds");
+                        if((single is null)==(family is null))
+                            throw new FormatException("Exactly one aura spellId/spellIds");
+                        int[] ids;
+                        if(single is not null)
+                        {
+                            int id=Number(c,"spellId");
+                            ids=new[]{id};
+                        }
+                        else
+                        {
+                            var parts=family!.Split(',');
+                            if(parts.Length is <2 or >20 ||
+                               parts.Any(x=>x.Length==0 || x.Trim()!=x ||
+                                   !int.TryParse(x,NumberStyles.None,CultureInfo.InvariantCulture,out var id) ||
+                                   id is <1 or >16777215))
+                                throw new FormatException("Aura rank family");
+                            ids=parts.Select(x=>int.Parse(x,CultureInfo.InvariantCulture)).ToArray();
+                            if(ids.Distinct().Count()!=ids.Length)
+                                throw new FormatException("Duplicate aura rank");
+                        }
+                        if(ids.Any(x=>x is <1 or >16777215))
+                            throw new FormatException("Aura SpellID");
+                        conditions.Add(new(signal,"IsTrue",null,null,null,ids[0],ids));
                         continue;
                     }
-                    if(c.Attribute("spellId") is not null)
-                        throw new FormatException("Only aura signal accepts spellId");
+                    if(c.Attribute("spellId") is not null || c.Attribute("spellIds") is not null)
+                        throw new FormatException("Only aura signal accepts spellId/spellIds");
                     string compare=Required(c,"compare");
                     if(signal is not ("PlayerHealthPercent" or "TargetHealthPercent" or "PowerPercent"))
                         throw new FormatException("Unsupported signal");
@@ -267,12 +289,22 @@ internal static class RotationXmlV2
                 if(c.Signal=="TargetDebuffAbsent")
                 {
                     var epoch=fresh.TargetEpoch;
-                    var auraKey=new AuraKey("target-epoch-"+epoch.Value,c.AuraSpellId!.Value,true);
-                    Truth absent=epoch.Quality==Knowledge.Known && epoch.Value is >=0 &&
-                        fresh.Auras.TryGetValue(auraKey,out var aura)
-                        ? TruthLogic.Not(aura.Present.Is(v=>v)) : Truth.Unknown;
+                    var ids=c.AuraRanks??new[]{c.AuraSpellId!.Value};
+                    Truth absent=Truth.Unknown;
+                    if(epoch.Quality==Knowledge.Known && epoch.Value is >=0)
+                    {
+                        var rankResults=new List<Truth>();
+                        foreach(int auraId in ids)
+                        {
+                            var key=new AuraKey("target-epoch-"+epoch.Value,auraId,true);
+                            rankResults.Add(fresh.Auras.TryGetValue(key,out var aura)
+                                ? TruthLogic.Not(aura.Present.Is(v=>v))
+                                : Truth.Unknown);
+                        }
+                        absent=TruthLogic.And(rankResults.ToArray());
+                    }
                     result=TruthLogic.And(result,absent);
-                    details.Add("TargetDebuffAbsent SpellID="+c.AuraSpellId+
+                    details.Add("TargetDebuffAbsent ranks="+string.Join(",",ids)+
                         " epoch="+epoch.Quality+" result="+absent);
                     continue;
                 }
