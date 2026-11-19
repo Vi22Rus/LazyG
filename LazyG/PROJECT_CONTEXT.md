@@ -1,3 +1,9 @@
+## 2026-11-19 — Verified CI checkpoint: 0.4.0-dev foundation
+
+**[CI-PASSED, DEV, NOT USER-TESTED]** Commit `61ab9336624007d306fb232bf7ebb815c78e8963`: [GitHub Actions run 44455119810](https://github.com/Vi22Rus/LazyG/actions/runs/44455119810) SUCCESS. Windows .NET 8 build, XML v2 offline schema/evaluator tests, settings overrides, safe ZIP archive tests, RGB v2/v3/Curve and Lua regression, single-file publish and Windows startup smoke passed. Action artifacts: `LazyG-Windows-x64` and unchanged optional `LazyGForeverProbe-0.3.0-dev`. User game test NOT performed; do not treat new XML rules, crash handling, Lua minimap/source provider as operationally validated.
+
+**NOT FINISHED 0.4.0-dev:** actual multi-spec profiles and live-capable signals, Essentials/Advanced UI, SRC/REC and minimap selector, Hekili/JustAC adapters, full crash disarm and UI dispatcher test remain pending. Synthetic embedded sample stays diagnostic-only. Default RGB channels remain unchanged. Rollback 0.3.0-dev: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
+
 ### 2026-11-19 — SRC replay hardening (0.4.0-dev foundation)
 
 `RotationSourceManager` keeps the last valid (source, epoch, sequence) watermark across disconnects. Same-epoch duplicate/old sequence or source change without a new epoch rejects and clears recommendations instead of reactivating a prior source. Added offline replay regression in `RotationFoundationTests.cs`. No live SRC channel or Lua selector shipped. Current full regression/build run for code commit: https://github.com/Vi22Rus/LazyG/actions/runs/44455119810 . Rollback: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
