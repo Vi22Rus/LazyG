@@ -26,7 +26,7 @@ Check(!execution.Recording && execution.ExportJsonl().Contains("SESSION_STOP"),
 var idleTrace=new RotationExecutionTrace();
 idleTrace.Start(execT,"test");
 idleTrace.Recommend(execT,3044,"test-rule");
-Check(idleTrace.ExportSummaryJson().Contains("\\"hidAttempts\\": 0"),
+Check(System.Text.Json.JsonDocument.Parse(idleTrace.ExportSummaryJson()).RootElement.GetProperty("hidAttempts").GetInt32()==0,
     "XML-only evaluation must not fabricate an input attempt");
 idleTrace.Stop(execT.AddSeconds(1),"DONE");
 var now=DateTimeOffset.UtcNow;
