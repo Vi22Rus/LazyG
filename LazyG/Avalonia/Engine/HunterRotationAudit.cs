@@ -46,7 +46,7 @@ internal enum RotationAuditVerdict { Unobservable, Match, Mismatch, Blocked }
 internal enum RotationCastEvidence { None, CombatLogSuccess }
 // TargetEpoch is only meaningful when both sides independently prove it.
 internal sealed record RotationObservedCast(int SpellId,DateTimeOffset At,
-    RotationCastEvidence Evidence,int? TargetEpoch);
+    RotationCastEvidence Evidence,int? TargetEpoch,bool PlayerConfirmed=false);
 internal sealed record RotationAuditRow(DateTimeOffset At,int? ExpectedSpellId,
     string? ExpectedRule, int? ObservedSpellId,RotationAuditVerdict Verdict,
     string Reason,string[] Conditions,int? TargetEpoch=null);
@@ -93,7 +93,8 @@ internal sealed class HunterRotationAudit
     // No LGD state flip, mouse event, pending key press or inferred cooldown is proof.
     public RotationAuditRow? Observe(RotationObservedCast observed)
     {
-        if(observed.Evidence!=RotationCastEvidence.CombatLogSuccess || observed.SpellId<=0 ||
+        if(observed.Evidence!=RotationCastEvidence.CombatLogSuccess || !observed.PlayerConfirmed ||
+           observed.SpellId<=0 ||
            lastCapture==default || observed.At<lastCapture ||
            observed.At-lastCapture>window)return null;
         for(int i=rows.Count-1;i>=0;i--)
