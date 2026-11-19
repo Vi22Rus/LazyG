@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — WarMate support archive investigation [ANALYZED / PLANNED / DOCS-ONLY]
+
+- Inspected user-supplied `warmate-support-20261119-094139.zip`, six files: system-info JSON, two days of dated structured logs, app settings, pause reasons, compatibility JSON. Specific crash 09:41:39: COMException HRESULT 0x8001010E from `WarMate.Capture.WgcFrameSource.DisposeAsync` (wrong thread), captured as fatal UI exception, then archive creation logged.
+- New `LazyG/CRASH_REPORT_PLAN.md`: propose best-effort fatal UI/worker/startup exception reporting, immediate fail-safe disarm, capped rotating structured logs, crash manifest, RGB/rotation/compatibility diagnostics, automatic local ZIP plus manual report, desktop fallback, privacy redaction and no auto upload, tests.
+- No code or EXE changes. Integrate into comprehensive 0.4.0-dev module, not a standalone user download. Preserve existing 0.3.0-dev RGB behavior.
+
 ## 2026-11-19 — 0.4.0-dev rotation-settings architecture accepted [PLANNED / DOCS-ONLY]
 
 - User explicitly clarified after reviewing WarMate Arms Essentials/Advanced screenshot: LazyG contains its **own** packaged XML rotations, without dependence on external Aster-style addons; user does **not** need a visual XML rule editor.
