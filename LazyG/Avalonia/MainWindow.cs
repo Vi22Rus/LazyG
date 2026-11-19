@@ -493,6 +493,7 @@ public sealed class MainWindow : Window
                         RotationSettingsStore.Save(settingsFile,profile,updated);
                         if(rotationPreview.Running)
                         {
+                            StopGhub("SETTINGS CHANGED");
                             rotationPreview.Stop("SETTINGS CHANGED · RESTART PREVIEW");
                             overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
                         }
@@ -593,7 +594,8 @@ public sealed class MainWindow : Window
                 RotationSettingsStore.Reset(settingsFile,profile);
                 if(rotationPreview.Running)
                 {
-                    rotationPreview.Stop("SETTINGS RESET · RESTART PREVIEW");
+                    StopGhub("SETTINGS CHANGED");
+                            rotationPreview.Stop("SETTINGS RESET · RESTART PREVIEW");
                     overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
                 }
             }
