@@ -15,7 +15,7 @@ void Reject(string broken)
 }
 Reject(xml.Replace("version=\"2\"","version=\"1\""));
 Reject(xml.Replace("powerThreshold\"/>","missing\"/>"));
-Reject(xml.Replace("min=\"0\" max=\"100\" step=\"5\"","min=\"0\" max=\"100\" step=\"7\""));
+Reject(xml.Replace("min=\"0\" max=\"100\" step=\"5\"","min=\"0\" max=\"100\" step=\"6\""));
 Reject(xml.Replace("<Rules>","<!DOCTYPE unsafe [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><Rules>"));
 Reject(xml.Replace("classId=\"3\"","classId=\"13\"").Replace("mode=\"PvE\"","mode=\"NotAMode\""));
 try {RotationXmlV2.Resolve(profile,new Dictionary<string,int>{{"powerThreshold",83}});throw new Exception("bad override accepted");}
