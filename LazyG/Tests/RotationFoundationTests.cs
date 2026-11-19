@@ -180,4 +180,52 @@ Check(RotationXmlV2.Evaluate(hunter,
     null,now.AddSeconds(2),"PvE").Recommendation is null,"Hunter stale state blocks");
 Reject(File.ReadAllText(Path.Combine("LazyG","Rotations","Forever","Experimental",
     "hunter-beast-mastery-pve.xml")).Replace("step=" + (char)34 + "5" + (char)34, "step=" + (char)34 + "3" + (char)34));
+
+// Hunter rank audit: never infer a learned rank from character level or base SpellID.
+var hunterRankUnknown=HunterSpellFamilies.Find(hunterState,1130,now);
+Check(hunterRankUnknown.SelectedRank is null &&
+    hunterRankUnknown.Status=="RankSetUnverified","partial rank evidence cannot assert max rank");
+int[] markRanks=HunterSpellFamilies.Ranks(1130);
+var rankState=hunterState with {
+    Spells=markRanks.ToDictionary(x=>x,x=>spell with {
+        Learned=Observed<bool>.Known(x==14323,now)
+    })
+};
+var foundRank=HunterSpellFamilies.Find(rankState,1130,now);
+Check(foundRank.SelectedRank==14323,"verified learned Hunter mark rank chosen from full family");
+Check(HunterSpellFamilies.BaseId(14323)==1130 &&
+    HunterSpellFamilies.BaseId(13549)==1978,"rank family lookup");
+Check(HunterSpellFamilies.Find(rankState,1130,now.AddSeconds(2)).SelectedRank is null,
+    "stale rank observation blocked");
+var audit=new HunterRotationAudit(3);
+var beforeAudit=audit.Capture(hunter,hunterState,null,now);
+Check(beforeAudit.ExpectedSpellId==3044 &&
+    beforeAudit.Verdict==RotationAuditVerdict.Unobservable,"XML expectation is not cast evidence");
+Check(audit.Observe(new(3044,now.AddMilliseconds(100),
+    RotationCastEvidence.None,7)) is null,"unverified cast attempt ignored");
+Check(audit.Observe(new(14281,now.AddMilliseconds(200),
+    RotationCastEvidence.CombatLogSuccess,8)) is null,
+    "target-epoch mismatch cannot establish execution");
+var verified=audit.Observe(new(14281,now.AddMilliseconds(200),
+    RotationCastEvidence.CombatLogSuccess,7));
+Check(verified?.Verdict==RotationAuditVerdict.Match &&
+    verified.ObservedSpellId==14281,"trusted same-family cast observation matches");
+var mismatchAudit=new HunterRotationAudit();
+mismatchAudit.Capture(hunter,hunterState,null,now);
+var mismatch=mismatchAudit.Observe(new(75,now.AddMilliseconds(300),
+    RotationCastEvidence.CombatLogSuccess,7));
+Check(mismatch?.Verdict==RotationAuditVerdict.Mismatch &&
+    mismatch.Reason.Contains("AttributionUnproven"),"different observed cast is correlation, not LazyG fault");
+var noProofAudit=new HunterRotationAudit(2);
+noProofAudit.Capture(hunter,hunterState,null,now);
+Check(noProofAudit.Observe(new(3044,now.AddSeconds(3),
+    RotationCastEvidence.CombatLogSuccess,7)) is null,
+    "old expected frame cannot be matched to future cast");
+noProofAudit.Capture(hunter,hunterState,null,now.AddMilliseconds(400));
+noProofAudit.Capture(hunter,hunterState,null,now.AddMilliseconds(800));
+Check(noProofAudit.Rows.Count==2,"audit log bounded");
+Check(noProofAudit.ExportJson().Contains("NoVerifiedCastEvent") &&
+    !noProofAudit.ExportJson().Contains("target-epoch-7"),"export is safe, no identity keys");
+Console.WriteLine("Hunter rank and rotation audit regression: PASS");
+
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
