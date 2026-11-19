@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LazyG.Desktop.Engine;
+using LazyGPrototype;
 static void Check(bool value,string message) {if(!value)throw new Exception("Foundation regression: "+message);}
 var now=DateTimeOffset.UtcNow;
 string xml=File.ReadAllText(Path.Combine("LazyG","Rotations","Forever","Examples","synthetic-v2.xml"));
@@ -184,6 +185,79 @@ Check(hunter.Settings["serpentManaMin"].Parent=="useSerpentSting" &&
     hunter.Settings["arcaneManaMin"].Parent=="useArcaneShot" &&
     hunter.Settings["useHuntersMark"].IconSpellId==1130,
     "WarMate-style nested sliders and spell icon metadata parsed");
+// Synthetic compact v3 extension with two complete 2-rank families and
+// one target debuff family. Bytes are independently asserted in Lua 5.1.
+var compactManifest=new ProfileDataManifest("forever",3,1,"PvE",0xA1B2C3D4,
+    new[]{new SpellFamilyRequirement(1130,new[]{1130,14323}),
+          new SpellFamilyRequirement(3044,new[]{3044,14281})},
+    new[]{new AuraFamilyRequirement("target",true,new[]{1130,14323})},
+    new[]{"Identity","GcdActive","TargetEpoch"});
+byte[] extension={
+    0x4c,0x48,1,0xA1,0xB2,0xC3,0xD4,3,1,1,0,7,1,1,2,2,4,0,
+    2,1,2,2,0x99,0x09
+};
+Check(HunterCompactProfileWire.PayloadLength(compactManifest)==24 &&
+    HunterCompactProfileWire.ExtensionCells(compactManifest)==8,
+    "compact profile packs two spell families and target aura in 8 RGB cells");
+byte[] BuildProfileFrame(byte[] body)
+{
+    int cells=23+HunterCompactProfileWire.ExtensionCells(compactManifest);
+    var rgb=new byte[(cells+1)*3];
+    byte[] markers={255,0,255,0,255,0,255,255,255,0,0,0};
+    Array.Copy(markers,rgb,markers.Length);
+    rgb[12]=1;rgb[13]=11;rgb[14]=4; // v3 direct8, current frame
+    rgb[15]=0x4c;rgb[16]=0x47;rgb[17]=0x13; // Forever profile, Hunter BM
+    Array.Copy(body,0,rgb,23*3,body.Length);
+    ushort crc=RgbV3Codec.Crc16(rgb.AsSpan(12,cells*3-12));
+    rgb[cells*3]=(byte)(crc>>8);rgb[cells*3+1]=(byte)crc;
+    rgb[cells*3+2]=(byte)cells;
+    return rgb;
+}
+Check(RgbV3Codec.TryDecode(BuildProfileFrame(extension),8,0x4c47,
+    out var compactFrame,out var wireError),wireError);
+Check(HunterCompactProfileWire.TryDecode(compactFrame,compactManifest,now,
+    out var compact) && compact is not null,
+    "v3 CRC plus full schema accepts compact Hunter states");
+var compactBase=state with {Spells=new Dictionary<int,SpellState>(),
+    Auras=new Dictionary<AuraKey,AuraState>()};
+var mapped=HunterCompactProfileWire.ToGameState(compactBase,compact!);
+Check(mapped.TargetEpoch.Is(x=>x==7)==Truth.True &&
+    ConditionEvaluator.GcdReady(mapped)==Truth.True &&
+    mapped.Spells[14323].Learned.Value==true &&
+    mapped.Spells[1130].Learned.Value==false &&
+    ConditionEvaluator.SpellReady(mapped,14323)==Truth.True &&
+    mapped.Spells[14323].CooldownMs.Quality==Knowledge.Unknown &&
+    ConditionEvaluator.SpellReady(mapped,14281)==Truth.False &&
+    mapped.Auras[new AuraKey("target-epoch-7",14323,true)].Present.Value==true &&
+    mapped.Auras[new AuraKey("target-epoch-7",1130,true)].Present.Value==false,
+    "compact profile translates known booleans, learned ranks, epoch auras without synthetic CD ms");
+Check(HunterCompactProfileWire.ToGameState(compactBase with {
+    SpecIndex=Observed<int>.Known(2,now)},compact!).Spells.Count==0,
+    "different spec cannot inherit Hunter profile observations");
+var damagedCompact=(byte[])extension.Clone();
+damagedCompact[3]^=1; // layout hash no longer matches, even with valid CRC
+Check(RgbV3Codec.TryDecode(BuildProfileFrame(damagedCompact),8,0x4c47,
+    out var wrongProfileFrame,out wireError) &&
+    !HunterCompactProfileWire.TryDecode(wrongProfileFrame,compactManifest,now,out _),
+    "full layout hash mismatch fails despite valid CRC");
+var unknownEpoch=(byte[])extension.Clone();
+unknownEpoch[10]=0;unknownEpoch[11]=0;unknownEpoch[12]=0;
+Check(RgbV3Codec.TryDecode(BuildProfileFrame(unknownEpoch),8,0x4c47,
+    out var noEpochFrame,out wireError) &&
+    HunterCompactProfileWire.TryDecode(noEpochFrame,compactManifest,now,out var noEpoch) &&
+    noEpoch!.Auras.Count==0,
+    "unverified target epoch cannot claim absence or presence of target auras");
+var secretRank=(byte[])extension.Clone();
+secretRank[22]=0x9B; // first rank Protected, highest learned rank no longer provable
+Check(RgbV3Codec.TryDecode(BuildProfileFrame(secretRank),8,0x4c47,
+    out var secretFrame,out wireError) &&
+    HunterCompactProfileWire.TryDecode(secretFrame,compactManifest,now,out var secret) &&
+    ConditionEvaluator.SpellReady(
+       HunterCompactProfileWire.ToGameState(compactBase,secret!),14323)==Truth.Unknown,
+    "protected rank cannot authorize selected-rank readiness");
+Check(ConditionEvaluator.SpellReady(mapped.Age(now.AddSeconds(2),
+    TimeSpan.FromMilliseconds(900)),14323)==Truth.Unknown,
+    "stale compact cooldown state does not authorize new casts");
 var manifest=ProfileDataManifestBuilder.Build(hunter);
 Check(manifest.Client=="forever" && manifest.ClassId==3 && manifest.SpecIndex==1 &&
     manifest.Mode=="PvE" && manifest.SpellFamilies.Count==11 &&
