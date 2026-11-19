@@ -330,6 +330,40 @@ var hunterState=state with {
             Observed<bool>.Known(true,now),Observed<int>.Missing(),Observed<int>.Missing())
     }
 };
+// Universal command planning is explicitly disarmed until a verified SRC
+// transport and a separately approved input driver exist.
+var bindings=RotationKeyBindings.Parse("3044=F1\n75=F2");
+Check(bindings[3044]=="F1" && RotationKeyBindings.Parse(
+    RotationKeyBindings.Format(bindings)).Count==2,"binding roundtrip");
+try { RotationKeyBindings.Parse("3044=F13"); throw new Exception("invalid key accepted"); }
+catch(FormatException) {}
+try { RotationKeyBindings.Parse("3044=F1\n3044=F2"); throw new Exception("duplicate accepted"); }
+catch(FormatException) {}
+var commandGate=new RotationCommandGate();
+var chosen=new RotationRecommendation(RotationSourceId.Internal,3044,30,"arcane",now);
+var verifiedSource=new RotationSourceSnapshot(RotationSourceId.Internal,
+    RotationSourceHealth.Ready,1,1,now,null,"Ready");
+Check(commandGate.TryPlan(chosen,verifiedSource,hunterState,now,false,true,
+    bindings,out var disarmed) is null && disarmed=="DISARMED","no default execution");
+Check(commandGate.TryPlan(chosen,verifiedSource,hunterState,now,true,false,
+    bindings,out var unfocused) is null && unfocused=="WOW NOT FOREGROUND","focus gate");
+Check(commandGate.TryPlan(chosen,verifiedSource with {Confirmed=null},hunterState,
+    now,true,true,bindings,out var unconfirmed) is null &&
+    unconfirmed=="UNVERIFIED SOURCE","source transport must be confirmed");
+Check(commandGate.TryPlan(chosen,verifiedSource,hunterState,now,true,true,
+    bindings,out var planned)?.Key=="F1" && planned=="PLANNED ONLY / NO INPUT",
+    "common command is only planned on fully verified evidence");
+Check(commandGate.TryPlan(chosen,verifiedSource,hunterState,now.AddMilliseconds(300),
+    true,true,bindings,out var repeated) is null &&
+    repeated=="FRAME ALREADY HANDLED","same frame cannot replay");
+Check(commandGate.TryPlan(chosen with {At=now.AddMilliseconds(500)},
+    verifiedSource with {ReceivedAt=now.AddMilliseconds(500)},
+    hunterState with {CapturedAt=now.AddMilliseconds(500)},now.AddMilliseconds(500),
+    true,true,bindings,out _)?.Key=="F1","fresh frame may create next plan");
+commandGate.Reset();
+Check(commandGate.TryPlan(chosen,verifiedSource,GameState.Empty(now),now,true,true,
+    bindings,out var stale) is null && stale=="STALE GAMESTATE",
+    "unknown game state cannot authorize command");
 // Start/Stop arms ONLY a fresh XML recommendation preview; it does not send
 // keys and never replays the last spell when RGB becomes unknown or stale.
 var previewSession=new RotationPreviewSession();
