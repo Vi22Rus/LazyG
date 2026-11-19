@@ -46,7 +46,9 @@ internal static class ForeverGameStateBridge
             " · attackGate "+ConditionEvaluator.AttackTarget(game)+
             " · HP "+Show(game.PlayerHealthPercent)+
             " · power "+Show(game.PowerPercent)+
-            " · GCD "+Show(game.GcdRemainingMilliseconds)+
+            " · GCDms "+Show(game.GcdRemainingMilliseconds)+
+            " · GCD29515Active "+Show(game.GcdActive)+
+            " · GcdGate "+ConditionEvaluator.GcdReady(game)+
             " · SpellReady "+ConditionEvaluator.SpellReady(game,1130);
     }
 }
