@@ -4,5 +4,6 @@
     <Compile Include="RotationFoundationTests.cs" />
     <Compile Include="../Avalonia/Engine/GameState.cs" Link="GameState.cs" />
     <Compile Include="../Avalonia/Engine/RotationFoundation.cs" Link="RotationFoundation.cs" />
+    <Compile Include="../Avalonia/Engine/RotationSettingsStore.cs" Link="RotationSettingsStore.cs" />
   </ItemGroup>
 </Project>
