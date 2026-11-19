@@ -133,6 +133,33 @@ internal static class HunterCompactProfileWire
             observedEpoch,spells,auras);
         return true;
     }
+    // Transport diagnostics only. Distinguish a CRC-valid binding-only row
+    // from a compact gameplay snapshot; neither is input authorization.
+    public static string Explain(RgbV3Packet? packet,
+        ProfileDataManifest? manifest,DateTimeOffset capturedAt)
+    {
+        if(packet is null)return "NO_V3_FRAME";
+        if(manifest is null)return "NO_HUNTER_MANIFEST";
+        int compactCells=ExtensionCells(manifest);
+        if(packet.ExtensionCells==AutoBindingCodec.Cells)
+            return "BINDINGS_ONLY: Hunter compact absent (check installed addon and /lazygcompact status)";
+        if(packet.ExtensionCells==0)return "CORE_ONLY: old v3 addon";
+        if(packet.ExtensionCells!=compactCells &&
+           packet.ExtensionCells!=compactCells+AutoBindingCodec.Cells)
+            return "UNEXPECTED_EXTENSION_CELLS: "+packet.ExtensionCells+
+                " expected "+compactCells+" or "+(compactCells+AutoBindingCodec.Cells);
+        if(!TryDecode(packet,manifest,capturedAt,out var decoded) || decoded is null)
+            return "COMPACT_HEADER_OR_LAYOUT_REJECTED: check Lua manifest vs embedded XML";
+        int verifiedRanks=decoded.Spells.Values.Count(x=>x.Learned.Quality==Knowledge.Known);
+        int allRanks=decoded.Spells.Count;
+        int verifiedUsable=decoded.Spells.Values.Count(x=>x.Usable.Quality==Knowledge.Known);
+        int knownDebuffs=decoded.Auras.Values.Count(x=>x.Present.Quality==Knowledge.Known);
+        return "COMPACT_DECODE_OK: rankFlags="+verifiedRanks+"/"+allRanks+
+            " usableFlags="+verifiedUsable+
+            " auraFlags="+knownDebuffs+
+            " gcd="+decoded.GcdActive.Quality+
+            " epoch="+decoded.TargetEpochObservation.Quality;
+    }
     // This is a synthetic bridge for diagnostics/simulation only. The caller
     // must separately validate a FRESH frame, verified identity, transport and
     // target selection, and discard old data on disconnect/source change.
