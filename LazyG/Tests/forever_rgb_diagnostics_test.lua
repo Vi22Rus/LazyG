@@ -26,6 +26,9 @@ local function stub(s)
 end
 LazyGCooldownRgb=stub(lgc)
 LazyGSpellDiagnostic=stub(lgd)
+local lge=false
+LazyGCastEventRgb={SetEnabled=function(v)lge=v==true end}
+IsPlayerSpell=function(id) return id==14323 or id==13550 or id==14282 or id==75 end
 local function boot(db)
   LazyGForeverProbeDB=db
   assert(loadfile("LazyG/Diagnostics/LazyGForeverProbe/LazyGForeverProbe.lua"))()
@@ -54,4 +57,16 @@ SlashCmdList.LAZYGFOREVERPROBE("cdstrip 34477")
 assert(db.lgcSpellId==34477 and lgc.id==34477)
 SlashCmdList.LAZYGFOREVERPROBE("diag invalid")
 assert(db.lgcSpellId==34477 and db.lgdSpellId==34477)
+SlashCmdList.LAZYGFOREVERPROBE("audit on")
+assert(lge==true)
+SlashCmdList.LAZYGFOREVERPROBE("audit off")
+assert(lge==false)
+SlashCmdList.LAZYGFOREVERPROBE("hunterranks")
+local mark=false
+local blocked=false
+for _,line in ipairs(db.lines) do
+  if string.find(line,"HUNTER_RANK family=HunterMark id=14323 learned=True",1,true) then mark=true end
+  if string.find(line,"HUNTER_RANK family=SerpentSting id=13550 learned=True",1,true) then blocked=true end
+end
+assert(mark and blocked,"Hunter rank audit checks actual candidate IDs")
 print("Full RGB diagnostics Lua commands, opt-in and reload: PASS")
