@@ -364,6 +364,7 @@ public sealed class MainWindow : Window
     {
         selectedClass=cls;selectedSpec=spec;view="rotation";
         session.LastClient="forever";session.LastClass=cls.Id;session.LastSpec=spec.Id;session.Save();
+        overlay?.SetClass(cls.Name);
         var body=Stack(spacing:17);
         var top=Stack(Orientation.Horizontal,16);top.Children.Add(SpellIcon(spec.Icon,76));
         var identity=Stack(spacing:5);
