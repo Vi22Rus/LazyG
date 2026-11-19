@@ -23,9 +23,11 @@ C_UnitAuras={
 }
 dofile("LazyG/AddonTemplate/HunterCompactCollector.lua")
 local c=LazyGHunterCompactCollector
-assert(c and not c.Enabled() and c.Build()==nil,"collector default OFF")
+assert(c and c.Enabled(),"Hunter BM collector starts ON for XML observation")
+SlashCmdList.LAZYG_COMPACT("off")
+assert(not c.Enabled() and c.Build()==nil,"user can opt out")
 SlashCmdList.LAZYG_COMPACT("on")
-assert(c.Enabled(),"manual opt-in")
+assert(c.Enabled(),"user can opt back in")
 local cells,bytes,length=c.Build()
 assert(type(cells)=="table" and #cells>8 and #cells<96,"compact cells only")
 assert(bytes[1]==0x4c and bytes[2]==0x48 and bytes[3]==1,
@@ -40,4 +42,4 @@ local _,later=c.Build()
 assert(later[12]~=bytes[12],"target epoch advances on target changed")
 SlashCmdList.LAZYG_COMPACT("off")
 assert(not c.Enabled() and c.Build()==nil,"opt-out restores legacy v3 mode")
-print("Hunter compact Forever Lua collector regression: PASS (opt-in, source quality, epoch, no new strip)")
+print("Hunter compact Forever Lua collector regression: PASS (auto-on, opt-out, source quality, epoch, no new strip)")
