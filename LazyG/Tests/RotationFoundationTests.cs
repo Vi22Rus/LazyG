@@ -159,14 +159,28 @@ Check(RotationXmlV2.Evaluate(hunter,
     hunterState with {PowerBand=Observed<HealthBand>.Known(new HealthBand(30,34),now)},
     new Dictionary<string,int>{{"arcaneManaMin",30}},now,"PvE").Recommendation?.SpellId==3044,
     "30-34 interval satisfies 30% lower bound");
+var absentMarkRanks=HunterSpellFamilies.Ranks(1130).ToDictionary(
+    id=>new AuraKey("target-epoch-7",id,true),
+    id=>new AuraState(Observed<bool>.Known(false,now),
+        Observed<int>.Missing(),Observed<int>.Missing()));
 Check(RotationXmlV2.Evaluate(hunter,
-    hunterState with {
-        Auras=new Dictionary<AuraKey,AuraState> {
-            [new AuraKey("target-epoch-7",1130,true)]=new(
-                Observed<bool>.Known(false,now),Observed<int>.Missing(),Observed<int>.Missing())
-        }
-    },null,now,"PvE").Recommendation?.SpellId==1130,
-    "known absent mark on current epoch allows mark");
+    hunterState with {Auras=absentMarkRanks},
+    null,now,"PvE").Recommendation?.SpellId==1130,
+    "all known absent mark ranks on current target allow refresh");
+var partialMark=new Dictionary<AuraKey,AuraState> {
+    [new AuraKey("target-epoch-7",1130,true)]=new(
+        Observed<bool>.Known(false,now),Observed<int>.Missing(),Observed<int>.Missing())
+};
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {Auras=partialMark},null,now,"PvE").Trace[0].Outcome==Truth.Unknown,
+    "one absent base rank cannot prove entire Mark family is absent");
+var rankMarkPresent=new Dictionary<AuraKey,AuraState>(absentMarkRanks) {
+    [new AuraKey("target-epoch-7",14323,true)]=new(
+        Observed<bool>.Known(true,now),Observed<int>.Missing(),Observed<int>.Missing())
+};
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {Auras=rankMarkPresent},null,now,"PvE").Trace[0].Outcome==Truth.False,
+    "higher-rank Mark on target must not trigger base-rank refresh");
 Check(RotationXmlV2.Evaluate(hunter,
     hunterState with {TargetEpoch=Observed<int>.Missing()},
     null,now,"PvE").Trace[0].Outcome==Truth.Unknown,
