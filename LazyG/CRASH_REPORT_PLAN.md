@@ -25,3 +25,7 @@ Date: 2026-11-19. Source inspected directly: user-provided `warmate-support-2026
 9. This belongs in the broad **0.4.0-dev rotation/settings/diagnostics stage**, not an immediate new user download. Implementation must not perturb already user-tested RGB transport. Recheck GitHub current files before coding and update both `PROJECT_CONTEXT.md` and `CHANGELOG.md` at each substantial stage.
 
 **Status:** Planned, source review complete, no LazyG code changes yet.
+## Additional agreed report content — rotation source (2026-11-19)
+
+Future LazyG source selector (Internal/Hekili/JustAC) adds a **safe source-state JSON** element to manual support and automatic crash ZIP: requested/confirmed source, provider compatibility/readiness, source epoch, last fresh sequence and age, transitions, whether stale/unavailable and reason code. No player identity, private install paths, raw pixels, personal user configuration, or input history. Differentiate network/RGB transport health from provider recommendation health; a valid channel does not prove the selected addon is active. Full architecture: [ROTATION_SOURCES_PLAN.md](ROTATION_SOURCES_PLAN.md). **Planned, not implemented.**
+
