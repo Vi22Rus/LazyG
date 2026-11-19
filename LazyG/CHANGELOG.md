@@ -1,3 +1,16 @@
+## 2026-11-19 — Support diagnostic log + XML-to-Logitech-to-WoW comparison FINAL CI VERIFIED [DEV / GAME-UNTESTED]
+
+**[CI SUCCESS]** [GitHub Actions 44484987774](https://github.com/Vi22Rus/LazyG/actions/runs/44484987774), code commit `ded2e2fdba6e7a26b6f3a768470cd20ef8b9930d`. C# GameState, RGB v3, full RotationFoundationTests including new structured trace regression, self-contained win-x64 single EXE publish and startup smoke all succeeded; Lua 5.1 wire/diagnostics regressions succeeded. Windows **LazyG-Windows-x64** artifact ID **14510181797**; diagnostic Lua **LazyGForeverProbe-0.4.0-dev** ID **14509707495**. Tests prove compilation and static logic, not an actual driver or in-game effect. Earlier intermediate runs failed compiling new logging/test code; final code run passed.
+
+**Usability:** On pressing Start for the experimental Hunter BM internal XML, the detailed trace and Hunter audit now start automatically. The simplified Support UI provides Start/Stop Recording, Export Diagnostic ZIP, Deep RGB ON/OFF, Refresh/Copy/Clear visible log. Stop/driver error/focus loss/Setup/config changes auto-save reports under `%LOCALAPPDATA%\\LazyG\\reports`. ZIP contains `rotation-trace.jsonl`, `rotation-comparison.json`, `rgb-health.json`, `events.txt`, `xml-hunter-audit.json`. Per-command comparisons distinguish XML plan, valid binding, attempted HID, successful DeviceIoControl, and optional WoW LGE player spellcast event. Reports do NOT infer causality or successful effect from IOCTL. LGE needs separate ForeverProbe diagnostic addon installed and `/lgprobe audit on`; with no event results say `NO_OBSERVABLE_CAST`, not failure. Do not ship a release until the user validates actual Forever behavior.
+
+**Rollback:** pre-logging automatic-binding CI [44483489729](https://github.com/Vi22Rus/LazyG/actions/runs/44483489729). **PowerShell**:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — Support cleanup + automatic XML/HID/WoW comparison trace [0.4.0-dev / GAME-UNTESTED]
 
 **User request:** simplify overcrowded Support controls; make a detailed in-game log and compare the XML rotation's intent with what Logitech sends and what WoW separately reports. A successfully completed Logitech `DeviceIoControl` is **not** proof of an in-game spell. LGE `UNIT_SPELLCAST_SUCCEEDED` only proves a player-cast event reported by addon; it is **not** verified impact or causal LazyG attribution.
