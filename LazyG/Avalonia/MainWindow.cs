@@ -46,6 +46,10 @@ public sealed class MainWindow : Window
     private bool cooldownDiagnosticEnabled;
     private string lastCooldownDiagnostic="";
     private readonly ForeverCooldownObserver cooldownObserver=new();
+    private readonly RgbTransportMonitor rgbMonitor=new();
+    private TextBlock? rgbHealthText;
+    private string lastRgbHealthSignature="";
+    private bool fullRgbDiagnosticMode;
     private bool xmlPreviewEnabled;
     private XmlRotationProfile? xmlPreviewProfile;
     private string lastXmlPreview = "";
@@ -57,7 +61,7 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.20-dev";
+        Title = "LazyG · 0.3.0-dev";
         RuntimeDiagnostics.Add("APP", "LazyG 0.2.20-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
@@ -363,10 +367,33 @@ public sealed class MainWindow : Window
         b.Children.Add(Text("SUPPORT",15,"#45E5F7",FontWeight.Bold));
         b.Children.Add(Text("LIVE RGB & APPLICATION DIAGNOSTICS",18,"#F1FAFF",FontWeight.Bold));
         b.Children.Add(Text("GAMESTATE v1 · verified RGB fields only · UNKNOWN does not authorize casts",12,"#85DDEE"));
+        rgbHealthText=Text(rgbMonitor.Summary(),12,"#72D9F3");
+        b.Children.Add(rgbHealthText);
+        b.Children.Add(Text("RGB transport: v2 identity, v3 CRC, Curve, LGD, LGC; sequence/age, recovery, capture performance. Read-only.",11,"#99BCCC"));
         b.Children.Add(Text(ForeverGameStateBridge.Diagnostic(latestGameState),12,"#C5E1EF"));
         b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#99BCCC"));
         var actions=Stack(Orientation.Horizontal,9);
-        actions.Children.Add(Action("Clear events",()=>{ RuntimeDiagnostics.Clear();RefreshDiagnosticsView(); }));
+        actions.Children.Add(Action("Clear events",()=>{
+            RuntimeDiagnostics.Clear();rgbMonitor.Reset();lastRgbHealthSignature="";
+            RefreshDiagnosticsView();
+        }));
+        actions.Children.Add(Action("Copy RGB report",async ()=>{
+            var clipboard=TopLevel.GetTopLevel(this)?.Clipboard;
+            if(clipboard is not null)
+                await clipboard.SetTextAsync(rgbMonitor.ExportJson());
+        }));
+        actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
+            fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
+            spellDiagnosticEnabled=fullRgbDiagnosticMode;
+            cooldownDiagnosticEnabled=fullRgbDiagnosticMode;
+            lastSpellPacket=null;lastSpellSequence=null;lastSpellDiagnostic="";
+            cooldownObserver.Reset();lastCooldownDiagnostic="";
+            rgbMonitor.Reset();lastRgbHealthSignature="";
+            RuntimeDiagnostics.Add("RGBMON",fullRgbDiagnosticMode
+                ?"Full receive diagnostics ON (enable optional LGD/LGC strips in WoW)"
+                :"Optional LGD/LGC receive diagnostics OFF; base v2/v3/Curve still monitored");
+            RefreshDiagnosticsView();
+        }));
         actions.Children.Add(Action("Refresh",()=>RefreshDiagnosticsView(force:true)));
         actions.Children.Add(Action("Copy all",async ()=>{
             var clipboard=TopLevel.GetTopLevel(this)?.Clipboard;
@@ -520,17 +547,42 @@ public sealed class MainWindow : Window
         try
         {
             var result=await Task.Run(() => {
+                var stopwatch=System.Diagnostics.Stopwatch.StartNew();
                 bool ok=WowRgbBridge.TryReadCombined(out var state,out var packet,
                     out var detail,out var v3,out var thresholds,
                     spellDiagnosticEnabled,out var spell,
                     cooldownDiagnosticEnabled,out var cooldown);
+                stopwatch.Stop();
                 return (ok,state,packet,detail,v3,thresholds,spell,cooldown,
-                    capturedAt:DateTimeOffset.UtcNow);
+                    capturedAt:DateTimeOffset.UtcNow,
+                    captureMs:stopwatch.Elapsed.TotalMilliseconds);
             });
             if(finished)return;
             var connected=result.ok && result.state is not null;
             var crc=result.packet is not null;
             var curve=result.thresholds is not null;
+            bool foreground=!result.detail.StartsWith("Switch to WoW",StringComparison.Ordinal) &&
+                !result.detail.StartsWith("WoW window not found",StringComparison.Ordinal) &&
+                !result.detail.StartsWith("Cannot",StringComparison.Ordinal) &&
+                !result.detail.StartsWith("RGB screen capture failed",StringComparison.Ordinal);
+            string reason=connected?"OK":!foreground?"WindowOrCaptureUnavailable":"BaseV2NotFound";
+            rgbMonitor.Accept(new RgbSample(
+                result.capturedAt,result.captureMs,foreground,connected,
+                crc,result.packet?.FrameCounter,curve,
+                spellDiagnosticEnabled,result.spell is not null,result.spell?.Sequence,
+                cooldownDiagnosticEnabled,result.cooldown is not null,result.cooldown?.Sequence,
+                reason));
+            var rgbHealth=rgbMonitor.Summary();
+            if(rgbHealthText is not null)rgbHealthText.Text=rgbHealth;
+            // Suppress per-frame event spam while preserving transitions and counters.
+            var signature=rgbHealth.Split(" frames=")[0]+
+                " recoveries="+rgbMonitor.LGC.Recovered+
+                " stale="+rgbMonitor.LGC.Frozen;
+            if(signature!=lastRgbHealthSignature)
+            {
+                RuntimeDiagnostics.Add("RGBMON",rgbHealth);
+                lastRgbHealthSignature=signature;
+            }
             string now=connected?(curve?"RGB CONNECTED · CURVE":crc?"RGB CONNECTED · CRC PASS":"RGB CONNECTED"):"GAME NOT CONNECTED";
             statusText.Text=now;
             if(now != lastBridgeState)
@@ -538,7 +590,7 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("RGB",now+(connected?"":(" · "+result.detail)));
                 lastBridgeState=now;
             }
-            string probe=connected?(crc?result.v3:"No RGB v3 packet")+
+            string probe=connected?(crc?"RGB v3 CRC PASS":result.v3)+
                 (curve?" · "+result.thresholds:" · Curve unavailable"):"No live game data";
             if(probe!=lastProbeState)
             {
@@ -618,6 +670,12 @@ public sealed class MainWindow : Window
         catch(Exception e)
         {
             statusText.Text="RGB CAPTURE ERROR";
+            cooldownObserver.Reset();
+            rgbMonitor.Accept(new RgbSample(DateTimeOffset.UtcNow,0,false,
+                false,false,null,false,
+                spellDiagnosticEnabled,false,null,
+                cooldownDiagnosticEnabled,false,null,"Exception"));
+            if(rgbHealthText is not null)rgbHealthText.Text=rgbMonitor.Summary();
             if(lastBridgeState!="RGB CAPTURE ERROR")
                 RuntimeDiagnostics.Add("ERROR","RGB capture: "+e.GetType().Name);
             lastBridgeState="RGB CAPTURE ERROR";
