@@ -1,3 +1,11 @@
+## 2026-11-19 — Forever Sonah/JustAC aura reader FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
+
+**[CI SUCCESS]** [GitHub Actions 44495871536](https://github.com/Vi22Rus/LazyG/actions/runs/44495871536), tested code SHA `346ce706cadf27ce85e2a705d38eae198753e2c1`. Both Windows build/rotation regressions, Windows startup smoke and self-contained single EXE publish, and Lua 5.1 wire/collector tests passed. Windows artifact **LazyG-Windows-x64 14514099960**, diagnostic probe addon **LazyGForeverProbe-0.4.0-dev 14514284379**. Docs-only commits afterward do not affect tested code.
+
+Source references used ONLY `/mnt/data/Sonah.zip` and `/mnt/data/JustAC.zip` (Forever-specific); other archives not mixed into this change. New collector prefers Sonah by-name, then JustAC batch, then legacy indexed read; rejects protected values, never assumes missing aura under secrecy. This is still game-untested: new log is needed to prove Mark/Sting debuff recognition. Maintain previous rollback [Actions 44490976300](https://github.com/Vi22Rus/LazyG/actions/runs/44490976300).
+
+---
+
 ## 2026-11-19 — Forever-only Sonah + JustAC aura-read adaptation [0.4.0-dev / GAME-UNTESTED]
 
 **Clarification by user:** For WoW Forever the two addon code references are **Sonah.zip** and **JustAC.zip** only. Do not blend in WarMate, Hekili 3.3.5 or other client APIs. Inspected actual uploaded archives in this session, not recalled excerpts.
