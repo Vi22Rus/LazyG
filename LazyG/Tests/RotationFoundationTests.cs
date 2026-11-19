@@ -242,6 +242,13 @@ lge[16]=(byte)lgeSum;lge[17]=(byte)(255-lgeSum);
 Check(LazyG.Desktop.Diagnostics.ForeverCastEventCodec.TryDecode(lge,out var castEvent) &&
     castEvent?.SpellId==3044 && castEvent.TargetEpoch==7,
     "LGE valid player-cast event");
+var idle=(byte[])lge.Clone();
+idle[4]=0;idle[5]=0;idle[6]=0;idle[7]=0;idle[10]=0;
+int idleSum=0;for(int n=0;n<16;n++)idleSum=(idleSum+idle[n])&255;
+idle[16]=(byte)idleSum;idle[17]=(byte)(255-idleSum);
+Check(LazyG.Desktop.Diagnostics.ForeverCastEventCodec.TryDecode(idle,out var idlePacket) &&
+    idlePacket is {PlayerEvent:false,SpellId:0,Sequence:0},
+    "LGE heartbeat establishes baseline before first cast");
 var corrupted=(byte[])lge.Clone();corrupted[7]^=1;
 Check(!LazyG.Desktop.Diagnostics.ForeverCastEventCodec.TryDecode(corrupted,out _),
     "LGE CRC rejects corrupted bytes");
