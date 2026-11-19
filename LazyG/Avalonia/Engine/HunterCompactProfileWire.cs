@@ -70,7 +70,10 @@ internal static class HunterCompactProfileWire
             bytes[i*3]=c.R;bytes[i*3+1]=c.G;bytes[i*3+2]=c.B;
         }
         int length=PayloadLength(manifest);
-        for(int i=length;i<bytes.Length;i++)
+        // Padding is confined to the compact manifest's own cells. The
+        // following four v3 cells carry a separate auto-binding record.
+        int compactBytes=ExtensionCells(manifest)*3;
+        for(int i=length;i<compactBytes;i++)
             if(bytes[i]!=0)return false;
         if(!DecodeHeader(bytes,manifest))return false;
         int epoch=(bytes[10]<<8)|bytes[11];
