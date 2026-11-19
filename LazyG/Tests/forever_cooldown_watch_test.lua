@@ -15,7 +15,7 @@ LazyGCooldownStateProbe={WidgetExperiment=function(id)
 end,Flags=function(id)
   if id==1130 then return phase==0 and 1 or phase==1 and 2 or 1,1 end
   if id==61304 then return phase==1 and 2 or 1,0 end
-  if id==29515 then return 0,0 end
+  if id==29515 then return 1,0 end
   return 0,0
 end}
 assert(loadfile("LazyG/Diagnostics/LazyGForeverProbe/CooldownWatch.lua"))()
@@ -44,6 +44,7 @@ phase=1
 clock=clock+0.1;script()
 assert(linesContaining("gcd61304")==2)
 assert(linesContaining("spell spell=1130")==2)
+assert(linesContaining("SpellActiveWhileGcdInactive")==1)
 -- The widget intentionally runs at 200ms, not at every 50ms flag sample.
 -- Keep this phase active until at least one full widget sampling interval.
 clock=clock+0.25;script()
