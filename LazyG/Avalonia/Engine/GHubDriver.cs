@@ -143,11 +143,24 @@ internal sealed class GHubDriver : IDisposable
 
 internal static class GHubKeys
 {
+    // Decoded RGB reports carry USB HID usage, not a Windows VK code.
+    // Restrict to known keyboard usages; mouse events are a separate device.
+    public static bool IsSupportedUsage(byte usage) =>
+        usage is >=4 and <=99 or >=104 and <=115;
     // Original DEV_LaZY_Forever USB HID keyboard mapping.
     public static bool TryParse(string value,out byte modifier,out byte usage)
     {
         modifier=0;usage=0;
         if(string.IsNullOrWhiteSpace(value))return false;
+        if(value.StartsWith("HID:",StringComparison.Ordinal))
+        {
+            var parts=value.Split(':');
+            if(parts.Length!=3 || !byte.TryParse(parts[1],out modifier) ||
+               !byte.TryParse(parts[2],out usage) ||
+               modifier>15 || !IsSupportedUsage(usage))
+            {modifier=0;usage=0;return false;}
+            return true;
+        }
         foreach(var part in value.Trim().ToUpperInvariant().Split('+',
             StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries))
         {
