@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.2.18-dev actual Forever LGC RGB capture [USER-TESTED / PARTIAL / DOCS-ONLY]
+
+- User supplied two real test files: Windows Support in-memory diagnostic transcript ("Pasted text.txt", 130 lines) and addon SavedVariables ("LazyGForeverProbe.lua", with `LGC strip ON SpellID=13795`). **Raw user logs are not committed to GitHub.**
+- **First actual proof of Lua→6-cell LGC RGB→Windows decode in Forever**. Windows Support contains decoded `LGC SpellID 13795` values changing with gameplay: at 08:52:14 spell `isActive=False`, GCD29515 `False`; at 08:52:16 spell `True`, GCD29515 `True` (there is also a `spell=True,onGCD=True` sample), at 08:52:17 spell `True`, GCD29515 `False`; at 08:52:46 GCD29515 `True` while spell remains `True`, and at 08:52:47 GCD29515 `False` while spell remains `True`. Evidence supports a working independently varying CD/GCD **read-only visual telemetry channel**, not verified spell readiness or exact remaining durations. Timestamps in Windows event log are rounded to seconds; do not estimate precise GCD durations.
+- Repeated `RGB v3 CRC PASS` and Curve HP/resource bands demonstrate coexistence with existing RGB transport. Verified base-game identity appears as `GAMESTATE transport Known, class 3 spec 1` when game is foreground. During focus changes or missing v2 identity, Support shows `No RGB v2 identity`, `GAME NOT CONNECTED`, `GAMESTATE transport Unknown`. This should remain fail-closed.
+- Addon SavedVariables contains only a strip-on event (not a `cdwatch` timer). Windows `GCD Unknown · SpellReady Unknown` is expected because LGC does not update action-authorization GameState. `isOnGCD=Unknown` outside active GCD remains Unknown; no conversion to known false.
+- **Next engineering task:** improve diagnostic packet validity over dropped/frozen frames and foreground transitions, ensure no stale LGC state is presented as fresh; then explicitly design separate boolean cooldown/GCD observations vs duration-ms gates. No source code changes or new EXE were made in this documentation step. Latest successful CI build remains https://github.com/Vi22Rus/LazyG/actions/runs/44439213580 . Rollback 0.2.17-dev https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 .
+
 ## 2026-11-19 — 0.2.18-dev LGC RGB verified two-artifact build [CI-PASSED / GAME-UNTESTED]
 
 - Exact successful run: https://github.com/Vi22Rus/LazyG/actions/runs/44439213580 , code commit `7d6c37094d9b53d8cd152924914c39cf69ebac8a`. All GitHub Actions jobs SUCCESS: Lua 5.1 syntax, RGB v3 wire vectors, Forever CD audit, state/widget, watch and new LGC cooldown RGB wire tests; Windows .NET RGB + GameState/XML regression, spell atlas, single EXE publish, 6-second Windows startup smoke and both artifact uploads.
