@@ -29,22 +29,22 @@ internal static class HunterExecutionGate
         foreach(var rule in profile.Rules)
         {
             if(!keyBindings.TryGetValue(rule.SpellId,out int vk) || !ValidKey(vk))
-            {
-                spells.Remove(rule.SpellId);
-                continue;
-            }
+                return null;
             var finding=HunterSpellFamilies.Find(state,rule.SpellId,now);
+            // Without complete knowledge of the learned rank family, a
+            // lower-priority fallback may be unsafe: block the entire cycle.
             if(finding.SelectedRank is not int id ||
-               !state.Spells.TryGetValue(id,out var selected) ||
-               ConditionEvaluator.SpellReady(state.Age(now,TimeSpan.FromMilliseconds(500)),id)!=Truth.True)
+               !state.Spells.TryGetValue(id,out var selected))
+                return null;
+            // Retain only confirmed concrete-rank readiness; a spell on CD
+            // becomes ineligible but does not block another proven rule.
+            spells.Remove(rule.SpellId);
+            if(ConditionEvaluator.SpellReady(state.Age(now,TimeSpan.FromMilliseconds(500)),id)
+               ==Truth.True)
             {
-                spells.Remove(rule.SpellId);
-                continue;
+                spells[rule.SpellId]=selected;
+                resolved[rule.SpellId]=id;
             }
-            // Spell family is a rule template only; only a positively observed
-            // learned and ready concrete rank can populate that template.
-            spells[rule.SpellId]=selected;
-            resolved[rule.SpellId]=id;
         }
         var projected=state with { Spells=spells };
         var outcome=RotationXmlV2.Evaluate(profile,projected,settings,now,"PvE").Recommendation;
