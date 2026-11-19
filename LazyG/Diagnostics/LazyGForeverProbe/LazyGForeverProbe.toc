@@ -7,5 +7,6 @@ CooldownStateProbe.lua
 CooldownWatch.lua
 CooldownRgb.lua
 SpellDiagnosticRgb.lua
+CastEventRgb.lua
 CooldownAudit.lua
 LazyGForeverProbe.lua
