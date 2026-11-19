@@ -31,6 +31,7 @@ var state=empty with {
     TargetExists=Observed<bool>.Known(true,now),TargetHostile=Observed<bool>.Known(true,now),
     TargetAlive=Observed<bool>.Known(true,now),GcdRemainingMilliseconds=Observed<int>.Known(0,now),
     PowerPercent=Observed<int>.Known(75,now),
+    PowerBand=Observed<HealthBand>.Known(new HealthBand(75,79),now),
     Spells=new Dictionary<int,SpellState>{{1130,spell}}
 };
 Check(RotationXmlV2.Evaluate(profile,state,null,now,"PvE").Recommendation?.SpellId==1130,"simulation suggestion");
@@ -116,4 +117,67 @@ Check(RotationXmlV2.Evaluate(paladin,paladinState,new Dictionary<string,int>{{"o
 Check(RotationXmlV2.Evaluate(paladin,paladinState,
     new Dictionary<string,int>{{"useHammerOfJustice",0}},now,"PvP").Recommendation is null,
     "user can disable control");
+
+// Hunter BM at level 30: RGB Curve 5%-range threshold tests, never raw exact power.
+var hunter=RotationProfileCatalog.Load("hunter","beast-mastery","PvE")!;
+Check(hunter.Rules.Count==4 && hunter.Settings.Values
+    .Where(x=>x.Type==RotationSettingType.Integer).All(x=>x.Step==5),
+    "Hunter BM four rules and 5-percent-only resource sliders");
+Check(RotationProfileCatalog.Load("hunter","beast-mastery","PvP") is null,
+    "Hunter PvP remains unavailable");
+var hunterSpells=new Dictionary<int,SpellState> {
+    [1130]=spell,[1978]=spell,[3044]=spell,[75]=spell
+};
+var hunterState=state with {
+    Spells=hunterSpells,
+    TargetEpoch=Observed<int>.Known(7,now),
+    PowerBand=Observed<HealthBand>.Known(new HealthBand(25,29),now),
+    Auras=new Dictionary<AuraKey,AuraState> {
+        [new AuraKey("target-epoch-7",1130,true)]=new(
+            Observed<bool>.Known(true,now),Observed<int>.Missing(),Observed<int>.Missing()),
+        [new AuraKey("target-epoch-7",1978,true)]=new(
+            Observed<bool>.Known(true,now),Observed<int>.Missing(),Observed<int>.Missing())
+    }
+};
+var hunterEval=RotationXmlV2.Evaluate(hunter,hunterState,null,now,"PvE");
+Check(hunterEval.Recommendation?.SpellId==3044,"Hunter Arcane Shot selected from 25-29 band");
+Check(hunterEval.Trace.Any(t=>t.Reason.Contains("CurveBand")),
+    "Hunter trace contains resource interval");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {PowerBand=Observed<HealthBand>.Known(new HealthBand(20,24),now)},
+    null,now,"PvE").Recommendation?.SpellId==75,
+    "below 25% band only Auto Shot meets configured priority");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {PowerBand=Observed<HealthBand>.Missing()},
+    null,now,"PvE").Recommendation?.SpellId==75,
+    "missing Curve does not authorize resource-dependent spells");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {PowerBand=Observed<HealthBand>.Known(new HealthBand(25,29),now)},
+    new Dictionary<string,int>{{"arcaneManaMin",30}},now,"PvE").Recommendation?.SpellId==75,
+    "5% slider change immediately changes selected ability");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {PowerBand=Observed<HealthBand>.Known(new HealthBand(30,34),now)},
+    new Dictionary<string,int>{{"arcaneManaMin",30}},now,"PvE").Recommendation?.SpellId==3044,
+    "30-34 interval satisfies 30% lower bound");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {
+        Auras=new Dictionary<AuraKey,AuraState> {
+            [new AuraKey("target-epoch-7",1130,true)]=new(
+                Observed<bool>.Known(false,now),Observed<int>.Missing(),Observed<int>.Missing())
+        }
+    },null,now,"PvE").Recommendation?.SpellId==1130,
+    "known absent mark on current epoch allows mark");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {TargetEpoch=Observed<int>.Missing()},
+    null,now,"PvE").Trace[0].Outcome==Truth.Unknown,
+    "missing target epoch never establishes absent mark");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {TargetEpoch=Observed<int>.Known(8,now)},
+    null,now,"PvE").Trace[0].Outcome==Truth.Unknown,
+    "old target epoch aura must not carry to new target");
+Check(RotationXmlV2.Evaluate(hunter,
+    hunterState with {PowerBand=Observed<HealthBand>.Known(new HealthBand(25,29),now)},
+    null,now.AddSeconds(2),"PvE").Recommendation is null,"Hunter stale state blocks");
+Reject(File.ReadAllText(Path.Combine("LazyG","Rotations","Forever","Experimental",
+    "hunter-beast-mastery-pve.xml")).Replace("step=\\"5\\"","step=\\"3\\""));
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
