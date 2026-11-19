@@ -252,5 +252,42 @@ Assert(XmlRotationPreview.Describe(parsed,ready,band04,now.AddSeconds(2))
     .Contains("stale"));
 Assert(XmlRotationPreview.Describe(null,ready,band04,now).Contains("no validated profile"));
 
+// LGC v1, separately encoded from LGD and RGB v2/v3: strict checksum,
+ // reserved bytes, state quality and temporal fail-closed reporting.
+var lgc=new byte[]{0x4c,0x47,0x43,1,7,0,0,53,227,2,1,1,0,0,0,0xa5,0,0};
+int lgcSum=0;
+for(int i=0;i<15;i++)lgcSum=(lgcSum+lgc[i])&255;
+lgc[16]=(byte)lgcSum;lgc[17]=(byte)(255-lgcSum);
+Assert(ForeverCooldownRgbCodec.TryDecode(lgc,out var cdPacket));
+Assert(cdPacket is not null && cdPacket.SpellId==13795 &&
+    cdPacket.SpellActive==ProbeCode.True &&
+    cdPacket.SpellOnGcd==ProbeCode.False &&
+    cdPacket.Gcd29515Active==ProbeCode.False &&
+    cdPacket.Gcd29515OnGcd==ProbeCode.Unknown);
+Assert(ForeverCooldownRgbCodec.Describe(cdPacket,now,now,
+    TimeSpan.FromMilliseconds(900),true).Contains("GCD(29515)=False"));
+Assert(ForeverCooldownRgbCodec.Describe(cdPacket,now,now.AddSeconds(2),
+    TimeSpan.FromMilliseconds(900),true)=="LGC STALE");
+Assert(ForeverCooldownRgbCodec.Describe(cdPacket,now,now,
+    TimeSpan.FromMilliseconds(900),false).Contains("No verified"));
+Assert(ForeverCooldownRgbCodec.Describe(null,now,now,
+    TimeSpan.FromMilliseconds(900),true).Contains("absent"));
+Assert(attackBase.GcdRemainingMilliseconds.Quality==Knowledge.Unknown);
+var damaged=(byte[])lgc.Clone();
+damaged[11]=2;
+Assert(!ForeverCooldownRgbCodec.TryDecode(damaged,out _));
+damaged=(byte[])lgc.Clone();
+damaged[3]=2;
+Assert(!ForeverCooldownRgbCodec.TryDecode(damaged,out _));
+damaged=(byte[])lgc.Clone();
+damaged[13]=1;
+Assert(!ForeverCooldownRgbCodec.TryDecode(damaged,out _));
+damaged=(byte[])lgc.Clone();
+damaged[12]=5;
+Assert(!ForeverCooldownRgbCodec.TryDecode(damaged,out _));
+damaged=(byte[])lgc.Clone();
+damaged[0]=0x44; // LGD is NOT LGC
+Assert(!ForeverCooldownRgbCodec.TryDecode(damaged,out _));
+
 Console.WriteLine("GameState, corpse safety, XML dispatch and preview regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
