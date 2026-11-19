@@ -159,6 +159,16 @@ frame:SetScript("OnEvent",function(_,event,...)
             " after addon reload [diagnostic only]")
       end
     end
+    if LazyGSpellDiagnostic and type(saved.lgdEnabled)=="boolean" then
+      if type(saved.lgdSpellId)=="number" then
+        LazyGSpellDiagnostic.SetSpellId(saved.lgdSpellId)
+      end
+      LazyGSpellDiagnostic.SetEnabled(saved.lgdEnabled)
+      if saved.lgdEnabled then
+        log("LGD strip RESTORED SpellID="..LazyGSpellDiagnostic.GetSpellId()..
+            " after addon reload [diagnostic only]")
+      end
+    end
     log("Ready. /lgprobe help (save with /reload)")
     return
   end
@@ -268,11 +278,31 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
       log("GCD comparison: SpellID 61304 (may be unavailable on Forever)")
       for _,line in ipairs(LazyGCooldownAudit.Inspect(61304)) do log(line) end
     end
-  elseif cmd=="rgb" and (arg=="on" or arg=="off") then
-    if LazyGSpellDiagnostic and LazyGSpellDiagnostic.SetEnabled then
-      LazyGSpellDiagnostic.SetEnabled(arg=="on")
-      log("LGD RGB "..arg.." (visual test only; no rotations)")
-    else log("LGD RGB module missing") end
+  elseif cmd=="rgb" then
+    if not LazyGSpellDiagnostic or not LazyGSpellDiagnostic.SetEnabled then
+      log("LGD RGB module missing")
+    elseif arg=="off" then
+      LazyGSpellDiagnostic.SetEnabled(false)
+      if saved then saved.lgdEnabled=false end
+      log("LGD strip OFF")
+    elseif arg=="on" then
+      LazyGSpellDiagnostic.SetEnabled(true)
+      if saved then
+        saved.lgdEnabled=true
+        saved.lgdSpellId=LazyGSpellDiagnostic.GetSpellId()
+      end
+      log("LGD strip ON SpellID="..LazyGSpellDiagnostic.GetSpellId())
+    elseif LazyGSpellDiagnostic.SetSpellId(tonumber(arg)) then
+      LazyGSpellDiagnostic.SetEnabled(true)
+      if saved then
+        saved.lgdEnabled=true
+        saved.lgdSpellId=LazyGSpellDiagnostic.GetSpellId()
+      end
+      log("LGD strip ON SpellID="..LazyGSpellDiagnostic.GetSpellId()..
+          " [diagnostic only]")
+    else
+      log("Usage: /lgprobe rgb <SpellID|on|off>")
+    end
   elseif cmd=="aura" then
     local unit=arg=="target" and "target" or "player"
     auraProbe(unit,20)
@@ -288,6 +318,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | cdstrip [ID|on|off] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | cdstrip [ID|on|off] | target | aura [player|target] | rgb [ID|on|off] | events on/off | show | clear")
   end
 end
