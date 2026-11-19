@@ -63,6 +63,8 @@ public sealed class MainWindow : Window
     private string LastGhubStatus="STOPPED";
     private string lastPreviewStatus="";
     private int? lastPreviewSpell;
+    private string lastInputGateReason="";
+    private int lastAutoBindingCount=-1;
     private readonly ProfileDataManifest? hunterCompactManifest;
     private byte? lastCompactFrame;
     private DateTimeOffset lastCompactFrameAt;
@@ -783,6 +785,15 @@ public sealed class MainWindow : Window
             ghubGeneration++;
             ghubArmed=true;
             LastGhubStatus="CONNECTED / RUNNING";
+            executionTrace.Start(DateTimeOffset.UtcNow,
+                "forever/"+cls.Id+"/"+spec.Id+"/PvE");
+            try {StartRotationAudit();}
+            catch(Exception auditEx){
+                hunterAuditRecording=false;
+                RuntimeDiagnostics.Add("HUNTERAUDIT","Audit unavailable: "+auditEx.GetType().Name);
+            }
+            executionTrace.Add(DateTimeOffset.UtcNow,"GHUB_CONNECTED",null,
+                "Virtual bus opened; keyboard effects not yet proven");
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(true,null,rotationPreview.Status);
@@ -825,7 +836,10 @@ public sealed class MainWindow : Window
         string status=rotationPreview.Status;
         if(status!=lastPreviewStatus || rec?.SpellId!=lastPreviewSpell)
         {
-            RuntimeDiagnostics.Add("ROTATION","Read-only "+status);
+            RuntimeDiagnostics.Add("ROTATION",status);
+            if(rec is not null)
+                executionTrace.Recommend(at,rec.SpellId,rec.RuleId);
+            else executionTrace.Add(at,"XML_BLOCKED",null,status);
             lastPreviewStatus=status;
             lastPreviewSpell=rec?.SpellId;
         }
@@ -835,6 +849,8 @@ public sealed class MainWindow : Window
     }
     private void StopGhub(string reason)
     {
+        executionTrace.Stop(DateTimeOffset.UtcNow,reason);
+        hunterAuditRecording=false;
         ghubArmed=false;
         ghubGeneration++;
         activeBindings=new System.Collections.Generic.Dictionary<int,string>();
@@ -869,6 +885,12 @@ public sealed class MainWindow : Window
             ghubArmed,GHubDriver.IsWowForeground(),activeBindings,out var reason);
         if(cmd is null)
         {
+            if(reason!=lastInputGateReason)
+            {
+                executionTrace.Add(now,"INPUT_BLOCKED",rec.SpellId,reason,
+                    null,rec.RuleId);
+                lastInputGateReason=reason;
+            }
             if(reason=="WOW NOT FOREGROUND")
             {
                 StopGhub("WOW LOST FOCUS");
@@ -877,7 +899,14 @@ public sealed class MainWindow : Window
             }
             return;
         }
-        if(!GHubKeys.TryParse(cmd.Key,out var mod,out var usage))return;
+        if(!GHubKeys.TryParse(cmd.Key,out var mod,out var usage))
+        {
+            executionTrace.Add(now,"INPUT_BLOCKED",rec.SpellId,"Invalid HID binding",
+                null,rec.RuleId);
+            return;
+        }
+        lastInputGateReason="";
+        long attempt=executionTrace.Attempt(now,rec.SpellId,rec.RuleId);
         ghubBusy=true;
         long generation=ghubGeneration;
         _=Task.Run(()=>{
@@ -887,10 +916,18 @@ public sealed class MainWindow : Window
                 // inside TapKey at the moment of DeviceIoControl.
                 if(generation==System.Threading.Interlocked.Read(ref ghubGeneration) &&
                    ghubArmed && ghub.Connected)
+                {
                     ghub.TapKey(mod,usage);
+                    executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
+                        attempt,true,"DeviceIoControl press/release returned; WoW action not proven");
+                }
+                else executionTrace.Add(DateTimeOffset.UtcNow,"HID_SKIPPED",
+                    rec.SpellId,"Stop or disconnected before HID call",attempt,rec.RuleId);
             }
             catch(Exception ex)
             {
+                executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
+                    attempt,false,ex.GetType().Name);
                 Dispatcher.UIThread.Post(()=>{
                     if(generation!=ghubGeneration)return;
                     StopGhub("LOGITECH ERROR: "+ex.GetType().Name);
@@ -989,6 +1026,13 @@ public sealed class MainWindow : Window
                     HunterCompactProfileWire.ExtensionCells(hunterCompactManifest),
                     result.capturedAt);
             else autoBindings.Reset();
+            int bindingCount=autoBindings.Bindings(result.capturedAt).Count;
+            if(lastAutoBindingCount!=bindingCount)
+            {
+                lastAutoBindingCount=bindingCount;
+                executionTrace.Add(result.capturedAt,"AUTO_BINDINGS",null,
+                    "Confirmed active mappings="+bindingCount);
+            }
             var crc=result.packet is not null;
             var curve=result.thresholds is not null;
             bool foreground=!result.detail.StartsWith("Switch to WoW",StringComparison.Ordinal) &&
@@ -1197,16 +1241,17 @@ public sealed class MainWindow : Window
                     lastCastEventSpellId=cast.SpellId;
                     RuntimeDiagnostics.Add("HUNTERAUDIT","LGE event baseline established; historical event ignored");
                 }
-                else if(cast.PlayerEvent)
+                else if(cast.Sequence==lastCastEventSequence &&
+                    cast.SpellId==lastCastEventSpellId)
                 {
-                    // Unchanged latched event means a repeated RGB frame, NOT
-                    // a second cast. Track separately for transport diagnostics.
-                    hunterAudit.RecordDuplicateEvent();
+                    // Repeated latched frame is not another cast.
+                    if(cast.PlayerEvent)hunterAudit.RecordDuplicateEvent();
                 }
-                else if(cast.Sequence!=lastCastEventSequence || cast.SpellId!=lastCastEventSpellId)
+                else if(cast.PlayerEvent)
                 {
                     lastCastEventSequence=cast.Sequence;
                     lastCastEventSpellId=cast.SpellId;
+                    executionTrace.CastEvent(result.capturedAt,cast.SpellId,true);
                     var correlated=hunterAudit.Observe(new RotationObservedCast(cast.SpellId,
                         result.capturedAt,RotationCastEvidence.UnitSpellcastSucceeded,
                         cast.TargetEpoch,cast.PlayerEvent));
