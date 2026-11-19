@@ -12,6 +12,9 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="../AddonTemplate/RgbV3Encoder.lua" LogicalName="LazyG.RgbV3Encoder.lua" />
+    <EmbeddedResource Include="../AddonTemplate/HunterCompactManifest.lua" LogicalName="LazyG.HunterCompactManifest.lua" />
+    <EmbeddedResource Include="../AddonTemplate/HunterCompactProfileEncoder.lua" LogicalName="LazyG.HunterCompactProfileEncoder.lua" />
+    <EmbeddedResource Include="../AddonTemplate/HunterCompactCollector.lua" LogicalName="LazyG.HunterCompactCollector.lua" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Thresholds.lua" LogicalName="LazyG.RgbV3Thresholds.lua" />
   </ItemGroup>
