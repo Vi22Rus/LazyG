@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using LazyG.Desktop.Engine;
 static void Check(bool value,string message) {if(!value)throw new Exception("Foundation regression: "+message);}
 var now=DateTimeOffset.UtcNow;
@@ -71,4 +72,19 @@ try {
     try {RotationSettingsStore.Load(file,profile);throw new Exception("Bad JSON accepted");}
     catch(InvalidDataException) {}
 } finally {if(Directory.Exists(folder))Directory.Delete(folder,true);}
+var supportDir=Path.Combine(Path.GetTempPath(),"LazyG-support-test-"+Guid.NewGuid().ToString("N"));
+try {
+    var archive=LazyG.Desktop.Diagnostics.RotationSupportArchive.Create(supportDir,
+        new("0.4.0-dev","Internal","Ready","C:\\Users\\Secret\\token","forever",
+            "SecretCharacter",12,2,3,4),"SecretPassword=123",false,now);
+    using var zip=System.IO.Compression.ZipFile.OpenRead(archive);
+    Check(zip.Entries.Count>=7,"support ZIP contents");
+    var names=string.Join(",",zip.Entries.Select(x=>x.FullName));
+    Check(names.Contains("rotation-state.json") && names.Contains("rgb-health.json"),"support sections");
+    foreach(var entry in zip.Entries) {
+        using var reader=new StreamReader(entry.Open());
+        var data=reader.ReadToEnd();
+        Check(!data.Contains("Secret") && !data.Contains("Password") && !data.Contains("token"),"redaction");
+    }
+} finally {if(Directory.Exists(supportDir))Directory.Delete(supportDir,true);}
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
