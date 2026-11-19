@@ -55,7 +55,10 @@ local function cooldownActive(id)
     return v
   end)
   if not ok then return "protected" end
-  return (type(active)=="boolean" or active=="protected") and active or nil
+  -- Lua and/or expressions collapse false to nil. Preserve a known false.
+  if type(active)=="boolean" then return active end
+  if active=="protected" then return "protected" end
+  return nil
 end
 local function scanDebuffs()
   local result={}
