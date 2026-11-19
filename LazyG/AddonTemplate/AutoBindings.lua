@@ -4,6 +4,7 @@
 local M = {}
 local floor=math.floor
 local entries, generation, cursor, dirty = {}, 0, 1, true
+local held=0
 local stamp = 0
 local lastSignature = ""
 local bases={
@@ -158,6 +159,7 @@ local function Scan()
     lastSignature=signature
     generation=(generation%255)+1
     cursor=1
+    held=0
   end
   entries=out
   dirty=false
@@ -171,7 +173,12 @@ function M.Build()
   local n=#entries
   local e=entries[cursor]
   local index=e and cursor or 0
-  if n>0 then cursor=cursor%n+1 end
+  if n>0 then
+    held=held+1
+    -- Hold for three 100-ms v3 frames; avoids phase-lock missing every
+    -- fourth record when Windows polls the screen at about 400 ms.
+    if held>=3 then cursor=cursor%n+1;held=0 end
+  end
   local spell=e and e.spell or 0
   local bytes={76,66,1,generation,index,n,
     floor(spell/65536)%256,floor(spell/256)%256,spell%256,
