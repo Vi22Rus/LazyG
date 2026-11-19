@@ -36,7 +36,7 @@ internal static class CrashReportService
             RotationSupportArchive.Create(directory,
                 new RotationSupportArchive.SafeState("0.4.0-dev",null,
                     "AwaitingTransport","UnhandledException","forever",null,0,0,0,0),
-                "UnhandledException",fatal,DateTimeOffset.UtcNow);
+                "UnhandledException",fatal,DateTimeOffset.UtcNow,exception?.GetType().Name);
         }
         catch { /* out-of-space, ACL, shutdown: best-effort only */ }
         finally { Interlocked.Exchange(ref reporting,0); }
