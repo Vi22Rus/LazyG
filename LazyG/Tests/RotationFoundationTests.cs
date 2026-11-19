@@ -259,6 +259,10 @@ Check(ConditionEvaluator.SpellReady(mapped.Age(now.AddSeconds(2),
     TimeSpan.FromMilliseconds(900)),14323)==Truth.Unknown,
     "stale compact cooldown state does not authorize new casts");
 var manifest=ProfileDataManifestBuilder.Build(hunter);
+Check(manifest.LayoutHash==3034231383u &&
+    manifest.SpellFamilies.Sum(x=>x.RankSpellIds.Count)==45 &&
+    manifest.AuraFamilies.Sum(x=>x.RankSpellIds.Count)==13,
+    "Lua BM manifest fingerprint matches embedded XML and reference rank families");
 Check(manifest.Client=="forever" && manifest.ClassId==3 && manifest.SpecIndex==1 &&
     manifest.Mode=="PvE" && manifest.SpellFamilies.Count==11 &&
     manifest.AuraFamilies.Count==2 &&
