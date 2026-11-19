@@ -35,6 +35,7 @@ var state=empty with {
 };
 Check(RotationXmlV2.Evaluate(profile,state,null,now,"PvE").Recommendation?.SpellId==1130,"simulation suggestion");
 Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"powerThreshold",80}},now,"PvE").Recommendation is null,"slider changes rule");
+Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"powerThreshold",80}},now,"PvE").Trace[0].Reason.Contains("powerThreshold=80"),"trace reports effective slider value");
 Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"useExample",0}},now,"PvE").Recommendation is null,"toggle changes rule");
 Check(RotationXmlV2.Evaluate(profile,state,null,now,"PvP").Recommendation is null,"mode isolation");
 Check(RotationXmlV2.Evaluate(profile,state with { TargetAlive=Observed<bool>.Missing() },null,now,"PvE").Recommendation is null,"unknown life blocks");
@@ -111,6 +112,7 @@ Check(RotationXmlV2.Evaluate(paladin,paladinState with {
     TargetHealthPercent=Observed<int>.Known(40,now)},
     new Dictionary<string,int>{{"onlyLowHpHammer",1}},now,"PvP").Recommendation is null,
     "HP threshold prevents known 40");
+Check(RotationXmlV2.Evaluate(paladin,paladinState,new Dictionary<string,int>{{"onlyLowHpHammer",1}},now,"PvP").Trace[0].Reason.Contains("TargetHealthPercent Below hammerHpThreshold=20"),"PvP trace includes conditional threshold");
 Check(RotationXmlV2.Evaluate(paladin,paladinState,
     new Dictionary<string,int>{{"useHammerOfJustice",0}},now,"PvP").Recommendation is null,
     "user can disable control");
