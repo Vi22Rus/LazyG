@@ -12,6 +12,21 @@ internal static class RgbV3PanelDetector
         Math.Abs(c.B - b) <= tolerance;
 
     public static bool FindPanel(Bitmap bitmap, out RgbV3Packet? packet, out string detail)
+    => Scan(bitmap,0,out packet,out detail);
+
+    // Same physical v3 row, profile-indexed extension. No extra RGB strip.
+    // A layout mismatch/CRC failure cannot be accepted as old 24-cell v3.
+    public static bool FindProfilePanel(Bitmap bitmap,int extensionCells,
+        out RgbV3Packet? packet,out string detail)
+        => extensionCells>0 && extensionCells<=96
+            ? Scan(bitmap,extensionCells,out packet,out detail)
+            : Reject(out packet,out detail);
+
+    private static bool Reject(out RgbV3Packet? packet,out string detail)
+    { packet=null;detail="Invalid profile extension count";return false; }
+
+    private static bool Scan(Bitmap bitmap,int extensionCells,
+        out RgbV3Packet? packet,out string detail)
     {
         packet = null;
         detail = "RGB v3 diagnostic strip not found (old v2 addon or hidden strip).";
@@ -38,7 +53,8 @@ internal static class RgbV3PanelDetector
                 var versionCell=bitmap.GetPixel(x + 4 * pitch,y);
                 int encoding=versionCell.B & 3;
                 if(encoding!=0 && encoding!=1)continue;
-                int cellCount=encoding==1?43:24;
+                int logicalCells=24+extensionCells;
+                int cellCount=encoding==1?5+(logicalCells-5)*2:logicalCells;
                 if(x + pitch*(cellCount-1)>=bitmap.Width)continue;
                 var rgb=new byte[cellCount*3];
                 for(int cell=0;cell<cellCount;cell++)
@@ -49,7 +65,7 @@ internal static class RgbV3PanelDetector
                     rgb[offset+1]=color.G;
                     rgb[offset+2]=color.B;
                 }
-                if (RgbV3Codec.TryDecode(rgb, 0, 0x4C47, out packet, out var error))
+                if (RgbV3Codec.TryDecode(rgb, extensionCells, 0x4C47, out packet, out var error))
                 {
                     detail = $"RGB v3 CRC PASS; frame={packet!.FrameCounter}; encoding={packet.Encoding}; position=({x},{y}); pitch={pitch}px";
                     return true;
