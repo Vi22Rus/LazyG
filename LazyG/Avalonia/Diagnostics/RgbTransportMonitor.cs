@@ -60,8 +60,9 @@ internal sealed class RgbChannelHealth
     private void Change(string next, string reason)
     {
         if(next==Status && reason==Reason)return;
-        if(everLive && Status=="Live" && next!="Live" ||
-           everLive && Status=="Stale" && next!="Stale" && !awaitingRecovery)
+        // Count one loss at the first transition out of Live. A recovery
+        // from Stale to Live is NOT another loss.
+        if(everLive && Status=="Live" && next!="Live")
         {
             Lost++;
             awaitingRecovery=true;
