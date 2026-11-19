@@ -23,6 +23,15 @@
 
 ---
 
+## 2026-11-19 — 0.2.19-dev LGC freshness real WoW Forever verification [USER-TESTED / PARTIAL / DOCS-ONLY]
+
+- User provided live 0.2.19-dev Windows Support transcript (`Pasted text.txt`, 149 lines) and WoW SavedVariables `LazyGForeverProbe.lua` confirming `LGC strip ON SpellID=13795`. Raw private logs not committed to GitHub.
+- During live combat, the read-only observer reported `LGC SpellID 13795 CD=True onGCD=False GCD(29515)=True gcdOnGCD=True` at 09:05:21; at 09:05:22, `CD=True` remained while `GCD(29515)=False`. Additional GCD transitions are visible throughout the log. Exact durations **cannot** be inferred from second-granularity timestamps.
+- **Stale-frame invalidation confirmed by actual user test:** at 09:05:31, `LGC STALE (sequence stopped; all states invalid)` occurred while other diagnostic lines still showed v3 CRC PASS earlier. At 09:05:31 loss of v2 identity was followed by `LGC unavailable (no verified fresh frame)`, `GAME NOT CONNECTED` and GameState transport Unknown. On later focus loss (09:05:47, 09:05:54), GameState also became Unknown. This verifies fail-closed handling of previous boolean observations rather than reusing outdated GCD=False.
+- Base RGB v3 CRC and Curve probe continue to recover (e.g., `RGB CONNECTED · CURVE` at 09:05:46 and 09:05:52). **LGC auto-recovery after stale/disconnect was not shown** in the supplied transcript, even when base RGB returned; do not claim it is tested. The SavedVariables file logs strip activation, not `cdwatch`.
+- `GAMESTATE` still correctly says `GCD Unknown · SpellReady Unknown` because LGC diagnostic booleans do not confer millisecond readings or XML authorization. No changes to code or artifacts; 0.2.19-dev user-tested *partially* for LGC receive, stale and disconnect, but no actual rotation test.
+- Next investigation: distinguish a persistent frozen LGC strip from lost opt-in state/reload after reconnect; independently verify LGC reacquisition when new frame sequences resume before enabling any rotation condition. Latest CI SUCCESS remains https://github.com/Vi22Rus/LazyG/actions/runs/44440949347 .
+
 ## 2026-11-19 — 0.2.19-dev LGC observer confirmed [CI-PASSED / GAME-UNTESTED]
 
 - GitHub Actions **SUCCESS** for https://github.com/Vi22Rus/LazyG/actions/runs/44440949347 , source commit `c43b8e65b59fdc350974cb7f2e3a27cea876e1dc`. Lua 5.1 regression, Windows RGB and GameState/XML regression (including new LGC snapshot freshness), spell assets, publish single EXE, Windows startup smoke and both uploads passed.
