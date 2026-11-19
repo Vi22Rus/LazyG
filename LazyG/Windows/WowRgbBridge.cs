@@ -77,6 +77,18 @@ internal static class WowRgbBridge
         out RgbThresholdProbe? thresholds, bool readSpellProbe,
         out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe)
     {
+        return TryReadCombined(out player,out telemetry,out detail,out v3Detail,
+            out thresholds,readSpellProbe,out spellProbe,false,out _);
+    }
+
+    // Independent LGC capture is opt-in; same bitmap, same verified RGB v2 anchor.
+    public static bool TryReadCombined(out RgbPlayerState? player,
+        out RgbV3Packet? telemetry,out string detail,out string v3Detail,
+        out RgbThresholdProbe? thresholds,bool readSpellProbe,
+        out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe,
+        bool readCooldownProbe,out LazyG.Desktop.Diagnostics.CooldownRgbPacket? cooldownProbe)
+    {
+        cooldownProbe=null;
         spellProbe=null;
         player = null;
         telemetry = null;
@@ -128,6 +140,8 @@ internal static class WowRgbBridge
                 RgbV3ThresholdDetector.FindPanel(bitmap, out thresholds);
             if (readSpellProbe)
                 RgbSpellProbeDetector.FindPanel(bitmap,out spellProbe);
+            if (readCooldownProbe)
+                RgbCooldownProbeDetector.FindPanel(bitmap,out cooldownProbe);
             return v2;
         }
         catch (Exception ex)
