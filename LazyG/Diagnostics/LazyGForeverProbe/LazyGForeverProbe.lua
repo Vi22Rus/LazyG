@@ -203,6 +203,16 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="audit" then
+    if not LazyGCastEventRgb then
+      log("LGE cast event module missing")
+    elseif arg=="on" or arg=="off" then
+      LazyGCastEventRgb.SetEnabled(arg=="on")
+      log("LGE player spellcast EVENT RGB "..(arg=="on" and "ON" or "OFF")..
+        " (not proof of effect; enable Hunter audit in Windows)")
+    else
+      log("Usage /lgprobe audit on|off")
+    end
   elseif cmd=="diag" then
     if not LazyGCooldownRgb or not LazyGSpellDiagnostic then
       log("RGB diagnostic strips missing")
