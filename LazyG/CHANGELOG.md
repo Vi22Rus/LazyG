@@ -1,3 +1,11 @@
+## 2026-11-19 — Universal command planning + F-key/G HUB profile compatibility [DEV / NOT INPUT / GAME-UNTESTED]
+
+**Implementation in main (new development stage):** Added `Avalonia/Engine/RotationCommandPipeline.cs` with validated per-SpellID F1–F12 bindings (saved in local application data), shared `RotationKeyCommand` and fail-closed `RotationCommandGate` requiring explicit arm, foreground, confirmed fresh source, fresh GameState/recommendation, anti-replay and rate limit. `MainWindow.ShowCommon` exposes shared bindings and save/validation, not Hunter-specific. Added corresponding `RotationFoundationTests` regression cases, including missing source, disarm, focus loss, replay and Unknown GameState. The executor has **NO actual keyboard driver or active caller**, SRC provider transport is still absent, and no G HUB SDK integration exists. F-key mapping is only interoperability with user-configured Logitech G HUB profiles, NOT direct programmatic control of G HUB. No game test or release. This is an incremental prerequisite, not completion of the requested full execution/G HUB stage. Existing RGB, XML, Curve and the prior read-only Start/Stop remain unchanged.
+
+**CI:** pending verification for this code batch at documentation time. Prior verified rollback: [Actions 44476309376](https://github.com/Vi22Rus/LazyG/actions/runs/44476309376). See [HUNTER_START_OVERLAY_INTEGRATION.md](HUNTER_START_OVERLAY_INTEGRATION.md). Next: check CI, prove required Forever live rank/aura/source signals, agree actual G HUB integration protocol and single input driver separately; do not arm on Unknown.
+
+---
+
 ## 2026-11-19 — Hunter BM Start/Stop → XML → overlay, режим рекомендаций [CI-PASSED / DEV / GAME-UNTESTED]
 
 **[CI SUCCESS]** [GitHub Actions #44476309376](https://github.com/Vi22Rus/LazyG/actions/runs/44476309376), commit `ed75a80a74d1a3e666ed9fee8afac66f02d661d1`. Пройдены тесты C# (включая Start/Stop, невалидные настройки, отсутствие/старение RGB), Lua 5.1, сборка одного win-x64 EXE и startup smoke. Артефакты **одного run**: Windows `LazyG-Windows-x64` **14506103680**, диагностический Lua `LazyGForeverProbe-0.4.0-dev` **14507080471** (не путать с Lua-адаптером внутри Windows Setup).
