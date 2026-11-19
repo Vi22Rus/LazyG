@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.17-dev successful CI and concrete artifacts [CI-PASSED / GAME-UNTESTED]
+
+- Confirmed SUCCESS https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 on commit `0ac25a8d6e28a0c87ef7796000d1bce29071de8c`. Lua 5.1 syntax and mocked cooldown state/widget, cooldown audit, and 30-second automatic watch tests passed. Windows RGB v3, GameState/XML regression, spell assets, single EXE publish, startup smoke and both artifact uploads passed.
+- Verified artifact names and IDs: `LazyGForeverProbe-0.2.17-dev` ID `14489725389` (10,262 bytes), `LazyG-Windows-x64` ID `14488613266` (77,716,296 bytes), unexpired at verification. Download under Artifacts in exact run.
+- A mock regression originally failed because a test matched `gcd29515` inside the *new comparison line*, not only sensor readings. Fixed test to count `gcd29515 spell=29515` explicitly, commit `0ac25a8d`. The subsequent run passed.
+- **No real WoW gameplay validation yet for changed widget setup or independent cooldown comparison.** The Windows EXE UI remains 0.2.13-dev. Rollback: CI-success run 44367660366 (0.2.16-dev).
+
 ## 2026-11-19 — 0.2.17-dev: compare independent spell cooldown to Forever GCD candidate [DEV / CI PENDING / GAME-UNTESTED]
 
 - Builds on user-verified 0.2.16-dev 30-second trace (seven synchronized 1130/29515 transitions, 61304 Unknown). **No inference of spell readiness or exact cooldown duration from this correlation.**
