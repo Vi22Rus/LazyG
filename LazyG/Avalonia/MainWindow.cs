@@ -460,23 +460,12 @@ public sealed class MainWindow : Window
                 void SaveSetting(int newValue)
                 {
                     if(externalActive)return;
-                    var updated=new System.Collections.Generic.Dictionary<string,int>(overrides);
-                    if(newValue==setting.Default)updated.Remove(setting.Id);
-                    else updated[setting.Id]=newValue;
-                    // Transactional exclusivity across all tabs: one shared-CD
-                    // family can have at most one user-enabled ability.
-                    if(newValue==1 && setting.ExclusiveGroup is not null)
-                        foreach(var other in profile.Settings.Values.Where(x=>
-                            x.Id!=setting.Id &&
-                            x.ExclusiveGroup==setting.ExclusiveGroup))
-                        {
-                            if(other.Default==0)updated.Remove(other.Id);
-                            else updated[other.Id]=0;
-                        }
                     try
                     {
+                        var updated=RotationSettingsExclusivity.Apply(
+                            profile,overrides,setting.Id,newValue);
                         RotationSettingsStore.Save(settingsFile,profile,updated);
-                        overrides=updated;
+                        overrides=new System.Collections.Generic.Dictionary<string,int>(updated);
                         RuntimeDiagnostics.Add("XML2","Setting saved: "+setting.Id+
                             (setting.ExclusiveGroup is null?"":" (exclusive "+setting.ExclusiveGroup+")"));
                         if(setting.Type==RotationSettingType.Boolean)
