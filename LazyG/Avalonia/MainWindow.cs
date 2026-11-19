@@ -14,6 +14,7 @@ using LazyGPrototype;
 using LazyG.Desktop.Diagnostics;
 using Control = Avalonia.Controls.Control;
 using Button = Avalonia.Controls.Button;
+using CheckBox = Avalonia.Controls.CheckBox;
 using TextBox = Avalonia.Controls.TextBox;
 using Orientation = Avalonia.Layout.Orientation;
 using HAlign = Avalonia.Layout.HorizontalAlignment;
