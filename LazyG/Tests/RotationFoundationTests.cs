@@ -52,7 +52,12 @@ var state=empty with {
     PowerBand=Observed<HealthBand>.Known(new HealthBand(75,79),now),
     Spells=KnownFamily(1130,1130)
 };
-Check(RotationXmlV2.Evaluate(profile,state,null,now,"PvE").Recommendation?.SpellId==1130,"simulation suggestion");
+var syntheticEval=RotationXmlV2.Evaluate(profile,state,null,now,"PvE");
+Check(syntheticEval.Recommendation?.SpellId==1130,
+    "simulation suggestion; "+syntheticEval.BlockReason+" "+
+    string.Join(" | ",syntheticEval.Trace.Select(x=>x.Reason))+
+    "; rank="+HunterSpellFamilies.Find(state,1130,now).Status+
+    "; spellReady="+ConditionEvaluator.SpellReady(state,1130));
 Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"powerThreshold",80}},now,"PvE").Recommendation is null,"slider changes rule");
 Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"powerThreshold",80}},now,"PvE").Trace[0].Reason.Contains("powerThreshold=80"),"trace reports effective slider value");
 Check(RotationXmlV2.Evaluate(profile,state,new Dictionary<string,int>{{"useExample",0}},now,"PvE").Recommendation is null,"toggle changes rule");
