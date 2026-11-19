@@ -181,6 +181,22 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="cdstrip" then
+    if not LazyGCooldownRgb then
+      log("LGC cooldown RGB module missing")
+    elseif arg=="off" then
+      LazyGCooldownRgb.SetEnabled(false)
+      log("LGC strip OFF")
+    elseif arg=="on" then
+      LazyGCooldownRgb.SetEnabled(true)
+      log("LGC strip ON SpellID="..LazyGCooldownRgb.GetSpellId())
+    elseif LazyGCooldownRgb.SetSpellId(tonumber(arg)) then
+      LazyGCooldownRgb.SetEnabled(true)
+      log("LGC strip ON SpellID="..LazyGCooldownRgb.GetSpellId()..
+          " (diagnostic only; enable LGC in Windows Support)")
+    else
+      log("Usage /lgprobe cdstrip <SpellID|on|off>")
+    end
   elseif cmd=="cdwatch" then
     if not LazyGCooldownWatch then
       log("CDWATCH unavailable: module missing")
@@ -251,6 +267,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | cdstrip [ID|on|off] | target | aura [player|target] | rgb on/off | events on/off | show | clear")
   end
 end
