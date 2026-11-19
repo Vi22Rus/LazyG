@@ -1,0 +1,154 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+
+namespace LazyG.Desktop.Engine;
+
+// WoW Forever Hunter families independently cross-checked against the Hunter reference
+// rank lists. No rank is presumed learned from level; prove learned from a fresh observation.
+internal static class HunterSpellFamilies
+{
+    private static readonly IReadOnlyDictionary<int,int[]> Families=new Dictionary<int,int[]> {
+        [1130]=new[] {1130,14323,14324,14325}, // Hunter's Mark
+        [1978]=new[] {1978,13549,13550,13551,13552,13553,13554,13555,25295}, // Serpent Sting
+        [3044]=new[] {3044,14281,14282,14283,14284,14285,14286}, // Arcane Shot; higher variants need game verification
+        [75]=new[] {75} // Auto Shot
+    };
+    public static int[] Ranks(int baseSpellId) =>
+        Families.TryGetValue(baseSpellId,out var ids)?(int[])ids.Clone():Array.Empty<int>();
+    public static int? BaseId(int spellId) =>
+        Families.FirstOrDefault(kv=>kv.Value.Contains(spellId)).Key is int n && n>0?n:null;
+
+    public static HunterRankFinding Find(GameState state,int baseSpellId,DateTimeOffset now)
+    {
+        var ranks=Ranks(baseSpellId);
+        if(ranks.Length==0)return new(baseSpellId,null,"UnknownFamily");
+        var fresh=state.Age(now,TimeSpan.FromMilliseconds(900));
+        if(fresh.Transport!=Knowledge.Known || fresh.ClassId.Is(v=>v==3)!=Truth.True)
+            return new(baseSpellId,null,"NoFreshHunterIdentity");
+        // Higher ranks are chosen only among explicitly Known(true) learned flags.
+        // If any rank has no observation, a newer rank may exist: cannot assert best rank.
+        foreach(int rank in ranks)
+            if(!fresh.Spells.TryGetValue(rank,out var spell) ||
+               spell.Learned.Quality!=Knowledge.Known)
+                return new(baseSpellId,null,"RankSetUnverified");
+        var best=ranks.LastOrDefault(rank=>fresh.Spells[rank].Learned.Value==true);
+        return best>0?new(baseSpellId,best,"VerifiedLearnedRank"):
+            new(baseSpellId,null,"NoKnownLearnedRank");
+    }
+}
+internal sealed record HunterRankFinding(int BaseSpellId,int? SelectedRank,string Status);
+
+// Diagnostic-only audit: predicted rotations and *trusted observed* cast events are
+// different channels; absence of combat events is never labeled wrong execution.
+internal enum RotationAuditVerdict { Unobservable, Match, Mismatch, Blocked }
+internal enum RotationCastEvidence { None, CombatLogSuccess }
+// TargetEpoch is only meaningful when both sides independently prove it.
+internal sealed record RotationObservedCast(int SpellId,DateTimeOffset At,
+    RotationCastEvidence Evidence,int? TargetEpoch);
+internal sealed record RotationAuditRow(DateTimeOffset At,int? ExpectedSpellId,
+    string? ExpectedRule, int? ObservedSpellId,RotationAuditVerdict Verdict,
+    string Reason,string[] Conditions);
+
+internal sealed class HunterRotationAudit
+{
+    private readonly List<RotationAuditRow> rows=new();
+    private readonly int capacity;
+    private readonly TimeSpan window;
+    private RotationProfileV2? profile;
+    private IReadOnlyDictionary<string,int>? overrides;
+    private DateTimeOffset lastCapture;
+    public HunterRotationAudit(int capacity=200,TimeSpan? matchWindow=null)
+    {
+        if(capacity is <1 or >2000)throw new ArgumentOutOfRangeException(nameof(capacity));
+        this.capacity=capacity;
+        window=matchWindow??TimeSpan.FromMilliseconds(1200);
+    }
+    public IReadOnlyList<RotationAuditRow> Rows=>rows.ToArray();
+    public void Clear(){rows.Clear();lastCapture=default;profile=null;overrides=null;}
+    // One diagnostic snapshot per polling interval; do not fabricate an execution.
+    public RotationAuditRow Capture(RotationProfileV2 rotation,GameState state,
+        IReadOnlyDictionary<string,int>? settings,DateTimeOffset at)
+    {
+        var evaluation=RotationXmlV2.Evaluate(rotation,state,settings,at,rotation.Mode);
+        var trace=evaluation.Trace.Select(t=>t.RuleId+":"+t.Outcome+" "+t.Reason)
+            .Take(20).ToArray();
+        // A recommendation represents XML conditional assessment, not user input.
+        var row=new RotationAuditRow(at,evaluation.Recommendation?.SpellId,
+            evaluation.Recommendation?.RuleId,null,
+            evaluation.Recommendation is null?RotationAuditVerdict.Blocked:
+                RotationAuditVerdict.Unobservable,
+            evaluation.Recommendation is null?
+                (evaluation.BlockReason.Length==0?"UnknownRequiredSignals":evaluation.BlockReason):
+                "NoVerifiedCastEvent",trace);
+        Add(row);
+        profile=rotation;
+        overrides=settings is null?null:new Dictionary<string,int>(settings);
+        lastCapture=at;
+        return row;
+    }
+    // Can only match independently established combat-log successes.
+    // No LGD state flip, mouse event, pending key press or inferred cooldown is proof.
+    public RotationAuditRow? Observe(RotationObservedCast observed)
+    {
+        if(observed.Evidence!=RotationCastEvidence.CombatLogSuccess || observed.SpellId<=0 ||
+           lastCapture==default || observed.At<lastCapture ||
+           observed.At-lastCapture>window)return null;
+        for(int i=rows.Count-1;i>=0;i--)
+        {
+            var row=rows[i];
+            if(row.At>observed.At || observed.At-row.At>window || row.ObservedSpellId is not null)
+                continue;
+            // Compare family rank equivalents: 1130 vs 14323 is the same ability.
+            int? expectedFamily=row.ExpectedSpellId is int e?HunterSpellFamilies.BaseId(e):null;
+            int? actualFamily=HunterSpellFamilies.BaseId(observed.SpellId);
+            var matched=row.ExpectedSpellId is int exp &&
+                (exp==observed.SpellId ||
+                 (expectedFamily is not null && expectedFamily==actualFamily));
+            // Different cast during this window may be a manually triggered skill,
+            // so "Mismatch" means observed != expected, NOT proven LazyG failure.
+            var verdict=row.ExpectedSpellId is null?RotationAuditVerdict.Blocked:
+                matched?RotationAuditVerdict.Match:RotationAuditVerdict.Mismatch;
+            var updated=row with { ObservedSpellId=observed.SpellId,Verdict=verdict,
+                Reason=verdict switch {
+                    RotationAuditVerdict.Match=>"ObservedCastMatchesRuleFamily",
+                    RotationAuditVerdict.Mismatch=>"ObservedDifferentCast;ActorAttributionUnproven",
+                    _=>"CastObservedButRuleBlocked;ActorAttributionUnproven"
+                }};
+            rows[i]=updated;
+            return updated;
+        }
+        return null;
+    }
+    private void Add(RotationAuditRow row)
+    {
+        if(rows.Count==capacity)rows.RemoveAt(0);
+        rows.Add(row);
+    }
+    // Export only static rule IDs, bounded timestamps, spell ids, classified outcomes,
+    // and quality traces. Never raw RGB, inputs, coordinates or player/target identity.
+    public string ExportJson()
+    {
+        var items=rows.Select(r=>new {
+            at=r.At.ToUniversalTime(),r.ExpectedSpellId,r.ExpectedRule,
+            r.ObservedSpellId,Verdict=r.Verdict.ToString(),r.Reason,
+            Conditions=r.Conditions
+        }).ToArray();
+        return JsonSerializer.Serialize(new {
+            schema=1,client="forever",spec="hunter-beast-mastery",mode="PvE",
+            note="Diagnostic only; absence of cast evidence is not an execution failure. No automatic input.",
+            rows=items
+        },new JsonSerializerOptions {WriteIndented=true});
+    }
+    public string Summary()
+    {
+        int matches=rows.Count(r=>r.Verdict==RotationAuditVerdict.Match);
+        int mismatches=rows.Count(r=>r.Verdict==RotationAuditVerdict.Mismatch);
+        int blocked=rows.Count(r=>r.Verdict==RotationAuditVerdict.Blocked);
+        int unverified=rows.Count(r=>r.Verdict==RotationAuditVerdict.Unobservable);
+        return "Hunter BM XML audit: "+rows.Count+" samples | observed matches="+matches+
+            " | differences="+mismatches+" (attribution unproven) | rule blocked="+blocked+
+            " | cast unobservable="+unverified;
+    }
+}
