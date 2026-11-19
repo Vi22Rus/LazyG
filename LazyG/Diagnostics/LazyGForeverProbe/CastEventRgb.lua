@@ -37,14 +37,11 @@ function LazyGCastEventRgb.SetEnabled(on)
 end
 function LazyGCastEventRgb.IsEnabled()return enabled end
 local function paint()
-  if sequence==0 or lastSpell==0 then
-    for i=1,6 do cells[i]:SetVertexColor(0,0,0,1) end
-    return
-  end
+  -- Inert heartbeat establishes an initial baseline without discarding first cast.
   local id=lastSpell
   local b={0x4C,0x47,0x45,1,sequence,math.floor(id/65536)%256,
       math.floor(id/256)%256,id%256,math.floor(targetEpoch/256)%256,
-      targetEpoch%256,1,0,0,0,0,0xA5,0,0}
+      targetEpoch%256,(sequence==0 and 0 or 1),0,0,0,0,0xA5,0,0}
   local sum=0
   for i=1,16 do sum=(sum+b[i])%256 end
   b[17]=sum; b[18]=255-sum
