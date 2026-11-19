@@ -335,6 +335,10 @@ var hunterState=state with {
 var bindings=RotationKeyBindings.Parse("3044=F1\n75=F2");
 Check(bindings[3044]=="F1" && RotationKeyBindings.Parse(
     RotationKeyBindings.Format(bindings)).Count==2,"binding roundtrip");
+Check(GHubKeys.TryParse("CTRL+F2",out var hidMod,out var hidKey) && hidMod==1 && hidKey==59,
+    "Logitech original HID modifier and F2");
+Check(RotationKeyBindings.Parse("14283=CTRL+F2")[14283]=="CTRL+F2",
+    "Logitech modifier bindings");
 try { RotationKeyBindings.Parse("3044=F13"); throw new Exception("invalid key accepted"); }
 catch(FormatException) {}
 try { RotationKeyBindings.Parse("3044=F1\n3044=F2"); throw new Exception("duplicate accepted"); }
@@ -351,7 +355,7 @@ Check(commandGate.TryPlan(chosen,verifiedSource with {Confirmed=null},hunterStat
     now,true,true,bindings,out var unconfirmed) is null &&
     unconfirmed=="UNVERIFIED SOURCE","source transport must be confirmed");
 Check(commandGate.TryPlan(chosen,verifiedSource,hunterState,now,true,true,
-    bindings,out var planned)?.Key=="F1" && planned=="PLANNED ONLY / NO INPUT",
+    bindings,out var planned)?.Key=="F1" && planned=="AUTHORIZED FOR LOGITECH DRIVER",
     "common command is only planned on fully verified evidence");
 Check(commandGate.TryPlan(chosen,verifiedSource,hunterState,now.AddMilliseconds(300),
     true,true,bindings,out var repeated) is null &&
