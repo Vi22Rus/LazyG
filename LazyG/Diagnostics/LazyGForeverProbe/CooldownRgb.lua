@@ -1,4 +1,4 @@
--- LazyG Forever 0.2.20-dev opt-in LGC RGB cooldown diagnostics.
+-- LazyG Forever 0.3.0-dev opt-in LGC RGB cooldown diagnostics.
 -- Separate from LGD, v2/v3/Curve. These flags are observations, NOT readiness.
 LazyGCooldownRgb = {}
 local M=LazyGCooldownRgb
