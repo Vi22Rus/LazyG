@@ -1,3 +1,7 @@
+## 2026-11-19 — CI verification: 0.4.0-dev XML/settings UI expansion
+
+**[CI-PASSED / DEV / NOT GAME-TESTED]** Commit `0bd9f8a53ebc5d430c9151fe6eb6b13d97320f42` — [GitHub Actions run 44457093533](https://github.com/Vi22Rus/LazyG/actions/runs/44457093533) **SUCCESS**: XML v2 parser, offline Paladin/Warrior conditional settings regressions, GameState/RGB legacy regressions, spell atlas, Lua 5.1 tests, .NET 8 Windows single-file publish and startup smoke. Windows artifact `LazyG-Windows-x64` is downloadable from this run. **NOT a release or a proven in-game rotation**. User gameplay test pending. The audit remains `ROTATION_PROFILE_AUDIT.md`; only 2 of 54 class/spec/mode profiles are experimental offline fixtures, the other 52 are explicitly Unavailable. Rollback: run 44445922892 (0.3.0-dev). Continue by adding typed gameplay signal capabilities and validated actual rotations before live execution.
+
 ## 2026-11-19 — 0.4.0-dev: XML-driven specialization settings UI and source audit (DEV)
 
 **Source and scope:** inspected current `main`, all six approved architecture documents, and referenced source archives `Sonah.zip`, `Hekili_Forever.zip`, `JustAC.zip`, `NAG-6.0.6.zip`. The repo had no production-ready rotation profiles. Do not mistake a class catalog for finished rotations.
