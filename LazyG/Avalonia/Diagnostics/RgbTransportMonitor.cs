@@ -85,6 +85,20 @@ internal sealed class RgbChannelHealth
     };
 }
 
+// Only explicit, safely decoded status fields. Missing values stay null or "Unknown".
+internal sealed record RgbDecodedView(
+    byte? V2ClassId, byte? V2RaceId, byte? V2Level,
+    byte? V2SpecIndex, byte? V2CombatFlagBits,
+    int? V3ProfileHash, byte? V3PlayerHealthRaw,
+    byte? V3TargetHealthRaw, int? V3PowerRaw,
+    byte? V3CombatFlagBits, byte? V3TargetFlagBits,
+    string? CurvePlayerHealthBand, string? CurveTargetHealthBand,
+    string? CurveResourceBand,
+    int? LgdSpellId, string? LgdLearned, string? LgdUsable,
+    string? LgdCooldownActive, string? LgdGcdActive,
+    int? LgcSpellId, string? LgcSpellActive, string? LgcSpellOnGcd,
+    string? LgcGcd29515Active, string? LgcGcd29515OnGcd);
+
 internal sealed class RgbTransportMonitor
 {
     public const string Schema="lazy-rgb-diagnostics-v1";
@@ -97,6 +111,8 @@ internal sealed class RgbTransportMonitor
     private DateTimeOffset firstAt, lastAt;
     private string captureStatus="NotObserved", captureReason="Startup";
     private bool lastCurve, lastBase;
+    private RgbDecodedView? decoded;
+    public void SetDecoded(RgbDecodedView? value)=>decoded=value;
     public long Samples=>samples;
     public string CaptureStatus=>captureStatus;
     public string CaptureReason=>captureReason;
@@ -142,6 +158,7 @@ internal sealed class RgbTransportMonitor
         BaseV2Frames=baseFrames, CurveFrames=curveFrames,
         CaptureFailures=captureFailures,
         CaptureStatus=captureStatus,CaptureReason=captureReason,
+        LatestDecoded=decoded,
         MeanCaptureMilliseconds=samples==0?0:Math.Round(totalCaptureMs/samples,2),
         MaxCaptureMilliseconds=Math.Round(maxCaptureMs,2),
         Channels=new[]{V3.Report(lastAt),LGD.Report(lastAt),LGC.Report(lastAt)},
@@ -154,6 +171,7 @@ internal sealed class RgbTransportMonitor
         firstAt=lastAt=default;
         captureStatus="NotObserved";captureReason="Startup";
         lastCurve=lastBase=false;
+        decoded=null;
         // Channel instances must also reset counters rather than retaining a
         // previous session's last-valid frame.
         V3.Reset();LGD.Reset();LGC.Reset();
