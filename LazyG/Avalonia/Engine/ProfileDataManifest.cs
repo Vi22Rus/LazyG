@@ -40,7 +40,7 @@ internal static class ProfileDataManifestBuilder
             if(seenSpells.Add(rule.SpellId))
             {
                 int[] ids=profile.ClassId==3
-                    ? HunterSpellFamilies.Ranks(rule.SpellId):Array.Empty<int>();
+                    ? ForeverHunterAbilityCatalog.Ranks(rule.SpellId):Array.Empty<int>();
                 if(ids.Length==0)ids=new[]{rule.SpellId};
                 if(ids.Distinct().Count()!=ids.Length || ids.Any(id=>id<=0))
                     throw new FormatException("Invalid rank family");
