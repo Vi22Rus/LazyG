@@ -23,6 +23,12 @@
 
 ---
 
+## 2026-11-19 — 0.2.20-dev verified recovery diagnostics [CI-PASSED / GAME-UNTESTED]
+
+- Confirmed SUCCESS https://github.com/Vi22Rus/LazyG/actions/runs/44442661847 on code commit `137fa74262b1dca4f1aa66b6e98029c7c8d033cd`. Both GitHub Actions jobs completed successfully: Lua 5.1 syntax, existing RGB v3/cooldown mock tests, **new Lua 5.1 LGC ON/OFF/SpellID reload persistence test**; .NET 8 RGB/GameState/XML including recovery counters, Forever atlas, single Windows EXE publish, Windows startup smoke, and both artifact uploads.
+- Verified artifacts: `LazyG-Windows-x64` ID `14491801787` (77,720,804 bytes, unexpired) and `LazyGForeverProbe-0.2.20-dev` ID `14492655351` (11,957 bytes, unexpired).
+- This build fixes persisted user opt-in across addon reload and logs LGC loss reasons/recovery counts; actual live WoW Forever reload/reacquisition remains **GAME-UNTESTED**. The previous user-tested 0.2.19-dev remains rollback https://github.com/Vi22Rus/LazyG/actions/runs/44440949347 . No RGB v2/v3/Curve, XML cast-gate or numeric GCD/CD inference changes.
+
 ## 2026-11-19 — 0.2.20-dev LGC recovery after addon reload [DEV / CI PENDING / GAME-UNTESTED]
 
 - Based on actual 0.2.19-dev WoW Forever user logs: LGC showed `STALE` and then `unavailable`, while base v3/Curve eventually returned, but no live LGC reacquisition was recorded. Logs also contained `Ready` events after addon reload. **Potential contributor (not proven sole cause):** existing `CooldownRgb.lua` started disabled every addon reload, and enabling via `/lgprobe cdstrip ID` was not saved.
