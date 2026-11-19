@@ -50,6 +50,7 @@ public sealed class MainWindow : Window
     private readonly RgbTransportMonitor rgbMonitor=new();
     private readonly RotationSourceManager sourceManager=new();
     private readonly HunterRotationAudit hunterAudit=new();
+    private TextBlock? hunterAuditSummaryText;
     private bool hunterAuditRecording;
     private DateTimeOffset lastHunterAuditSample;
     private byte? lastCastEventSequence;
@@ -619,7 +620,8 @@ public sealed class MainWindow : Window
             RefreshDiagnosticsView(force:true);
         }));
         b.Children.Add(Text("Hunter BM: /lgprobe audit on (in WoW) enables optional LGE player spellcast event strip. Start Hunter BM audit enables Windows comparison; an event is NOT proof of hit/effect or LazyG input.",11,"#E9B26D"));
-        b.Children.Add(Text(hunterAudit.Summary(),12,"#72D9F3"));
+        hunterAuditSummaryText=Text(hunterAudit.Summary(),12,"#72D9F3");
+        b.Children.Add(hunterAuditSummaryText);
         actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
             fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
             spellDiagnosticEnabled=fullRgbDiagnosticMode;
@@ -926,6 +928,8 @@ public sealed class MainWindow : Window
                 hunterAudit.Capture(hunterAuditProfile,latestGameState,
                     hunterAuditSettings,result.capturedAt);
                 lastHunterAuditSample=result.capturedAt;
+                if(hunterAuditSummaryText is not null)
+                    hunterAuditSummaryText.Text=hunterAudit.Summary();
                 if(hunterAudit.Rows.Count%20==0)
                     RuntimeDiagnostics.Add("HUNTERAUDIT",hunterAudit.Summary());
             }
@@ -950,6 +954,8 @@ public sealed class MainWindow : Window
                     RuntimeDiagnostics.Add("HUNTERAUDIT",correlated is null
                         ?"LGE player event observed but no eligible XML frame (not matched)"
                         :"LGE player event "+cast.SpellId+" · "+correlated.Reason);
+                    if(hunterAuditSummaryText is not null)
+                        hunterAuditSummaryText.Text=hunterAudit.Summary();
                 }
             }
             var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
