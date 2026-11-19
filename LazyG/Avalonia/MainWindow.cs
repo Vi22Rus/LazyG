@@ -321,22 +321,151 @@ public sealed class MainWindow : Window
         body.Children.Add(new Viewbox { Child=grid, Stretch=Stretch.Uniform, StretchDirection=StretchDirection.DownOnly, HorizontalAlignment=HAlign.Center });
         Go(Page(cls.Name.ToUpperInvariant()+" SPECIALIZATIONS","Forever · Class library",body,"Classes",ShowClasses));
     }
-    private void ShowSpec(GameClass cls,Specialization spec)
+    // Generated directly from the XML v2 rule parameter schema: no separate UI setting list.
+    // Editing an experimental profile is offline configuration, NOT live cast authorization.
+    private void ShowSpec(GameClass cls,Specialization spec,string mode="PvE",
+        string tier="Essentials",bool changedOnly=false)
     {
         selectedClass=cls;selectedSpec=spec;view="rotation";
         session.LastClient="forever";session.LastClass=cls.Id;session.LastSpec=spec.Id;session.Save();
-        var body=Stack(spacing:18);
-        var top=Stack(Orientation.Horizontal,16);top.Children.Add(SpellIcon(spec.Icon,86));
+        var body=Stack(spacing:17);
+        var top=Stack(Orientation.Horizontal,16);top.Children.Add(SpellIcon(spec.Icon,76));
         var identity=Stack(spacing:5);
-        identity.Children.Add(Text(spec.Name,27,"#FFFFFF",FontWeight.Bold));
-        identity.Children.Add(Text(cls.Name+"  ·  WoW Forever  ·  PvE / PvP",13,cls.Accent));
-        top.Children.Add(identity);body.Children.Add(Pane(top,"#0B2941"));
-        var blank=Stack(spacing:12);
-        blank.Children.Add(Text("ROTATION SETTINGS",14,"#ECB66E",FontWeight.Bold));
-        blank.Children.Add(Text("No rotation profile installed",21,"#F1FAFF",FontWeight.SemiBold));
-        blank.Children.Add(Text("This page is intentionally empty. Ability toggles, thresholds and priorities will be defined by LazyG XML rotations.",13,"#C7B1A4"));
-        body.Children.Add(Pane(blank,"#261B16",12,"#594032",new Thickness(25,34)));
-        Go(Page(spec.Name.ToUpperInvariant(),"Class → Specialization → Rotation settings",body,cls.Name,()=>ShowClass(cls)));
+        identity.Children.Add(Text(spec.Name,25,"#FFFFFF",FontWeight.Bold));
+        identity.Children.Add(Text(cls.Name+" · Forever · Internal XML (not executing)",12,cls.Accent));
+        top.Children.Add(identity);body.Children.Add(Pane(top));
+        var modeTabs=Stack(Orientation.Horizontal,8);
+        modeTabs.Children.Add(Action(mode=="PvE"?"PvE ✓":"PvE",
+            ()=>ShowSpec(cls,spec,"PvE","Essentials"),mode=="PvE"));
+        modeTabs.Children.Add(Action(mode=="PvP"?"PvP ✓":"PvP",
+            ()=>ShowSpec(cls,spec,"PvP","Essentials"),mode=="PvP"));
+        body.Children.Add(modeTabs);
+        var source=sourceManager.Snapshot(DateTimeOffset.UtcNow);
+        bool externalActive=source.Confirmed is RotationSourceId.Hekili or RotationSourceId.JustAC;
+        body.Children.Add(Text(externalActive
+            ?"External source confirmed: built-in settings locked; values preserved."
+            :"Source RGB not installed. Settings may be edited offline; no automatic input is enabled.",
+            12,externalActive?"#E9B26D":"#94CDE4"));
+        RotationProfileV2? profile;
+        try { profile=RotationProfileCatalog.Load(cls.Id,spec.Id,mode); }
+        catch(Exception ex)
+        {
+            RuntimeDiagnostics.Add("XML2","Profile load rejected: "+ex.GetType().Name);
+            body.Children.Add(Text("Invalid embedded XML; rotation blocked.",14,"#EAA3A3"));
+            Go(Page(spec.Name.ToUpperInvariant(),"Rotation settings",body,cls.Name,()=>ShowClass(cls)));
+            return;
+        }
+        if(profile is null)
+        {
+            body.Children.Add(Pane(Text("No validated XML profile for this specialization and mode. Settings are unavailable; no placeholder controls are shown.",14,"#E8C4A6")));
+            Go(Page(spec.Name.ToUpperInvariant(),"Rotation settings",body,cls.Name,()=>ShowClass(cls)));
+            return;
+        }
+        body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
+        string settingsFile=Path.Combine(Environment.GetFolderPath(
+            Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
+            "forever-"+cls.Id+"-"+spec.Id+"-"+mode.ToLowerInvariant()+".json");
+        System.Collections.Generic.Dictionary<string,int> overrides;
+        try {overrides=new System.Collections.Generic.Dictionary<string,int>(
+            RotationSettingsStore.Load(settingsFile,profile));}
+        catch(Exception ex)
+        {
+            RuntimeDiagnostics.Add("XML2","Override load rejected: "+ex.GetType().Name);
+            body.Children.Add(Text("Saved settings invalid. Defaults are displayed; saving is disabled until the file is repaired.",12,"#EAA3A3"));
+            Go(Page(spec.Name.ToUpperInvariant(),"Rotation settings",body,cls.Name,()=>ShowClass(cls)));
+            return;
+        }
+        int changes=overrides.Count(kv=>profile.Settings.TryGetValue(kv.Key,out var d) && d.Default!=kv.Value);
+        var toolbar=Stack(Orientation.Horizontal,8);
+        toolbar.Children.Add(Action(tier=="Essentials"?"Essentials ✓":"Essentials",
+            ()=>ShowSpec(cls,spec,mode,"Essentials",changedOnly),tier=="Essentials"));
+        toolbar.Children.Add(Action(tier=="Advanced"?"Advanced ✓":"Advanced",
+            ()=>ShowSpec(cls,spec,mode,"Advanced",changedOnly),tier=="Advanced"));
+        toolbar.Children.Add(Action(changedOnly?"Changed only ✓ ("+changes+")":"Changed only ("+changes+")",
+            ()=>ShowSpec(cls,spec,mode,tier,!changedOnly)));
+        var reset=Action("Reset defaults",()=>{
+            if(externalActive)return;
+            // Reset is explicit: retained backup via settings store and confirmed in a second click.
+            ShowRotationResetConfirmation(cls,spec,profile,settingsFile,mode,tier);
+        });
+        reset.IsEnabled=!externalActive;toolbar.Children.Add(reset);
+        body.Children.Add(toolbar);
+        int shown=0;
+        foreach(var setting in profile.Settings.Values.OrderBy(s=>s.Group).ThenBy(s=>s.Id))
+        {
+            if(setting.Tier!=tier || (changedOnly &&
+                (!overrides.TryGetValue(setting.Id,out var v) || v==setting.Default)))continue;
+            shown++;
+            var settingLocal=setting;
+            var pane=Stack(spacing:7);
+            pane.Children.Add(Text(setting.LabelRu+" / "+setting.LabelEn,14,"#E9F9FF",FontWeight.SemiBold));
+            pane.Children.Add(Text(setting.Group+" · "+setting.Unit+" · default "+setting.Default+
+                " · used by XML rules · live signal may be Unknown",11,"#8CAEC1"));
+            int current=overrides.TryGetValue(setting.Id,out var saved)?saved:setting.Default;
+            void SaveSetting(int newValue)
+            {
+                if(externalActive)return;
+                var updated=new System.Collections.Generic.Dictionary<string,int>(overrides);
+                if(newValue==settingLocal.Default)updated.Remove(settingLocal.Id);
+                else updated[settingLocal.Id]=newValue;
+                try
+                {
+                    RotationSettingsStore.Save(settingsFile,profile,updated);
+                    overrides=updated;
+                    RuntimeDiagnostics.Add("XML2","Setting saved: "+settingLocal.Id+" (local override)");
+                }
+                catch(Exception ex)
+                {
+                    RuntimeDiagnostics.Add("XML2","Setting save failed: "+ex.GetType().Name);
+                    ShowSpec(cls,spec,mode,tier,changedOnly);
+                }
+            }
+            if(setting.Type==RotationSettingType.Boolean)
+            {
+                var toggle=new CheckBox {Content="Enabled",IsChecked=current==1,
+                    IsEnabled=!externalActive,Foreground=Palette.Brush("#EAF8FF")};
+                toggle.IsCheckedChanged+=(_,_)=>SaveSetting(toggle.IsChecked==true?1:0);
+                pane.Children.Add(toggle);
+            }
+            else
+            {
+                var slider=new Slider {Minimum=setting.Min,Maximum=setting.Max,
+                    TickFrequency=setting.Step,IsSnapToTickEnabled=true,
+                    Value=current,IsEnabled=!externalActive,Width=300,
+                    HorizontalAlignment=HAlign.Left};
+                var valueText=Text(current.ToString()+" "+setting.Unit,13,"#42E4F3");
+                slider.ValueChanged+=(_,_)=>{
+                    int proposed=(int)Math.Round(slider.Value);
+                    valueText.Text=proposed+" "+setting.Unit;
+                    SaveSetting(proposed);
+                };
+                pane.Children.Add(slider);pane.Children.Add(valueText);
+            }
+            body.Children.Add(Pane(pane));
+        }
+        if(shown==0)
+            body.Children.Add(Text(changedOnly?"No modified settings in this category.":"No parameters in this category.",13,"#9EC3D9"));
+        Go(Page(spec.Name.ToUpperInvariant(),mode+" · XML-driven settings · experimental",body,
+            cls.Name,()=>ShowClass(cls)));
+    }
+    private void ShowRotationResetConfirmation(GameClass cls,Specialization spec,
+        RotationProfileV2 profile,string settingsFile,string mode,string tier)
+    {
+        var dialog=new Window {Title="Reset XML settings?",Width=420,Height=190,
+            WindowStartupLocation=WindowStartupLocation.CenterOwner,CanResize=false,
+            Background=Palette.Surface,Foreground=Palette.White};
+        var contents=Stack(spacing:15);contents.Margin=new Thickness(22);
+        contents.Children.Add(Text("Reset all "+mode+" overrides for "+spec.Name+"?",15,"#FFFFFF"));
+        contents.Children.Add(Text("A backup of the previous values is retained.",12,"#98BED1"));
+        var controls=Stack(Orientation.Horizontal,12);
+        controls.Children.Add(Action("Cancel",dialog.Close));
+        controls.Children.Add(Action("Reset defaults",()=>{
+            try { RotationSettingsStore.Reset(settingsFile,profile); }
+            catch(Exception ex) {RuntimeDiagnostics.Add("XML2","Reset failed: "+ex.GetType().Name);}
+            dialog.Close();ShowSpec(cls,spec,mode,tier);
+        },true));
+        contents.Children.Add(controls);
+        dialog.Content=contents;dialog.ShowDialog(this);
     }
     private void ShowCommon()
     {
