@@ -20,37 +20,6 @@ internal static class WowRgbBridge
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr handle);
     [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr handle, int command);
-    [DllImport("user32.dll", SetLastError=true)]
-    private static extern uint SendInput(uint count, [In] KeyboardInput[] inputs, int size);
-
-    // Win-x64 Win32 INPUT is 40 bytes: DWORD type at 0 and KEYBDINPUT
-    // union member at byte 8 (pointer-aligned). Not portable to win-x86.
-    [StructLayout(LayoutKind.Explicit,Size=40)]
-    private struct KeyboardInput
-    {
-        [FieldOffset(0)] public uint Type;
-        [FieldOffset(8)] public ushort VirtualKey;
-        [FieldOffset(10)] public ushort Scan;
-        [FieldOffset(12)] public uint Flags;
-        [FieldOffset(16)] public uint Time;
-        [FieldOffset(24)] public IntPtr ExtraInfo;
-    }
-
-    // Only explicit opt-in F1..F12 bindings. This does not verify that WoW
-    // accepted the key or that any spell took effect.
-    public static bool TrySendBoundFKey(int virtualKey)
-    {
-        if(virtualKey<0x70 || virtualKey>0x7B)return false;
-        using var game=FindGame();
-        if(game is null || GetForegroundWindow()!=game.MainWindowHandle)return false;
-        var inputs=new[] {
-            new KeyboardInput {Type=1,VirtualKey=(ushort)virtualKey},
-            new KeyboardInput {Type=1,VirtualKey=(ushort)virtualKey,Flags=0x0002}
-        };
-        return SendInput((uint)inputs.Length,inputs,Marshal.SizeOf<KeyboardInput>())==
-            (uint)inputs.Length;
-    }
-
 
     private static Process? FindGame()
     {
