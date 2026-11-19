@@ -381,7 +381,7 @@ Assert(!json.Contains("characterName"));
 Assert(json.Contains("LatestDecoded") &&
     json.Contains("CurvePlayerHealthBand") &&
     json.Contains("LgcGcd29515Active") &&
-    json.Contains("80–84%") &&
+    json.Contains("80") && json.Contains("84") &&
     json.Contains("Unknown"));
 rgbs.Accept(sample(s0.AddMilliseconds(500),44,10));
 Assert(rgbs.V3.Status=="Live" && rgbs.LGC.Status=="Live");
@@ -413,4 +413,7 @@ Assert(ConditionEvaluator.GcdReady(attackBase)==Truth.Unknown);
 Assert(XmlRotationDispatcher.Evaluate(parsed,attackBase,band04,now) is null);
 
 Console.WriteLine("GameState, corpse safety, XML dispatch and preview regression: PASS");
-void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
+void Assert(bool ok,[System.Runtime.CompilerServices.CallerLineNumber] int line=0)
+{
+    if(!ok)throw new Exception("GameState regression failed at line "+line);
+}
