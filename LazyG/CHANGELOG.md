@@ -1,3 +1,9 @@
+## 2026-11-19 — User clarification: test is HUNTER BM, not Paladin [DEV]
+
+The user's phrase about the overlay was misheard: the missing **spell icon and spell name** were reported while testing **Hunter BM**. User explicitly confirmed they never mentioned Paladin. Main hypothesis remains: XML issues zero recommendations due to unavailable compact game states; therefore overlay correctly presents no recommended spell/icon (not necessarily an artwork defect). The separate general fix for hardcoded Hunter lookup and class selection is harmless but NOT the root-cause finding for this test and must NOT be presented as a Paladin diagnosis. Prioritize verifying Hunter Compact data availability, the XML Recommendation, and then Hunter overlay icon/name when a real recommendation exists. No fixed 1.5s GCD. No claims of successful gameplay until tested.
+
+---
+
 ## 2026-11-19 — Hunter Compact RGB-to-GameState diagnosis + Paladin overlay correction [DEV / GAME-UNTESTED]
 
 **User-requested recovery after diagnostic ZIP `LazyG-Diagnostic-20261119-081419-187.zip`:** 360 validated base RGB v2 frames, 359 v3 CRC frames, 359 Curve samples, up to 27 auto-bindings; 381 Hunter XML audit snapshots, 0 XML recommendations, 0 HID attempts. Report does NOT reveal whether the full Hunter Compact gameplay payload was present; earlier UI conflated CRC-valid binding-only v3 frames with full combat telemetry. Optional LGD/LGC were OFF. Do not blame Logitech for the zero recommendations. Some in-game abilities were used manually; never attribute independent cast events to LazyG.
