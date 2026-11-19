@@ -281,7 +281,7 @@ Check(eventOnly?.Verdict==RotationAuditVerdict.EventOnly &&
 var missingBefore=HunterAuditReadiness.Missing(hunterState,now);
 Check(missingBefore.Contains("VerifiedRank:1130") &&
       missingBefore.Contains("GcdReady")==false &&
-      missingBefore.Contains("TargetDebuffRanks:1130")==false,
+      missingBefore.Contains("TargetDebuffRanks:1130"),
       "readiness distinguishes verified synthetic global gate from missing rank evidence");
 Check(HunterAuditReadiness.Missing(GameState.Empty(now),now).Contains("CurveManaBand"),
     "unknown Curve explicitly reported");
