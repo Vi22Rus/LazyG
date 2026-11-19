@@ -40,6 +40,7 @@ internal sealed class OverlayWindow : Window
     private readonly DispatcherTimer gcdTimer;
     private readonly Stopwatch demoClock = new();
     private readonly List<ForeverSpell> demoSpells;
+    private readonly string recommendationClass;
     private int demoIndex=-1;
     private bool demoActive;
     private bool aoeEnabled;
@@ -47,6 +48,7 @@ internal sealed class OverlayWindow : Window
 
     public OverlayWindow(Action close,string previewClass="Hunter")
     {
+        recommendationClass=previewClass;
         demoSpells=ForeverSpellCatalog.ForClass(previewClass).ToList();
         if(demoSpells.Count==0) demoSpells=ForeverSpellCatalog.ForClass("Hunter").ToList();
 
@@ -187,30 +189,31 @@ internal sealed class OverlayWindow : Window
     {
         readonlySession=running;
         previewButton.IsEnabled=!running;
-        spellContext.Text=running?"LIVE XML RECOMMENDATION · READ-ONLY":
-            "PREVIEW STOPPED · NO INPUT";
+        spellContext.Text=running?"XML RECOMMENDATION · "+recommendationClass:
+            "XML IDLE · "+recommendationClass;
         rotationLabel.Text=running?"XML PREVIEW ON":"ROTATION IDLE";
-        pauseReason.Text=running?status:"Read-only preview stopped · no input";
+        pauseReason.Text=running?status:"No active XML rotation";
         if(!running)
         {
             if(demoActive)demoClock.Stop();
             ClearSpell();
-            spellCaption.Text="Start Hunter BM to show an XML recommendation";
+            spellCaption.Text="No active XML recommendation for "+recommendationClass;
             return;
         }
         if(spellId is not int id || id<=0)
         {
             ClearSpell();
             spellTitle.Text="NO RECOMMENDATION";
-            spellCaption.Text="XML conditions not confirmed · no ability selected";
+            spellCaption.Text="No verified XML recommendation for "+recommendationClass+" · no ability selected";
             return;
         }
-        var spell=ForeverSpellCatalog.Find("hunter",id);
+        var spell=ForeverSpellCatalog.Find(recommendationClass,id);
         if(spell is null)
         {
-            var family=HunterSpellFamilies.BaseId(id);
+            var family=recommendationClass.Equals("Hunter",StringComparison.OrdinalIgnoreCase)?
+                HunterSpellFamilies.BaseId(id):null;
             if(family is int baseId)
-                spell=ForeverSpellCatalog.Find("hunter",baseId);
+                spell=ForeverSpellCatalog.Find(recommendationClass,baseId);
         }
         if(spell is null)
         {
