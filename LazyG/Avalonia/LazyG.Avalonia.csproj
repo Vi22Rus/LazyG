@@ -25,7 +25,7 @@
     <EmbeddedResource Include="../AddonTemplate/HunterCompactManifest.lua" LogicalName="LazyG.HunterCompactManifest.lua" />
     <EmbeddedResource Include="../AddonTemplate/HunterCompactProfileEncoder.lua" LogicalName="LazyG.HunterCompactProfileEncoder.lua" />
     <EmbeddedResource Include="../AddonTemplate/HunterCompactCollector.lua" LogicalName="LazyG.HunterCompactCollector.lua" />
-    <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
+    <EmbeddedResource Include="../AddonTemplate/AutoBindings.lua" LogicalName="LazyG.AutoBindings.lua" />\n    <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Thresholds.lua" LogicalName="LazyG.RgbV3Thresholds.lua" />
     <EmbeddedResource Include="../AddonTemplate/Panel.lua" LogicalName="LazyG.Panel.lua" />
     <EmbeddedResource Include="../AddonTemplate/HunterProfile.lua" LogicalName="LazyG.HunterProfile.lua" />
