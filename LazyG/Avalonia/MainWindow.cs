@@ -368,6 +368,11 @@ public sealed class MainWindow : Window
             return;
         }
         body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
+        if(cls.Id=="hunter" && spec.Id=="beast-mastery" && mode=="PvE")
+        {
+            body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
+            body.Children.Add(Text("Для теста: Support → Start Hunter BM audit; Save Hunter audit JSON. Факт успешного применения заклинания текущим RGB не подтверждается.",11,"#B7A88E"));
+        }
         string settingsFile=Path.Combine(Environment.GetFolderPath(
             Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
             "forever-"+cls.Id+"-"+spec.Id+"-"+mode.ToLowerInvariant()+".json");
