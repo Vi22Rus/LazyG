@@ -9,7 +9,7 @@ namespace LazyG.Desktop.Engine;
 // The existing on-screen 24-cell v3 detector and Curve remain unchanged.
 // Not an input authorization, not yet published by the live Forever addon.
 internal sealed record HunterCompactProfile(
-    uint LayoutHash, int TargetEpoch, Observed<bool> GcdActive,
+    uint LayoutHash, int SpecIndex, int TargetEpoch, Observed<bool> GcdActive,
     Observed<int> TargetEpochObservation,
     IReadOnlyDictionary<int,SpellState> Spells,
     IReadOnlyDictionary<AuraKey,AuraState> Auras);
@@ -55,6 +55,9 @@ internal static class HunterCompactProfileWire
         result=null;
         if(frame is null || capturedAt==default || frame.Encoding!=0 ||
            frame.ExtensionCells!=ExtensionCells(manifest) ||
+           frame.ProfileHash!=0x4c47 ||
+           (frame.GetCell(5).B&15)!=manifest.ClassId ||
+           ((frame.GetCell(5).B>>4)&3)!=manifest.SpecIndex ||
            manifest.Client!="forever" || manifest.ClassId!=3 ||
            manifest.SpellFamilies.Count>100 || CountRanks(manifest)>255 ||
            CountAuras(manifest)>255)
@@ -122,7 +125,7 @@ internal static class HunterCompactProfileWire
         }
         uint hash=((uint)bytes[3]<<24)|((uint)bytes[4]<<16)|
             ((uint)bytes[5]<<8)|bytes[6];
-        result=new(hash,epoch,ReadFlag(bytes[13],capturedAt),
+        result=new(hash,manifest.SpecIndex,epoch,ReadFlag(bytes[13],capturedAt),
             observedEpoch,spells,auras);
         return true;
     }
@@ -132,7 +135,8 @@ internal static class HunterCompactProfileWire
     public static GameState ToGameState(GameState baseline,HunterCompactProfile result)
     {
         if(baseline.Transport!=Knowledge.Known ||
-           baseline.ClassId.Is(id=>id==3)!=Truth.True)
+           baseline.ClassId.Is(id=>id==3)!=Truth.True ||
+           baseline.SpecIndex.Is(id=>id==result.SpecIndex)!=Truth.True)
             return baseline;
         return baseline with {
             GcdActive=result.GcdActive,
