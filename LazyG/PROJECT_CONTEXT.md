@@ -1,3 +1,11 @@
+## 2026-11-19 — RGB→XML integration audit CI VERIFIED (dev, no gameplay claim)
+
+**[CI-PASSED / DEV / NOT GAME-TESTED]** [Windows + Lua GitHub Actions run 44465707808](https://github.com/Vi22Rus/LazyG/actions/runs/44465707808) **SUCCESS**, code commit `06ef3793f5633e45b21cce1d55a88083f11602bd`; Windows build/real single-file publish/startup smoke, GameState + XML + LGC boolean regression and Lua 5.1 tests passed. Two matching artifacts: `LazyG-Windows-x64` (ID `14501488795`) and `LazyGForeverProbe-0.4.0-dev` (ID `14502071739`). Verified rollback before this integration: [run 44462581902](https://github.com/Vi22Rus/LazyG/actions/runs/44462581902).
+
+What changed: corrected the verified Forever LGC `29515.isActive` boolean → `GameState.GcdActive` bridge (no fake millisecond value) for read-only XML evaluation, displays distinct `GCDms`, `GCD29515Active`, `GcdGate`, regression for True/False/Protected/Stale. Premature independent Hunter F-key ARM/SendInput was **removed** and tested original UI/bridge restored. See [RGB_INTEGRATION_AUDIT.md](RGB_INTEGRATION_AUDIT.md) for full 119-path repository inventory review, prior user-tested RGB evidence, identified gaps and one-engine architecture. The Windows app still **does not automatically execute XML rotations**: live spell readiness/rank batches, target-specific aura/epoch and single source/executor pipeline remain missing. Never label this as user-tested release.
+
+---
+
 ## 2026-11-19 — RGB→XML архитектурная сверка и устранение ошибочного Hunter-пилота [DEV / CI CHECKING / GAME-UNTESTED]
 
 По прямому требованию пользователя сверены текущие GitHub исходники, документация, реальные записи 0.2.16–0.3.0 и присланные Hunter JSON/SavedVariables с интерфейсами референсных Lua-аддонов. Полный отчёт и дорожная карта: [RGB_INTEGRATION_AUDIT.md](RGB_INTEGRATION_AUDIT.md). **Ключевая ошибка:** LGC GCD `29515.isActive` реально передавался и менялся в игре, но `GameState.GcdRemainingMilliseconds`, на который был завязан XML `GcdReady`, оставался Unknown. Это разрыв интеграции, а не отсутствие рабочего RGB детектора. Результаты GCD подтверждают только булево активен/неактивен, не числовые остатки времени и не все условия разрешения автодействий.
