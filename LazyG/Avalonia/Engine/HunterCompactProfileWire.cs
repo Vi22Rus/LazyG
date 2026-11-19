@@ -54,7 +54,8 @@ internal static class HunterCompactProfileWire
     {
         result=null;
         if(frame is null || capturedAt==default || frame.Encoding!=0 ||
-           frame.ExtensionCells!=ExtensionCells(manifest) ||
+           (frame.ExtensionCells!=ExtensionCells(manifest) &&
+             frame.ExtensionCells!=ExtensionCells(manifest)+AutoBindingCodec.Cells) ||
            frame.ProfileHash!=0x4c47 ||
            (frame.GetCell(5).B&15)!=manifest.ClassId ||
            ((frame.GetCell(5).B>>4)&3)!=manifest.SpecIndex ||
