@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — 0.3.0-dev complete RGB diagnostics batch [CI-PASSED / GAME-UNTESTED]
+
+- **Verified SUCCESS**: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 , application code commit 9dbb60625cafc9dbd6cd8f63580368b9ddde96fc. Both Windows and Lua 5.1 CI jobs passed, including v3 direct8 and stepped4 CRC/pixel scanner, Curve 5% bands, GameState/XML action safety, transport monitor state transitions, LGC/LGD selected SpellID, one-command diagnostics, reload restoration, single-file Windows publish and startup smoke.
+- **Verified two artifacts:** LazyG-Windows-x64 (ID 14493695319, 77,738,041 bytes, unexpired); LazyGForeverProbe-0.3.0-dev (ID 14492428893, 12,413 bytes, unexpired).
+- One integrated game acceptance test only; no more incremental tiny downloads. Test: install matched EXE and probe addon, WoW command /lgprobe diag 13795, Windows Support > Full RGB diagnostics ON/OFF, fight and place trap, /reload and fight again without re-enabling strips, change focus, Support > Save RGB report and Copy all, send JSON and SavedVariables once. More details in RGB_ENGINE.md.
+- **CI-discovered real bug corrected:** Stale to Live recovery incorrectly recorded an additional loss and inflated future recovery counters. Changed to count only Live to non-Live. Unicode escaping in JSON assertion also corrected. All tests passed after fix.
+- Retain backward compatibility with v2/v3/Curve and legacy RGB commands. Latest game tests before this release verified LGC 0.2.19-dev; this new 0.3.0-dev **is not yet tested in-game**. v3 stepped4 rendered physical frames tested only with synthetic bitmaps. No protected API bypass, numerical GCD/CD duration, casting or XML editor. Rollback to prior SUCCESS 0.2.20-dev: https://github.com/Vi22Rus/LazyG/actions/runs/44442661847 .
+
 ## 2026-11-19 — 0.3.0-dev unified RGB subsystem and one-shot diagnostics [DEV / CI VALIDATION / GAME-UNTESTED]
 
 - User explicitly requested **one comprehensive RGB batch + one integrated WoW test**, not repeated incremental 65-kbit downloads and one-line test cycles. This dev version consolidates previously user-tested Forever RGB v2, v3 direct8+CRC, 5% Curve bands, optional LGD (spell) and LGC (CD/GCD), preserves wire compatibility and isolated WoW 3.3.5 profiles.
