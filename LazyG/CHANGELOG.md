@@ -1,3 +1,10 @@
+### Additional modules in the same 0.4.0-dev foundation checkpoint
+
+- `Avalonia/Engine/RotationSettingsStore.cs`: validated per-profile JSON override persistence; atomic replacement, backup, reset to defaults, unknown-key/profile rejection. No UI wiring yet.
+- `Avalonia/Diagnostics/RotationSupportArchive.cs`: local ZIP writer using an explicit allowlist of safe scalar status fields; unsupported/free-text input, private identifiers and arbitrary log content are not packaged. Automatic fatal exception hooks, output-disarm safety and manual Support UI button **not wired yet**; do not call automatic crash handling implemented.
+- Offline tests now cover settings persistence, backup/reset, ZIP structure and redaction. Current CI validation after project resource XML correction: https://github.com/Vi22Rus/LazyG/actions/runs/44454711919 (status to be confirmed).
+- Do not install/download earlier intermediate failed CI attempts. RGB and v1 XML remain unchanged.
+
 ## 2026-11-19 — 0.4.0-dev foundation (IN PROGRESS; NO USER TEST)
 
 - Added `Avalonia/Engine/RotationFoundation.cs`: independent, strict `RotationXmlV2` with client/class/spec/mode identity, validated int/bool settings, real setting-to-rule references, typed percent comparisons, bounded XML and prohibited DTD; diagnostic-only evaluation, tri-state signal safety and per-rule trace. Legacy `XmlRotationDispatcher` v1 is unchanged.
