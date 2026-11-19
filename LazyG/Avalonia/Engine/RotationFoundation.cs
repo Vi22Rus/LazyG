@@ -86,6 +86,30 @@ internal sealed record RotationRuleTrace(string RuleId, int SpellId, Truth Outco
 internal sealed record RotationEvaluation(RotationRecommendation? Recommendation,
     IReadOnlyList<RotationRuleTrace> Trace, string BlockReason);
 
+// Shared-CD preferences are a user choice, NOT proof the spells have separate
+// cooldowns in game. Persist every change atomically across all profile tabs.
+internal static class RotationSettingsExclusivity
+{
+    public static IReadOnlyDictionary<string,int> Apply(RotationProfileV2 profile,
+        IReadOnlyDictionary<string,int> overrides,string settingId,int newValue)
+    {
+        if(!profile.Settings.TryGetValue(settingId,out var setting))
+            throw new FormatException("Unknown setting");
+        var values=new Dictionary<string,int>(overrides,StringComparer.Ordinal);
+        if(newValue==setting.Default)values.Remove(settingId);
+        else values[settingId]=newValue;
+        if(newValue==1 && setting.ExclusiveGroup is not null)
+            foreach(var other in profile.Settings.Values.Where(x=>
+                x.Id!=settingId && x.ExclusiveGroup==setting.ExclusiveGroup))
+            {
+                if(other.Default==0)values.Remove(other.Id);
+                else values[other.Id]=0;
+            }
+        RotationXmlV2.Resolve(profile,values);
+        return values;
+    }
+}
+
 internal static class RotationXmlV2
 {
     private const int MaxChars=65536;
