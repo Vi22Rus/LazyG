@@ -9,16 +9,18 @@ namespace LazyG.Desktop.Engine;
 // rank lists. No rank is presumed learned from level; prove learned from a fresh observation.
 internal static class HunterSpellFamilies
 {
-    private static readonly IReadOnlyDictionary<int,int[]> Families=new Dictionary<int,int[]> {
-        [1130]=new[] {1130,14323,14324,14325}, // Hunter's Mark
-        [1978]=new[] {1978,13549,13550,13551,13552,13553,13554,13555,25295}, // Serpent Sting
-        [3044]=new[] {3044,14281,14282,14283,14284,14285,14286,14287}, // Arcane Shot; higher variants need game verification
-        [75]=new[] {75} // Auto Shot
-    };
+    // One authoritative rank registry, shared by XML, manifest, and audit.
+    // A base SpellID is a family key, NOT evidence that base rank was learned.
     public static int[] Ranks(int baseSpellId) =>
-        Families.TryGetValue(baseSpellId,out var ids)?(int[])ids.Clone():Array.Empty<int>();
-    public static int? BaseId(int spellId) =>
-        Families.FirstOrDefault(kv=>kv.Value.Contains(spellId)).Key is int n && n>0?n:null;
+        ForeverHunterAbilityCatalog.Ranks(baseSpellId);
+
+    public static int? BaseId(int spellId)
+    {
+        foreach(var ability in ForeverHunterAbilityCatalog.All)
+            if(ability.CandidateRanks.Contains(spellId))
+                return ability.BaseSpellId;
+        return null;
+    }
 
     public static HunterRankFinding Find(GameState state,int baseSpellId,DateTimeOffset now)
     {
@@ -70,10 +72,11 @@ internal static class HunterAuditReadiness
             gaps.Add("CurveManaBand");
         foreach(var baseSpell in new[] {1130,1978,3044,75})
         {
-            if(ConditionEvaluator.SpellReady(fresh,baseSpell)!=Truth.True)
-                gaps.Add("SpellReady:"+baseSpell);
-            if(HunterSpellFamilies.Find(fresh,baseSpell,now).SelectedRank is null)
+            var rank=HunterSpellFamilies.Find(fresh,baseSpell,now);
+            if(rank.SelectedRank is not int selectedRank)
                 gaps.Add("VerifiedRank:"+baseSpell);
+            else if(ConditionEvaluator.SpellReady(fresh,selectedRank)!=Truth.True)
+                gaps.Add("SpellReady:"+baseSpell+"@"+selectedRank);
         }
         if(fresh.TargetEpoch.Quality!=Knowledge.Known)
             gaps.Add("TargetEpoch");
