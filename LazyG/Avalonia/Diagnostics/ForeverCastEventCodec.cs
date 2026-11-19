@@ -23,9 +23,10 @@ internal static class ForeverCastEventCodec
         if(bytes[16]!=checksum || bytes[17]!=(255-checksum))return false;
         int id=(bytes[5]<<16)|(bytes[6]<<8)|bytes[7];
         int epoch=(bytes[8]<<8)|bytes[9];
-        if(id is <1 or >16777215 || bytes[4]==0 || bytes[10]!=1)
-            return false;
-        result=new(bytes[4],id,epoch,true);
+        bool idle=bytes[4]==0 && id==0 && bytes[10]==0;
+        bool eventFromPlayer=bytes[4]!=0 && id is >=1 and <=16777215 && bytes[10]==1;
+        if(!idle && !eventFromPlayer)return false;
+        result=new(bytes[4],id,epoch,eventFromPlayer);
         return true;
     }
 }
