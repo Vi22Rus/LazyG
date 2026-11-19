@@ -34,7 +34,7 @@ function M.Build(manifest,snapshot)
   local auraFamilies=manifest.auras or {}
   check(#spellFamilies<=100 and #auraFamilies<=100,"family bounds")
   local rankCount,auraCount=0,0
-  local rankCodes,auraCodes={}
+  local rankCodes,auraCodes={},{}
   local familyStatus={}
   for _,family in ipairs(spellFamilies) do
     local ranks=family.ranks or {}
