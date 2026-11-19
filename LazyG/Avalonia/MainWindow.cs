@@ -50,6 +50,11 @@ public sealed class MainWindow : Window
     private readonly RgbTransportMonitor rgbMonitor=new();
     private readonly RotationSourceManager sourceManager=new();
     private readonly HunterRotationAudit hunterAudit=new();
+    private readonly ProfileDataManifest? hunterCompactManifest;
+    private byte? lastCompactFrame;
+    private DateTimeOffset lastCompactFrameAt;
+    private bool compactSequenceEstablished;
+    private string lastCompactDiagnostic="";
     private TextBlock? hunterAuditSummaryText;
     private bool hunterAuditRecording;
     private DateTimeOffset lastHunterAuditSample;
@@ -77,6 +82,12 @@ public sealed class MainWindow : Window
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        try
+        {
+            var bm=RotationProfileCatalog.Load("hunter","beast-mastery","PvE");
+            if(bm is not null)hunterCompactManifest=ProfileDataManifestBuilder.Build(bm);
+        }
+        catch(Exception ex) {RuntimeDiagnostics.Add("COMPACT","Profile rejected: "+ex.GetType().Name);}
         Content = CreateShell();
         ShowClasses();
         timer.Tick += async (_, _) => await PollBridgeAsync();
@@ -865,7 +876,9 @@ public sealed class MainWindow : Window
                     out var detail,out var v3,out var thresholds,
                     spellDiagnosticEnabled,out var spell,
                     cooldownDiagnosticEnabled,out var cooldown,
-                    hunterAuditRecording,out var castEvent);
+                    hunterAuditRecording,out var castEvent,
+                    hunterCompactManifest is null?0:
+                        HunterCompactProfileWire.ExtensionCells(hunterCompactManifest));
                 stopwatch.Stop();
                 return (ok,state,packet,detail,v3,thresholds,spell,cooldown,castEvent,
                     capturedAt:DateTimeOffset.UtcNow,
@@ -935,6 +948,51 @@ public sealed class MainWindow : Window
                 latestGameState=latestGameState with {
                     PowerBand=Observed<HealthBand>.Known(resourceBand,result.capturedAt)
                 };
+            // Optional, versioned Hunter BM snapshot in the SAME v3 RGB row.
+            // A first new frame after loss is baseline only. Two distinct CRC-
+            // valid frames are required; malformed/stale packets never persist.
+            bool compactValid=connected && result.packet is not null &&
+                result.packet.ExtensionCells>0 && hunterCompactManifest is not null &&
+                HunterCompactProfileWire.TryDecode(result.packet,hunterCompactManifest,
+                    result.capturedAt,out var _);
+            if(!compactValid)
+            {
+                lastCompactFrame=null;
+                lastCompactFrameAt=default;
+                compactSequenceEstablished=false;
+            }
+            else if(hunterCompactManifest is not null &&
+                    HunterCompactProfileWire.TryDecode(result.packet,hunterCompactManifest,
+                        result.capturedAt,out var compact) && compact is not null)
+            {
+                var frameCounter=result.packet!.FrameCounter;
+                if(lastCompactFrame is null)
+                {
+                    lastCompactFrame=frameCounter;
+                    lastCompactFrameAt=result.capturedAt;
+                }
+                else
+                {
+                    if(lastCompactFrame.Value!=frameCounter)
+                    {
+                        lastCompactFrame=frameCounter;
+                        lastCompactFrameAt=result.capturedAt;
+                        compactSequenceEstablished=true;
+                    }
+                    if(compactSequenceEstablished &&
+                       result.capturedAt-lastCompactFrameAt<=TimeSpan.FromMilliseconds(900))
+                        latestGameState=HunterCompactProfileWire.ToGameState(
+                            latestGameState,compact);
+                }
+            }
+            string compactDiagnostic=compactValid
+                ?(compactSequenceEstablished?"PROFILE LIVE (read-only)":"PROFILE BASELINE")
+                :"PROFILE NOT PRESENT / STALE";
+            if(lastCompactDiagnostic!=compactDiagnostic)
+            {
+                RuntimeDiagnostics.Add("COMPACT",compactDiagnostic);
+                lastCompactDiagnostic=compactDiagnostic;
+            }
             if(spellDiagnosticEnabled && connected && result.spell is not null)
             {
                 if(lastSpellSequence!=result.spell.Sequence || lastSpellPacket?.SpellId!=result.spell.SpellId)
