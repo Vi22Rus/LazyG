@@ -390,88 +390,172 @@ public sealed class MainWindow : Window
             return;
         }
         int changes=overrides.Count(kv=>profile.Settings.TryGetValue(kv.Key,out var d) && d.Default!=kv.Value);
-        var toolbar=Stack(Orientation.Horizontal,8);
-        toolbar.Children.Add(Action(tier=="Essentials"?"Essentials ✓":"Essentials",
-            ()=>ShowSpec(cls,spec,mode,"Essentials",changedOnly),tier=="Essentials"));
-        toolbar.Children.Add(Action(tier=="Advanced"?"Advanced ✓":"Advanced",
-            ()=>ShowSpec(cls,spec,mode,"Advanced",changedOnly),tier=="Advanced"));
-        toolbar.Children.Add(Action(changedOnly?"Changed only ✓ ("+changes+")":"Changed only ("+changes+")",
-            ()=>ShowSpec(cls,spec,mode,tier,!changedOnly)));
-        var reset=Action("Reset defaults",()=>{
-            if(externalActive)return;
-            // Reset is explicit: retained backup via settings store and confirmed in a second click.
-            ShowRotationResetConfirmation(cls,spec,profile,settingsFile,mode,tier);
-        });
-        reset.IsEnabled=!externalActive;toolbar.Children.Add(reset);
-        body.Children.Add(toolbar);
-        int shown=0;
-        foreach(var setting in profile.Settings.Values.OrderBy(s=>s.Group).ThenBy(s=>s.Id))
+        const string amber="#F9B72E", ivory="#FAEDE0", muted="#C0A999";
+        var settingsSurface=Stack(spacing:12);
+        var toolbar=Stack(Orientation.Horizontal,11);
+        Button tab(string name,bool active,Action click)
         {
-            if(setting.Tier!=tier || (changedOnly &&
-                (!overrides.TryGetValue(setting.Id,out var v) || v==setting.Default)))continue;
-            shown++;
-            var settingLocal=setting;
-            var pane=Stack(spacing:7);
-            pane.Children.Add(Text(setting.LabelRu+" / "+setting.LabelEn,14,"#E9F9FF",FontWeight.SemiBold));
-            var referencedRules=profile.Rules.Where(rule=>rule.EnabledBy==setting.Id ||
-                rule.Conditions.Any(cond=>cond.SettingRef==setting.Id ||
-                    cond.WhenEnabled==setting.Id)).ToArray();
-            var referencedSignals=referencedRules.SelectMany(rule=>rule.Conditions)
-                .Select(cond=>cond.Signal).Distinct().ToArray();
-            pane.Children.Add(Text(setting.Group+" · "+setting.Unit+" · default "+setting.Default+
-                " · rules: "+string.Join(", ",referencedRules.Select(rule=>
-                    rule.Id+" (SpellID "+rule.SpellId+")")),11,"#8CAEC1"));
-            pane.Children.Add(Text("Signals: "+
-                (referencedSignals.Length==0?"spell/GCD/target proof":string.Join(", ",referencedSignals))+
-                " · Live readiness unverified (Unknown blocks).",11,"#B7A88E"));
-            if(referencedSignals.Contains("PowerPercent"))
-                pane.Children.Add(Text("Forever Curve: только интервалы 0–4%, 5–9%, 10–14%…95–100%; порог с шагом 5%. Не точная мана или ярость.",11,"#B7A88E"));
-            int current=overrides.TryGetValue(setting.Id,out var saved)?saved:setting.Default;
-            void SaveSetting(int newValue)
-            {
-                if(externalActive)return;
-                var updated=new System.Collections.Generic.Dictionary<string,int>(overrides);
-                if(newValue==settingLocal.Default)updated.Remove(settingLocal.Id);
-                else updated[settingLocal.Id]=newValue;
-                try
-                {
-                    RotationSettingsStore.Save(settingsFile,profile,updated);
-                    overrides=updated;
-                    RuntimeDiagnostics.Add("XML2","Setting saved: "+settingLocal.Id+" (local override)");
-                }
-                catch(Exception ex)
-                {
-                    RuntimeDiagnostics.Add("XML2","Setting save failed: "+ex.GetType().Name);
-                    ShowSpec(cls,spec,mode,tier,changedOnly);
-                }
-            }
-            if(setting.Type==RotationSettingType.Boolean)
-            {
-                var toggle=new CheckBox {Content="Enabled",IsChecked=current==1,
-                    IsEnabled=!externalActive,Foreground=Palette.Brush("#EAF8FF")};
-                toggle.IsCheckedChanged+=(_,_)=>SaveSetting(toggle.IsChecked==true?1:0);
-                pane.Children.Add(toggle);
-            }
-            else
-            {
-                var slider=new Slider {Minimum=setting.Min,Maximum=setting.Max,
-                    TickFrequency=setting.Step,IsSnapToTickEnabled=true,
-                    Value=current,IsEnabled=!externalActive,Width=300,
-                    HorizontalAlignment=HAlign.Left};
-                var valueText=Text(current.ToString()+" "+setting.Unit,13,"#42E4F3");
-                slider.ValueChanged+=(_,_)=>{
-                    int proposed=(int)Math.Round(slider.Value);
-                    valueText.Text=proposed+" "+setting.Unit;
-                    SaveSetting(proposed);
-                };
-                pane.Children.Add(slider);pane.Children.Add(valueText);
-            }
-            body.Children.Add(Pane(pane));
+            var button=Action(name,click,active);
+            button.Padding=new Thickness(17,8);
+            button.Background=Palette.Brush(active?"#DA8E15":"#291D19");
+            button.Foreground=Palette.Brush(active?"#21120D":"#E9D4BF");
+            button.BorderBrush=Palette.Brush(active?"#FFCE5B":"#62442A");
+            return button;
         }
-        if(shown==0)
-            body.Children.Add(Text(changedOnly?"No modified settings in this category.":"No parameters in this category.",13,"#9EC3D9"));
+        toolbar.Children.Add(tab("Essentials",tier=="Essentials",
+            ()=>ShowSpec(cls,spec,mode,"Essentials",changedOnly)));
+        toolbar.Children.Add(tab("Advanced",tier=="Advanced",
+            ()=>ShowSpec(cls,spec,mode,"Advanced",changedOnly)));
+        toolbar.Children.Add(tab(mode,mode=="PvE",
+            ()=>ShowSpec(cls,spec,mode=="PvE"?"PvP":"PvE","Essentials")));
+        toolbar.Children.Add(tab(changedOnly?"Changed only ✓ "+changes:"Changed only · "+changes,
+            changedOnly,()=>ShowSpec(cls,spec,mode,tier,!changedOnly)));
+        var reset=tab("Reset to defaults",false,()=>{
+            if(!externalActive)
+                ShowRotationResetConfirmation(cls,spec,profile,settingsFile,mode,tier);
+        });
+        reset.IsEnabled=!externalActive;
+        toolbar.Children.Add(reset);
+        settingsSurface.Children.Add(toolbar);
+        var finder=new TextBox { Watermark="Filter settings…",Width=340,
+            HorizontalAlignment=HAlign.Left,Background=Palette.Brush("#241A17"),
+            Foreground=Palette.Brush(ivory),BorderBrush=Palette.Brush("#664933"),
+            BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(12),
+            Padding=new Thickness(13,8) };
+        settingsSurface.Children.Add(finder);
+        settingsSurface.Children.Add(Text("PvE and PvP profiles store separate settings. Only the current XML profile is displayed.",
+            11,muted));
+        var renderedRows=new System.Collections.Generic.List<(Border Row,string SearchText)>();
+        var orderedGroups=new[]{"Utility","Defensives","Cooldowns","Rotation","AoE","Resource"};
+        var visibleSettings=profile.Settings.Values.Where(x=>x.Tier==tier &&
+            (!changedOnly || (overrides.TryGetValue(x.Id,out var value) &&
+                              value!=x.Default)))
+            .OrderBy(x=>Array.IndexOf(orderedGroups,x.Group)<0?99:Array.IndexOf(orderedGroups,x.Group))
+            .ThenBy(x=>x.Parent is null?0:1).ThenBy(x=>x.Id).ToArray();
+        string[] sectionGroups=visibleSettings.Select(x=>x.Group).Distinct().ToArray();
+        foreach(string group in sectionGroups)
+        {
+            settingsSurface.Children.Add(Text(group.ToUpperInvariant(),11,amber,FontWeight.Bold));
+            foreach(var setting in visibleSettings.Where(x=>x.Group==group))
+            {
+                var current=overrides.TryGetValue(setting.Id,out var saved)?saved:setting.Default;
+                var row=new Grid { ColumnDefinitions=new ColumnDefinitions("Auto,*,Auto"),
+                    ColumnSpacing=13,Margin=new Thickness(setting.Parent is null?0:24,0,0,0),
+                    MinHeight=58 };
+                var icon=HunterSettingIcon(cls.Id,setting.IconSpellId,setting.LabelEn,setting.Parent is null?34:30);
+                Grid.SetColumn(icon,0);row.Children.Add(icon);
+                var labels=Stack(spacing:3);
+                labels.Children.Add(Text(setting.LabelEn+" · "+setting.LabelRu,
+                    13,ivory,FontWeight.SemiBold));
+                string description=string.IsNullOrWhiteSpace(setting.DescriptionRu)
+                    ? setting.DescriptionEn:setting.DescriptionRu;
+                if(description.Length>0)
+                    labels.Children.Add(Text(description,11,muted));
+                if(setting.ExclusiveGroup is not null)
+                    labels.Children.Add(Text("Общий кулдаун · "+setting.ExclusiveGroup+
+                        " · включение отключит остальные способности группы",10,"#E0AE65"));
+                if(setting.Type==RotationSettingType.Integer && setting.Unit=="percent")
+                    labels.Children.Add(Text("Ресурс WoW Forever: только проверенные интервалы по 5%.",10,muted));
+                Grid.SetColumn(labels,1);row.Children.Add(labels);
+                void SaveSetting(int newValue)
+                {
+                    if(externalActive)return;
+                    var updated=new System.Collections.Generic.Dictionary<string,int>(overrides);
+                    if(newValue==setting.Default)updated.Remove(setting.Id);
+                    else updated[setting.Id]=newValue;
+                    // Transactional exclusivity across all tabs: one shared-CD
+                    // family can have at most one user-enabled ability.
+                    if(newValue==1 && setting.ExclusiveGroup is not null)
+                        foreach(var other in profile.Settings.Values.Where(x=>
+                            x.Id!=setting.Id &&
+                            x.ExclusiveGroup==setting.ExclusiveGroup))
+                        {
+                            if(other.Default==0)updated.Remove(other.Id);
+                            else updated[other.Id]=0;
+                        }
+                    try
+                    {
+                        RotationSettingsStore.Save(settingsFile,profile,updated);
+                        overrides=updated;
+                        RuntimeDiagnostics.Add("XML2","Setting saved: "+setting.Id+
+                            (setting.ExclusiveGroup is null?"":" (exclusive "+setting.ExclusiveGroup+")"));
+                        if(setting.Type==RotationSettingType.Boolean)
+                            ShowSpec(cls,spec,mode,tier,changedOnly);
+                    }
+                    catch(Exception ex)
+                    {
+                        RuntimeDiagnostics.Add("XML2","Settings update rejected: "+ex.GetType().Name);
+                        ShowSpec(cls,spec,mode,tier,changedOnly);
+                    }
+                }
+                Control control;
+                if(setting.Type==RotationSettingType.Boolean)
+                {
+                    var toggle=new ToggleSwitch {
+                        IsChecked=current==1,IsEnabled=!externalActive,
+                        OnContent="",OffContent="",Width=74,Height=36,
+                        HorizontalAlignment=HAlign.Right };
+                    toggle.IsCheckedChanged+=(_,_)=>SaveSetting(toggle.IsChecked==true?1:0);
+                    control=toggle;
+                }
+                else
+                {
+                    var controlRow=Stack(Orientation.Horizontal,12);
+                    var slider=new Slider {
+                        Minimum=setting.Min,Maximum=setting.Max,
+                        TickFrequency=setting.Step,IsSnapToTickEnabled=true,
+                        Value=current,Width=155,
+                        IsEnabled=!externalActive,
+                        VerticalAlignment=VerticalAlignment.Center
+                    };
+                    var value=Text(current+(setting.Unit=="percent"?" %":" "+setting.Unit),13,amber,FontWeight.Bold);
+                    value.Width=65;
+                    value.TextAlignment=TextAlignment.Right;
+                    slider.ValueChanged+=(_,_)=>{
+                        int proposed=(int)Math.Round(slider.Value);
+                        value.Text=proposed+(setting.Unit=="percent"?" %":" "+setting.Unit);
+                        if(proposed!= (overrides.TryGetValue(setting.Id,out var previous)
+                            ? previous:setting.Default))
+                            SaveSetting(proposed);
+                    };
+                    controlRow.Children.Add(slider);controlRow.Children.Add(value);
+                    control=controlRow;
+                }
+                Grid.SetColumn(control,2);row.Children.Add(control);
+                var container=new Border {Child=row,Padding=new Thickness(10,9),
+                    Background=Palette.Brush("#271A18"),CornerRadius=new CornerRadius(8),
+                    BorderBrush=Palette.Brush("#483025"),
+                    BorderThickness=new Thickness(0,0,0,1)};
+                settingsSurface.Children.Add(container);
+                renderedRows.Add((container,setting.LabelEn+" "+setting.LabelRu+" "+description+" "+setting.Group));
+            }
+        }
+        finder.TextChanged+=(_,_)=>{
+            string filter=finder.Text?.Trim()??"";
+            foreach(var item in renderedRows)
+                item.Row.IsVisible=filter.Length==0 ||
+                    item.SearchText.Contains(filter,StringComparison.OrdinalIgnoreCase);
+        };
+        if(renderedRows.Count==0)
+            settingsSurface.Children.Add(Text(changedOnly
+                ?"No changed settings in this category.":"No XML settings in this category.",
+                13,muted));
+        body.Children.Add(Pane(settingsSurface,"#1D1514",14,"#64432F",new Thickness(19)));
         Go(Page(spec.Name.ToUpperInvariant(),mode+" · XML-driven settings · experimental",body,
             cls.Name,()=>ShowClass(cls)));
+    }
+    private static Border HunterSettingIcon(string classSlug,int spellId,string fallback,int size)
+    {
+        var spell=spellId>0?ForeverSpellCatalog.Find(classSlug,spellId):null;
+        var atlasIcon=spell is null?null:ForeverSpellCatalog.Icon(spell);
+        Control visual=atlasIcon is null
+            ? Text(string.IsNullOrEmpty(fallback)?"?":fallback[..1],size/2,"#F9B72E",FontWeight.Bold)
+            : new Image {Source=atlasIcon,Stretch=Stretch.UniformToFill,
+                Width=size-2,Height=size-2};
+        return new Border {Width=size,Height=size,Child=visual,
+            CornerRadius=new CornerRadius(5),ClipToBounds=true,
+            Background=Palette.Brush("#2A211D"),
+            BorderBrush=Palette.Brush("#A17C4D"),BorderThickness=new Thickness(1)};
     }
     private void ShowRotationResetConfirmation(GameClass cls,Specialization spec,
         RotationProfileV2 profile,string settingsFile,string mode,string tier)
