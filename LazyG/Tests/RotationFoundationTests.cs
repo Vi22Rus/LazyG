@@ -120,6 +120,26 @@ Check(RotationXmlV2.Evaluate(paladin,paladinState,
 
 // Hunter BM at level 30: RGB Curve 5%-range threshold tests, never raw exact power.
 var hunter=RotationProfileCatalog.Load("hunter","beast-mastery","PvE")!;
+Check(ForeverHunterAbilityCatalog.All.Count>=35,
+    "full Hunter reference catalog covers core BM, MM, SV and PvP families");
+Check(ForeverHunterAbilityCatalog.Ranks(14323).Length==0,
+    "catalog keyed by base ID only, prevents rank alias ambiguity");
+Check(ForeverHunterAbilityCatalog.Find(19434)?.SharedCooldownGroup==
+      ForeverHunterAbilityCatalog.Find(2643)?.SharedCooldownGroup,
+    "Aimed and Multi share group in reference, not hardcoded cooldown time");
+Check(ForeverHunterAbilityCatalog.Find(3044)?.SharedCooldownGroup==
+      ForeverHunterAbilityCatalog.Find(1293241)?.SharedCooldownGroup,
+    "Arcane and Summon Hawk shared group references");
+Check(ForeverHunterAbilityCatalog.Find(1499)?.SharedCooldownGroup==
+      ForeverHunterAbilityCatalog.Find(13795)?.SharedCooldownGroup,
+    "traps reference one cooldown family");
+Check(ForeverHunterAbilityCatalog.Ranks(1130)
+    .SequenceEqual(HunterSpellFamilies.Ranks(1130)) &&
+    ForeverHunterAbilityCatalog.Ranks(1978)
+    .SequenceEqual(HunterSpellFamilies.Ranks(1978)) &&
+    ForeverHunterAbilityCatalog.Ranks(3044)
+    .SequenceEqual(HunterSpellFamilies.Ranks(3044)),
+    "first four verified audit families remain consistent with full registry");
 var manifest=ProfileDataManifestBuilder.Build(hunter);
 Check(manifest.Client=="forever" && manifest.ClassId==3 && manifest.SpecIndex==1 &&
     manifest.Mode=="PvE" && manifest.SpellFamilies.Count==4 &&
