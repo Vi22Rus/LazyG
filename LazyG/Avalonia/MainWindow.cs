@@ -57,8 +57,8 @@ public sealed class MainWindow : Window
     private bool finished;
     public MainWindow()
     {
-        Title = "LazyG · 0.2.19-dev";
-        RuntimeDiagnostics.Add("APP", "LazyG 0.2.19-dev started · Forever UI");
+        Title = "LazyG · 0.2.20-dev";
+        RuntimeDiagnostics.Add("APP", "LazyG 0.2.20-dev started · Forever UI");
         Width = 1280; Height = 820; MinWidth = 850; MinHeight = 560;
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
