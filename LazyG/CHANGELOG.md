@@ -1,3 +1,10 @@
+### 0.4.0-dev foundation: Support UI and crash handling integration
+
+- Added `Create support ZIP` on existing Avalonia Support page; values are allowlisted and stored locally under `%LOCALAPPDATA%\\LazyG\\reports`. The page explicitly displays that rotation source SRC is not yet connected; provider mode cannot be selected in Windows. Current RGB diagnostics remain intact.
+- Added `CrashReportService` early AppDomain/TaskScheduler handlers and startup exception reporting. An optional emergency-stop callback is available for future keyboard execution; **current application has no production rotation input to stop**. Reports are bounded, synchronous best-effort, with sanitized exception type and no automatic upload. UI dispatcher-specific fatal handling is not yet tested; do not claim full fatal coverage.
+- Updated visible title/footer to `0.4.0-dev foundation` (NOT release, NOT completed rotation system). A passing earlier baseline of the new engine + persistence + ZIP tests (before Support/startup integration) is https://github.com/Vi22Rus/LazyG/actions/runs/44454711919 . Full updated CI must pass for the latest commit.
+- Remaining: real user XML settings UI, verified Forever game profiles, SRC/REC strip and minimap selector, compatible providers, crash fatal disarm integration and end-to-end gameplay test. Original 0.3.0-dev rollback remains available.
+
 ### Additional modules in the same 0.4.0-dev foundation checkpoint
 
 - `Avalonia/Engine/RotationSettingsStore.cs`: validated per-profile JSON override persistence; atomic replacement, backup, reset to defaults, unknown-key/profile rejection. No UI wiring yet.
