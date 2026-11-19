@@ -283,10 +283,10 @@ internal static class RotationXmlV2
                     // Entire observed interval must satisfy the threshold.
                     var band=fresh.PowerBand;
                     quality=band.Quality;
-                    answer=band.Is(v=>v.IsValid &&
+                    answer=band.Is(v=>v.IsFivePercentCurveBand &&
                         (c.Compare=="Below"?v.Upper<threshold:v.Lower>=threshold));
                     if(band.Quality==Knowledge.Known &&
-                       band.Value is HealthBand invalid && !invalid.IsValid)
+                       band.Value is HealthBand invalid && !invalid.IsFivePercentCurveBand)
                         answer=Truth.Unknown;
                     details.Add("CurveBand="+(band.Value?.ToString()??"Unknown"));
                 }
