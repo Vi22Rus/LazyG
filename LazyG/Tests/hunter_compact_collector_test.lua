@@ -42,9 +42,22 @@ local originalByIndex=C_UnitAuras.GetAuraDataByIndex
 C_UnitAuras.GetAuraDataByIndex=function() error("indexed denied") end
 C_Secrets.ShouldAurasBeSecret=function()return hidden end
 local _,directBytes=c.Build()
-local lastAuraStart=19+2*#LazyGHunterCompactManifest.spells+
-  math.floor((45+3)/4)
-assert(lastAuraStart>19,"aura wire begins after family flags + learned rank flags")
+local ranks=0
+for _,family in ipairs(LazyGHunterCompactManifest.spells) do
+  ranks=ranks+#family.ranks
+end
+local firstAuraByte=19+2*#LazyGHunterCompactManifest.spells+
+  math.floor((ranks+3)/4)
+assert(math.floor(directBytes[firstAuraByte]/4)%4==2,
+    "direct by-name finds target Hunter Mark rank despite batch/index denial")
+assert(directBytes[firstAuraByte]%4==0,
+    "unseen lower rank must remain UNKNOWN rather than absent")
+hidden=true
+C_UnitAuras.GetAuraDataBySpellName=function()return nil end
+local _,hiddenBytes=c.Build()
+assert(hiddenBytes[firstAuraByte]==0,
+    "secret target aura lookup denial must not turn into false absence")
+hidden=false
 -- Restore readable scanner for reference vector checks below.
 C_UnitAuras.GetAuraDataByIndex=originalByIndex
 C_UnitAuras.GetUnitAuras=nil
