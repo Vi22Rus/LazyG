@@ -76,6 +76,29 @@ local function spell(id)
   local quality,value=call("C_Spell.GetSpellCooldown",61304)
   log("GCD 61304="..quality.." active="..field(value,"isActive"))
 end
+-- Manual Hunter rank-family audit. Static public SpellIDs only; never read a
+-- hidden value, and never turn inaccessible rank data into Learned=false.
+local hunterFamilies={
+  {"HunterMark",{1130,14323,14324,14325}},
+  {"SerpentSting",{1978,13549,13550,13551,13552,13553,13554,13555,25295}},
+  {"ArcaneShot",{3044,14281,14282,14283,14284,14285,14286,14287}},
+  {"AutoShot",{75}},
+}
+local function hunterRanks()
+  local qualityClass=call("UnitClassBase","player")
+  if qualityClass~="Type:string" then
+    -- UnitClassBase may be absent; do not assert a class identity from this probe.
+    log("HUNTER_RANK class validation unconfirmed: "..qualityClass)
+  end
+  for _,family in ipairs(hunterFamilies) do
+    for _,id in ipairs(family[2]) do
+      local quality=call("IsPlayerSpell",id)
+      if quality=="ApiMissing" then quality=call("C_SpellBook.IsSpellKnown",id) end
+      log("HUNTER_RANK family="..family[1].." id="..id.." learned="..quality)
+    end
+  end
+  log("HUNTER_RANK completed; verify with spellbook, Unknown is not unlearned")
+end
 local function target()
   for _,unit in ipairs({"player","target"}) do
     log(unit.." exists="..(call("UnitExists",unit)))
@@ -202,6 +225,7 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
       log(name.." result="..(call(name)))
     end
   elseif cmd=="spell" then spell(tonumber(arg))
+  elseif cmd=="hunterranks" then hunterRanks()
   elseif cmd=="target" then target()
   elseif cmd=="audit" then
     if not LazyGCastEventRgb then
