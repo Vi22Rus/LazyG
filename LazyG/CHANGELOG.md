@@ -23,6 +23,14 @@
 
 ---
 
+## 2026-11-19 — WoW Forever real 0.2.17-dev CDWATCH: independent spell cooldown observed [USER-TESTED / PARTIAL]
+
+- User supplied fresh `LazyGForeverProbe.lua` SavedVariables from an actual 0.2.17-dev Forever diagnostic run: `CDWATCH START spell=13795`, `STOP reason=completed samples=417`, +0.000 to +30.015s. Reference: user-provided file in current conversation, **do not upload the raw SavedVariables into GitHub**.
+- At +0.000s, `13795.isActive=True, isOnGCD=False` while `29515.isActive=False`; spell was already active at recording start, so a **full 30s spell cooldown duration is NOT established**. At +4.784..+6.125s, `29515` changes True to False while `13795` remains True. At +6.879s both True, +8.557s both False, +9.284s both True; at +9.507s `13795.isActive=True,isOnGCD=False` while `29515` is still True; by +10.608s `29515.isActive=False` while `13795.isActive=True`, and this independent active-vs-inactive state persists to the +30.015s terminal sample. This is **observed independent cooldown status**, not validated millisecond cooldown remaining or cast readiness.
+- `61304` stays Unknown throughout, with no transition. `29515.isOnGCD` becomes Unknown when isActive False; Unknown must not be treated as a known false result.
+- The corrected widget design from 0.2.17-dev recorded `13795 widgetSpell=Shown` initially, `Hidden` at +6.879s, `Shown` at +9.507s; this is meaningful experimental visual responsiveness but NOT evidence that `IsShown()` reliably indicates gameplay readiness. `29515 widget=Hidden`, `61304 widget=Unknown`.
+- **Design conclusion:** `29515.isActive` is empirically supported as a Forever GCD-activity candidate, while `C_Spell.GetSpellCooldown(13795).isActive` is capable of representing a separate ability cooldown after GCD ends. The current `CooldownWatch` is **diagnostic only**; no movement of these observations into `GameState.GcdRemainingMilliseconds`, RGB v2/v3/Curve or XML permissions is authorized by this capture. Verify across spell ranks, during combat, and ability eligibility before any authorization semantics. No source code edited in response to the uploaded log.
+
 ## 2026-11-19 — 0.2.17-dev verified build: independent cooldown comparison [CI-PASSED / GAME-UNTESTED]
 
 - **Verified SUCCESS** of exact Actions run https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 on code commit `0ac25a8d6e28a0c87ef7796000d1bce29071de8c`. Windows RGB v3, GameState/XML and spell atlas tests, single-file EXE publish, Windows startup smoke, optional addon packaging, and Lua 5.1 cooldown audit/widget/watch regression all SUCCESS.
