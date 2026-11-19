@@ -114,6 +114,7 @@ jobs:
           luac5.1 -p LazyG/AddonTemplate/RgbV3Encoder.lua
           luac5.1 -p LazyG/AddonTemplate/HunterCompactProfileEncoder.lua
           luac5.1 -p LazyG/AddonTemplate/HunterCompactManifest.lua
+          luac5.1 -p LazyG/AddonTemplate/HunterCompactCollector.lua
           luac5.1 -p LazyG/AddonTemplate/RgbV3Panel.lua
           luac5.1 -p LazyG/AddonTemplate/RgbV3Thresholds.lua
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownAudit.lua
