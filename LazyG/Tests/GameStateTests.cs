@@ -304,6 +304,7 @@ Assert(observed.LastNewFrameAt==now);
 var unchanged=lgcObserver.Update(true,firstLgc,now.AddMilliseconds(600));
 Assert(unchanged.LastNewFrameAt==now && unchanged.Transport==Knowledge.Known);
 var frozen=lgcObserver.Update(true,firstLgc,now.AddMilliseconds(1201));
+Assert(lgcObserver.LastLossReason=="FrozenLgcSequence");
 Assert(frozen.Transport==Knowledge.Stale &&
     frozen.SpellCooldownActive.Quality==Knowledge.Stale &&
     frozen.Gcd29515Active.Quality==Knowledge.Stale &&
@@ -313,30 +314,40 @@ var resumed=new CooldownRgbPacket(11,13795,ProbeCode.Protected,
     ProbeCode.Unknown,ProbeCode.True,ProbeCode.Protected);
 var resumedAt=now.AddMilliseconds(1400);
 var live=lgcObserver.Update(true,resumed,resumedAt);
+Assert(lgcObserver.Recoveries==1 && lgcObserver.Describe().Contains("recoveries=1"));
 Assert(live.SpellCooldownActive.Quality==Knowledge.Protected &&
     live.SpellOnGcd.Quality==Knowledge.Unknown &&
     live.Gcd29515Active.Is(x=>x)==Truth.True &&
     live.Gcd29515OnGcd.Quality==Knowledge.Protected);
 // Corrupted same-counter content cannot be silently treated as a new frame.
 var conflicting=resumed with { Gcd29515Active=ProbeCode.False };
+Assert(lgcObserver.Recoveries==1);
 Assert(lgcObserver.Update(true,conflicting,resumedAt.AddMilliseconds(100))
     .Transport==Knowledge.Unknown);
 Assert(lgcObserver.Update(true,resumed,resumedAt.AddMilliseconds(200))
     .Transport==Knowledge.Known);
+Assert(lgcObserver.Recoveries==2);
+Assert(lgcObserver.LastLossReason=="SameSequenceConflict");
 // Foreground loss clears the former 'Known False' immediately.
 Assert(lgcObserver.Update(false,resumed,resumedAt.AddMilliseconds(250))
     .Transport==Knowledge.Unknown);
 Assert(lgcObserver.Snapshot.Gcd29515Active.Quality==Knowledge.Unknown);
+Assert(lgcObserver.LastLossReason=="BaseRgbIdentityLost");
 Assert(lgcObserver.Update(true,firstLgc,resumedAt.AddMilliseconds(400))
     .Transport==Knowledge.Known);
+Assert(lgcObserver.Recoveries==3);
 Assert(lgcObserver.Update(true,null,resumedAt.AddMilliseconds(410))
     .Transport==Knowledge.Unknown);
+Assert(lgcObserver.LastLossReason=="LgcPacketMissing");
 Assert(lgcObserver.Update(true,firstLgc,resumedAt.AddMilliseconds(420))
     .Transport==Knowledge.Known);
+Assert(lgcObserver.Recoveries==4);
 Assert(lgcObserver.Update(true,firstLgc,resumedAt.AddMilliseconds(100))
     .Transport==Knowledge.Unknown); // clock rollback
+Assert(lgcObserver.LastLossReason=="CaptureClockReversed");
 lgcObserver.Reset();
 Assert(lgcObserver.Snapshot.Transport==Knowledge.Unknown);
+Assert(lgcObserver.Recoveries==0);
 // No diagnostic outcome is a measured duration or a cast permission.
 Assert(attackBase.GcdRemainingMilliseconds.Quality==Knowledge.Unknown);
 Assert(ConditionEvaluator.GcdReady(attackBase)==Truth.Unknown);
