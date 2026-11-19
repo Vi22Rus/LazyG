@@ -6,8 +6,16 @@ namespace LazyG.Desktop;
 internal static class Program
 {
     [STAThread]
-    private static void Main(string[] args) =>
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    private static void Main(string[] args)
+    {
+        Diagnostics.CrashReportService.Install();
+        try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
+        catch(Exception ex)
+        {
+            Diagnostics.CrashReportService.Report(ex,true);
+            throw;
+        }
+    }
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<LazyApp>().UsePlatformDetect().LogToTrace();
 }
