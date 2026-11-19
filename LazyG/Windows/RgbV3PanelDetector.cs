@@ -33,20 +33,25 @@ internal static class RgbV3PanelDetector
                     !Near(bitmap.GetPixel(x + 3 * pitch, y), 0, 0, 0))
                     continue;
 
-                // direct8 only for first in-game v3 test; stepped4 is
-                // covered by codec regression tests, not yet painted in game.
-                var rgb = new byte[24 * 3];
-                for (int cell = 0; cell < 24; ++cell)
+                // The first five cells are always plain in both modes.
+                // direct8: 24 physical cells. stepped4: 5 + (24-5)*2 = 43.
+                var versionCell=bitmap.GetPixel(x + 4 * pitch,y);
+                int encoding=versionCell.B & 3;
+                if(encoding!=0 && encoding!=1)continue;
+                int cellCount=encoding==1?43:24;
+                if(x + pitch*(cellCount-1)>=bitmap.Width)continue;
+                var rgb=new byte[cellCount*3];
+                for(int cell=0;cell<cellCount;cell++)
                 {
-                    Color color = bitmap.GetPixel(x + cell * pitch, y);
-                    int offset = cell * 3;
-                    rgb[offset] = color.R;
-                    rgb[offset + 1] = color.G;
-                    rgb[offset + 2] = color.B;
+                    Color color=bitmap.GetPixel(x+cell*pitch,y);
+                    int offset=cell*3;
+                    rgb[offset]=color.R;
+                    rgb[offset+1]=color.G;
+                    rgb[offset+2]=color.B;
                 }
                 if (RgbV3Codec.TryDecode(rgb, 0, 0x4C47, out packet, out var error))
                 {
-                    detail = $"RGB v3 CRC PASS; frame={packet!.FrameCounter}; position=({x},{y}); pitch={pitch}px";
+                    detail = $"RGB v3 CRC PASS; frame={packet!.FrameCounter}; encoding={packet.Encoding}; position=({x},{y}); pitch={pitch}px";
                     return true;
                 }
                 detail = "RGB v3 detected but invalid: " + error;
