@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — rotation source selector and Windows source-aware UX [APPROVED PLAN / DOCS-ONLY]
+
+- User explicitly approved optional `Hekili` and `JustAC` alongside LazyG's **internal XML rotations**. Lua minimap icon (draggable around circular minimap) right-click menu selects `Internal/Hekili/JustAC`; persist in SavedVariables, send **periodically fresh, versioned, CRC-checked** selection/provider health and external SpellID recommendation over a new separate RGB channel; baseline v2/v3/Curve/LGD/LGC stays unchanged.
+- Windows must consume source identity, clear old recommendations on source change/stale/loss, expose a source banner in main UI and overlay, disable **only** internal-specialization rotation settings for external provider, preserve those settings, retain common keys/delays/Logitech G Hub/Start-Stop/Support/emergency stop, and never auto-fallback from missing provider to Internal.
+- New permanent spec `LazyG/ROTATION_SOURCES_PLAN.md`: provider abstraction, logical RGB status/recommendation packet, minimap UX, transactional source manager, UI and failure states, diagnostics, testing and rollout. `0.4.0-dev`: foundation and source-neutral API, not claim of live Hekili/JustAC support. External adapters follow with exact Forever-compatible archives; `JustAC.zip` and `oharaaster.zip` available, **user's Hekili Forever build still needed**.
+- Documentation only; **no Lua/C# changes, no new CI build**, `0.3.0-dev` rollback remains https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
+
 ## 2026-11-19 — WarMate support archive investigation [ANALYZED / PLANNED / DOCS-ONLY]
 
 - Inspected user-supplied `warmate-support-20261119-094139.zip`, six files: system-info JSON, two days of dated structured logs, app settings, pause reasons, compatibility JSON. Specific crash 09:41:39: COMException HRESULT 0x8001010E from `WarMate.Capture.WgcFrameSource.DisposeAsync` (wrong thread), captured as fatal UI exception, then archive creation logged.
