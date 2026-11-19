@@ -1,4 +1,4 @@
--- LazyG Forever 0.2.16-dev: automatic 30-second cooldown/GCD observation.
+-- LazyG Forever 0.2.17-dev: automatic 30-second cooldown/GCD observation.
 -- Read-only research. No keypresses, spell casts, RGB changes, or decisions.
 -- State transitions are recorded at up to 20 samples/sec (50ms interval).
 LazyGCooldownWatch={}
@@ -36,6 +36,7 @@ local function observe(id,source,at,force)
     previous[source]=state
     record(string.format("CDWATCH +%.3fs %s spell=%d %s",at,source,id,state))
   end
+  return a,b
 end
 local function finish(reason)
   if not running then return end
@@ -83,9 +84,26 @@ function W.Start(id,writer)
   local function sample(t,force)
     samples=samples+1
     local elapsed=t-startedAt
-    observe(trackedId,"spell",elapsed,force)
+    local spellActive=observe(trackedId,"spell",elapsed,force)
     observe(61304,"gcd61304",elapsed,force)
-    observe(29515,"gcd29515",elapsed,force)
+    local gcd29515=observe(29515,"gcd29515",elapsed,force)
+    -- A separate, longer cooldown can be distinguished from the observed
+    -- GCD candidate ONLY when these two plain flags disagree.
+    -- Unknown is never interpreted as a false ready state.
+    local verdict="Unknown"
+    if spellActive==2 and gcd29515==1 then
+      verdict="SpellActiveWhileGcdInactive"
+    elseif spellActive==1 and gcd29515==2 then
+      verdict="GcdActiveWhileSpellInactive"
+    elseif (spellActive==1 or spellActive==2) and
+           (gcd29515==1 or gcd29515==2) then
+      verdict="SameBooleanState"
+    end
+    if force or previous["independent"]~=verdict then
+      previous["independent"]=verdict
+      record(string.format("CDWATCH +%.3fs comparison spell=%d vs gcd29515=%s [diagnostic]",
+          elapsed,trackedId,verdict))
+    end
   end
   sample(now,true)
   widgetSample(now,true)
