@@ -17,7 +17,8 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="../AddonTemplate/RgbV3Encoder.lua" LogicalName="LazyG.RgbV3Encoder.lua" />
-    <EmbeddedResource Include="../Rotations/Forever/Examples/synthetic-v2.xml" LogicalName="LazyG.ForeverXmlV2SyntheticExample" />\n    <EmbeddedResource Include="../Rotations/Forever/Examples/diagnostic-hunter.xml" LogicalName="LazyG.ForeverXmlDiagnosticExample" />
+    <EmbeddedResource Include="../Rotations/Forever/Examples/synthetic-v2.xml" LogicalName="LazyG.ForeverXmlV2SyntheticExample" />
+    <EmbeddedResource Include="../Rotations/Forever/Examples/diagnostic-hunter.xml" LogicalName="LazyG.ForeverXmlDiagnosticExample" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
     <EmbeddedResource Include="../AddonTemplate/RgbV3Thresholds.lua" LogicalName="LazyG.RgbV3Thresholds.lua" />
     <EmbeddedResource Include="../AddonTemplate/Panel.lua" LogicalName="LazyG.Panel.lua" />
