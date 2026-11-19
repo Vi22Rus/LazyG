@@ -53,6 +53,7 @@ public sealed class MainWindow : Window
     private readonly RotationPreviewSession rotationPreview=new();
     private readonly GHubDriver ghub=new();
     private readonly RotationCommandGate commandGate=new();
+    private readonly AutoBindingRegistry autoBindings=new();
     private System.Collections.Generic.IReadOnlyDictionary<int,string> activeBindings=
         new System.Collections.Generic.Dictionary<int,string>();
     private bool ghubArmed;
@@ -398,7 +399,7 @@ public sealed class MainWindow : Window
         {
             body.Children.Add(Action(rotationPreview.Running?"Stop":"Start",
                 ()=>{RequestStart(cls,spec);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
-            body.Children.Add(Text("Start connects Logitech G HUB virtual bus and sends the XML-selected ability key when RGB allows it. Configure SpellID=key under Common. Requires real WoW validation.",11,"#B7A88E"));
+            body.Children.Add(Text("Start connects Logitech G HUB; Lua automatically reads the WoW action bar bindings through RGB v3. Only a fresh exact SpellID match can send a key. In-game validation required.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
             body.Children.Add(Text("Для теста: Support → Start Hunter BM audit; Save Hunter audit JSON. Факт успешного применения заклинания текущим RGB не подтверждается.",11,"#B7A88E"));
         }
@@ -610,30 +611,12 @@ public sealed class MainWindow : Window
         view="common";
         var all=Stack(spacing:16);
         all.Children.Add(Text("Shared settings are planned per client, with independent PvE and PvP preferences.",13,"#CDB29C"));
-        var keyFile=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LazyG","bindings","forever-fkeys.json");
         var mapping=Stack(spacing:9);
-        mapping.Children.Add(Text("UNIVERSAL SPELL → KEY MAPPING (DEV)",15,"#45E5F7",FontWeight.Bold));
-        mapping.Children.Add(Text("SpellID=key, e.g. 14283=F1 or 14283=CTRL+F2. Set the same ability hotkey in WoW. Start uses the original Logitech G HUB virtual bus directly; no SendInput.",12,"#CDB29C"));
-        string initial="";
-        try {initial=RotationKeyBindings.Format(RotationKeyBindings.Load(keyFile));}
-        catch(Exception ex){RuntimeDiagnostics.Add("BINDINGS","Load rejected: "+ex.GetType().Name);}
-        var bindingInput=new TextBox {Text=initial,AcceptsReturn=true,Height=120,
-            Watermark="3044=F1",TextWrapping=TextWrapping.NoWrap};
-        mapping.Children.Add(bindingInput);
-        var bindingStatus=Text("Logitech: "+LastGhubStatus+" · Start/Stop controls input.",12,"#E5B778");
-        mapping.Children.Add(bindingStatus);
-        mapping.Children.Add(Action("Save bindings",()=>{
-            try {
-                var parsed=RotationKeyBindings.Parse(bindingInput.Text ?? "");
-                RotationKeyBindings.Save(keyFile,parsed);
-                bindingStatus.Text="Saved "+parsed.Count+" Logitech mappings. Stop/Start reloads them.";
-                RuntimeDiagnostics.Add("BINDINGS","Validated Logitech mappings saved ("+parsed.Count+")");
-            } catch(Exception ex) {
-                bindingStatus.Text="Invalid mapping: "+ex.Message;
-                RuntimeDiagnostics.Add("BINDINGS","Rejected: "+ex.GetType().Name);
-            }
-        }));
+        mapping.Children.Add(Text("AUTOMATIC WOW KEYBINDS · RGB V3",15,"#45E5F7",FontWeight.Bold));
+        mapping.Children.Add(Text("Bindings are read from the actual WoW action bars (Ctrl/Alt/Shift combinations included) and sent through the existing RGB v3 row. No manual SpellID mapping required. Logitech G HUB is the only input driver.",12,"#CDB29C"));
+        mapping.Children.Add(Text("Verified RGB bindings currently received: "+
+            autoBindings.Bindings(DateTimeOffset.UtcNow).Count+
+            ". No matching key = no input. Macros and ambiguous matches are blocked pending separate validation.",12,"#E5B778"));
         all.Children.Add(Pane(mapping));
         foreach(var group in new [] { ("RACIAL ABILITIES",new[]{"Offensive racials","Defensive racials","Racial interrupts","Racial utility"}),
                           ("CONSUMABLES",new[]{"Healing potions","Mana potions","Battle potions","Healthstone"}),
@@ -663,6 +646,9 @@ public sealed class MainWindow : Window
         rgbHealthText=Text(rgbMonitor.Summary(),12,"#72D9F3");
         b.Children.Add(rgbHealthText);
         b.Children.Add(Text("Rotation source: AwaitingTransport — source RGB/SRC not installed; no external provider confirmed.",12,"#E5B778"));
+        b.Children.Add(Text("Automatic WoW keybinds: "+
+            autoBindings.Bindings(DateTimeOffset.UtcNow).Count+
+            " currently available (RGB v3 CRC; no manual assignments).",12,"#85DDEE"));
         b.Children.Add(Text("RGB transport: v2 identity, v3 CRC, Curve, LGD, LGC; sequence/age, recovery, capture performance. Read-only.",11,"#99BCCC"));
         b.Children.Add(Text(ForeverGameStateBridge.Diagnostic(latestGameState),12,"#C5E1EF"));
         b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#99BCCC"));
@@ -877,16 +863,12 @@ public sealed class MainWindow : Window
                 Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
                 "forever-"+cls.Id+"-"+spec.Id+"-pve.json");
             var settings=RotationSettingsStore.Load(file,profile);
-            var fileBindings=Path.Combine(Environment.GetFolderPath(
-                Environment.SpecialFolder.LocalApplicationData),"LazyG","bindings",
-                "forever-fkeys.json");
-            var bindings=RotationKeyBindings.Load(fileBindings);
-            if(bindings.Count==0)throw new InvalidOperationException(
-                "Configure SpellID=key mappings in Common settings first.");
+            // Bindings arrive automatically from the Forever Lua RGB tail.
+            // Start may precede collection; without a matching key no input.
             ghub.Connect();
             try { rotationPreview.Start(profile,settings); }
             catch {ghub.Disconnect();throw;}
-            activeBindings=bindings;
+            activeBindings=new System.Collections.Generic.Dictionary<int,string>();
             commandGate.Reset();
             ghubGeneration++;
             ghubArmed=true;
@@ -970,6 +952,9 @@ public sealed class MainWindow : Window
         var internalSource=new RotationSourceSnapshot(RotationSourceId.Internal,
             RotationSourceHealth.Ready,ghubGeneration,0,frameAt,null,
             "Explicit local XML / fresh RGB");
+        // Only confirmed, CRC-decoded, fresh auto bindings can authorize
+        // Logitech HID input. Legacy user-entered mappings are not used.
+        activeBindings=autoBindings.Bindings(now);
         var cmd=commandGate.TryPlan(rec,internalSource,latestGameState,now,
             ghubArmed,GHubDriver.IsWowForeground(),activeBindings,out var reason);
         if(cmd is null)
@@ -1089,6 +1074,11 @@ public sealed class MainWindow : Window
             });
             if(finished)return;
             var connected=result.ok && result.state is not null;
+            if(connected && result.packet is not null)
+                autoBindings.Accept(result.packet,hunterCompactManifest is null?0:
+                    HunterCompactProfileWire.ExtensionCells(hunterCompactManifest),
+                    result.capturedAt);
+            else autoBindings.Reset();
             var crc=result.packet is not null;
             var curve=result.thresholds is not null;
             bool foreground=!result.detail.StartsWith("Switch to WoW",StringComparison.Ordinal) &&
@@ -1337,6 +1327,7 @@ public sealed class MainWindow : Window
                 latestGameState=GameState.Empty(DateTimeOffset.UtcNow);
                 UpdateRotationPreview(DateTimeOffset.UtcNow);
             }
+            autoBindings.Reset();
             cooldownObserver.Reset();
             rgbMonitor.Accept(new RgbSample(DateTimeOffset.UtcNow,0,false,
                 false,false,null,false,
