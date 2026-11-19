@@ -46,6 +46,8 @@ internal sealed record GameState(
 {
     // Quantized Curve resource evidence; never treat as exact rage/mana/energy.
     public Observed<HealthBand> PowerBand { get; init; } = Observed<HealthBand>.Missing();
+    // Independent LGC 29515.isActive, NOT remaining GCD time or cast permission.
+    public Observed<bool> GcdActive { get; init; } = Observed<bool>.Missing();
     // Required for target-specific aura evidence; target changes invalidate old effects.
     public Observed<int> TargetEpoch { get; init; } = Observed<int>.Missing();
 
@@ -69,7 +71,7 @@ internal sealed record GameState(
         TargetHostile=TargetHostile.At(now,maxAge),TargetAlive=TargetAlive.At(now,maxAge),
         PlayerHealthPercent=PlayerHealthPercent.At(now,maxAge),
         TargetHealthPercent=TargetHealthPercent.At(now,maxAge),
-        PowerPercent=PowerPercent.At(now,maxAge),PowerBand=PowerBand.At(now,maxAge),TargetEpoch=TargetEpoch.At(now,maxAge),
+        PowerPercent=PowerPercent.At(now,maxAge),PowerBand=PowerBand.At(now,maxAge),GcdActive=GcdActive.At(now,maxAge),TargetEpoch=TargetEpoch.At(now,maxAge),
         Moving=Moving.At(now,maxAge),
         Casting=Casting.At(now,maxAge),GcdRemainingMilliseconds=GcdRemainingMilliseconds.At(now,maxAge),
         Spells=AgeSpells(Spells,now,maxAge), Auras=AgeAuras(Auras,now,maxAge)
@@ -197,7 +199,16 @@ internal static class ConditionEvaluator
     public static Truth TargetBelow(GameState s,int percent) => s.TargetHealthPercent.Is(x=>x<percent);
     public static Truth PowerAbove(GameState s,int percent) => s.PowerPercent.Is(x=>x>=percent);
     public static Truth IsMoving(GameState s) => s.Moving.Is(x=>x);
-    public static Truth GcdReady(GameState s) => s.GcdRemainingMilliseconds.Is(x=>x<=0);
+    public static Truth GcdReady(GameState s)
+    {
+        // Explicit time and LGC boolean are separate independent observations.
+        // Active LGC overrides an older numeric estimate. No durations invented.
+        if(s.GcdActive.Quality==Knowledge.Known)
+            return s.GcdActive.Is(x=>!x);
+        if(s.GcdActive.Quality is Knowledge.Stale or Knowledge.Protected)
+            return Truth.Unknown;
+        return s.GcdRemainingMilliseconds.Is(x=>x<=0);
+    }
     // Global invariant for all hostile single-target attack and execute logic.
     // No target, corpse, missing death evidence, unknown hostility => no cast.
     public static Truth AttackTarget(GameState s) =>
