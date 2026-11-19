@@ -163,10 +163,19 @@ internal static class WowRgbBridge
             using (var g = Graphics.FromImage(bitmap))
                 g.CopyFromScreen(topLeft.X, topLeft.Y, 0, 0, new Size(width, height));
             bool v2 = RgbPanelDetector.FindPanel(bitmap, out player, out detail);
-            if(!RgbV3PanelDetector.FindPanel(bitmap, out telemetry, out v3Detail) &&
-               compactExtensionCells>0)
-                RgbV3PanelDetector.FindProfilePanel(bitmap,compactExtensionCells,
-                    out telemetry,out v3Detail);
+            if(!RgbV3PanelDetector.FindPanel(bitmap,out telemetry,out v3Detail))
+            {
+                // New 4-cell auto-binding tail on the same v3 row.
+                // Legacy layouts remain accepted for old addon installs.
+                if(!RgbV3PanelDetector.FindProfilePanel(bitmap,
+                    compactExtensionCells+4,out telemetry,out v3Detail))
+                {
+                    if(!RgbV3PanelDetector.FindProfilePanel(bitmap,4,
+                        out telemetry,out v3Detail) && compactExtensionCells>0)
+                        RgbV3PanelDetector.FindProfilePanel(bitmap,
+                            compactExtensionCells,out telemetry,out v3Detail);
+                }
+            }
             if (telemetry != null)
                 RgbV3ThresholdDetector.FindPanel(bitmap, out thresholds);
             if (readSpellProbe)
