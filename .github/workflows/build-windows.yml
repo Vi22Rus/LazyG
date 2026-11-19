@@ -35,7 +35,11 @@ jobs:
         shell: pwsh
         run: dotnet run --project LazyG/Tests/GameStateTests.csproj -c Release
 
-      - name: Verify rotation v2 schema, simulator and provider safety\n        shell: pwsh\n        run: dotnet run --project LazyG/Tests/RotationFoundationTests.csproj -c Release\n\n      - name: Verify embedded Forever spell atlas and bilingual mapping
+      - name: Verify rotation v2 schema, simulator and provider safety
+        shell: pwsh
+        run: dotnet run --project LazyG/Tests/RotationFoundationTests.csproj -c Release
+
+      - name: Verify embedded Forever spell atlas and bilingual mapping
         shell: pwsh
         run: python LazyG/Tests/test_spell_assets.py
 
