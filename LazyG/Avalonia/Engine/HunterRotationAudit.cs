@@ -73,7 +73,11 @@ internal sealed class HunterRotationAudit
     {
         var evaluation=RotationXmlV2.Evaluate(rotation,state,settings,at,rotation.Mode);
         var trace=evaluation.Trace.Select(t=>t.RuleId+":"+t.Outcome+" "+t.Reason)
-            .Take(20).ToArray();
+            .Take(20).Concat(rotation.Rules.Select(r=>{
+                var rank=HunterSpellFamilies.Find(state,r.SpellId,at);
+                return "Rank "+r.SpellId+"="+rank.Status+
+                    (rank.SelectedRank is int id?" selected="+id:"");
+            })).Take(32).ToArray();
         // A recommendation represents XML conditional assessment, not user input.
         var row=new RotationAuditRow(at,evaluation.Recommendation?.SpellId,
             evaluation.Recommendation?.RuleId,null,
