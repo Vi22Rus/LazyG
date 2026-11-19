@@ -47,6 +47,7 @@ public sealed class MainWindow : Window
     private string lastCooldownDiagnostic="";
     private readonly ForeverCooldownObserver cooldownObserver=new();
     private readonly RgbTransportMonitor rgbMonitor=new();
+    private readonly RotationSourceManager sourceManager=new();
     private TextBlock? rgbHealthText;
     private string lastRgbHealthSignature="";
     private bool fullRgbDiagnosticMode;
@@ -369,6 +370,7 @@ public sealed class MainWindow : Window
         b.Children.Add(Text("GAMESTATE v1 · verified RGB fields only · UNKNOWN does not authorize casts",12,"#85DDEE"));
         rgbHealthText=Text(rgbMonitor.Summary(),12,"#72D9F3");
         b.Children.Add(rgbHealthText);
+        b.Children.Add(Text("Rotation source: AwaitingTransport — source RGB/SRC not installed; no external provider confirmed.",12,"#E5B778"));
         b.Children.Add(Text("RGB transport: v2 identity, v3 CRC, Curve, LGD, LGC; sequence/age, recovery, capture performance. Read-only.",11,"#99BCCC"));
         b.Children.Add(Text(ForeverGameStateBridge.Diagnostic(latestGameState),12,"#C5E1EF"));
         b.Children.Add(Text("In-memory only · No screenshots, character names, keys or credentials are logged.",12,"#99BCCC"));
@@ -399,6 +401,25 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("RGBMON","Report save failed: "+ex.GetType().Name);
             }
             RefreshDiagnosticsView();
+        }));
+        actions.Children.Add(Action("Create support ZIP",()=>{
+            try
+            {
+                string folder=Path.Combine(Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
+                var source=sourceManager.Snapshot(DateTimeOffset.UtcNow);
+                var safe=new RotationSupportArchive.SafeState("0.4.0-dev",
+                    source.Confirmed?.ToString(),source.Health.ToString(),source.Reason,
+                    "forever",null,rgbMonitor.V3.Lost,rgbMonitor.V3.Frozen,0,0);
+                string file=RotationSupportArchive.Create(folder,safe,"ManualSupport");
+                RuntimeDiagnostics.Add("SUPPORT","Local support ZIP created: "+
+                    Path.GetFileName(file)+" (review before sharing; no auto upload)");
+            }
+            catch(Exception ex)
+            {
+                RuntimeDiagnostics.Add("SUPPORT","ZIP creation failed: "+ex.GetType().Name);
+            }
+            RefreshDiagnosticsView(force:true);
         }));
         actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
             fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
