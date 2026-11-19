@@ -106,6 +106,16 @@ local function Paint()
     local ok,extra=pcall(LazyGHunterCompactCollector.Build)
     if ok and type(extra)=="table" then extension=extra end
   end
+  -- Sonah-style auto bindings: exactly four versioned cells appended to
+  -- the SAME v3 row, after the optional Hunter compact profile.
+  -- Base v2, Curve and independent diagnostics remain untouched.
+  if LazyGAutoBindings then
+    local ok, bindings=pcall(LazyGAutoBindings.Build)
+    if ok and type(bindings)=="table" and #bindings==4 then
+      extension=extension or {}
+      for _,cell in ipairs(bindings)do extension[#extension+1]=cell end
+    end
+  end
   local rgb = Encoder.Encode(core, extension, "direct8")
   local count=#rgb/3
   if count>96 then return end
