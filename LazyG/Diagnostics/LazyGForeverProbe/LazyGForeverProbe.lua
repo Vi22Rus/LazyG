@@ -147,6 +147,18 @@ frame:SetScript("OnEvent",function(_,event,...)
     saved=LazyGForeverProbeDB
     if type(saved.lines)~="table" then saved.lines={} end
     saved.version=1
+    -- Persist only a user's explicit opt-in and plain SpellID across /reload.
+    -- No character data, spell names, or protected values are persisted.
+    if LazyGCooldownRgb and type(saved.lgcEnabled)=="boolean" then
+      if type(saved.lgcSpellId)=="number" then
+        LazyGCooldownRgb.SetSpellId(saved.lgcSpellId)
+      end
+      LazyGCooldownRgb.SetEnabled(saved.lgcEnabled)
+      if saved.lgcEnabled then
+        log("LGC strip RESTORED SpellID="..LazyGCooldownRgb.GetSpellId()..
+            " after addon reload [diagnostic only]")
+      end
+    end
     log("Ready. /lgprobe help (save with /reload)")
     return
   end
@@ -186,12 +198,21 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
       log("LGC cooldown RGB module missing")
     elseif arg=="off" then
       LazyGCooldownRgb.SetEnabled(false)
+      if saved then saved.lgcEnabled=false end
       log("LGC strip OFF")
     elseif arg=="on" then
       LazyGCooldownRgb.SetEnabled(true)
+      if saved then
+        saved.lgcEnabled=true
+        saved.lgcSpellId=LazyGCooldownRgb.GetSpellId()
+      end
       log("LGC strip ON SpellID="..LazyGCooldownRgb.GetSpellId())
     elseif LazyGCooldownRgb.SetSpellId(tonumber(arg)) then
       LazyGCooldownRgb.SetEnabled(true)
+      if saved then
+        saved.lgcEnabled=true
+        saved.lgcSpellId=LazyGCooldownRgb.GetSpellId()
+      end
       log("LGC strip ON SpellID="..LazyGCooldownRgb.GetSpellId()..
           " (diagnostic only; enable LGC in Windows Support)")
     else
