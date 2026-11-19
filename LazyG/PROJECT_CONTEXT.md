@@ -1,3 +1,13 @@
+## 2026-11-19 — RGB→XML архитектурная сверка и устранение ошибочного Hunter-пилота [DEV / CI CHECKING / GAME-UNTESTED]
+
+По прямому требованию пользователя сверены текущие GitHub исходники, документация, реальные записи 0.2.16–0.3.0 и присланные Hunter JSON/SavedVariables с интерфейсами референсных Lua-аддонов. Полный отчёт и дорожная карта: [RGB_INTEGRATION_AUDIT.md](RGB_INTEGRATION_AUDIT.md). **Ключевая ошибка:** LGC GCD `29515.isActive` реально передавался и менялся в игре, но `GameState.GcdRemainingMilliseconds`, на который был завязан XML `GcdReady`, оставался Unknown. Это разрыв интеграции, а не отсутствие рабочего RGB детектора. Результаты GCD подтверждают только булево активен/неактивен, не числовые остатки времени и не все условия разрешения автодействий.
+
+Из `main` **откачен преждевременный код отдельного F-key Hunter-пилота** (MainWindow/WowRgbBridge/тесты возвращены к проверенному состоянию `e224deba...`, `HunterExecutionGate.cs` удалён). Отдельный ARM и SendInput не соответствовали утверждённой архитектуре единого исполнительного слоя и всё равно не могли работать при текущих rank/target/aura Unknown. История коммитов даёт откат, предыдущий подтверждённый CI baseline: https://github.com/Vi22Rus/LazyG/actions/runs/44462581902 .
+
+Создана **неисполняющая** интеграция LGC: `GameState.GcdActive` как независимый `Observed<bool>`, прокидывание свежего `ForeverCooldownObserver.Snapshot.Gcd29515Active` в `MainWindow` при включённой диагностике, `ConditionEvaluator.GcdReady` для известных булевых наблюдений, диагностика теперь показывает отдельно `GCDms`, `GCD29515Active` и `GcdGate`. Нет выдуманного `GCD=0ms`, нет обхода secret API, нет автоматических клавиш. Добавлены offline тесты true/false/stale/protected. **Не решены:** spell-rank batch, фактическая готовность каждого spell, target epoch/ауры, SRC выбор источника, общий исполнитель, реальный игровой тест новой связки. Последняя CI для нового кода должна быть отдельно подтверждена; никакой release и повторной ручной проверки, пока не собрана полноценная цепочка.
+
+---
+
 ## 2026-11-19 — Hunter BM comparison quality VERIFIED by CI
 
 **[CI-PASSED / DEV / NOT IN-GAME TESTED]** [GitHub Actions run 44462581902](https://github.com/Vi22Rus/LazyG/actions/runs/44462581902) **SUCCESS** on code commit `e224deba735b02da78ca4d3cf56eaecfdeaaea03`. XML/GameState/Hunter audit tests, new readiness/capability gaps and LGE event-family summary regression, original RGB/Lua/Forever spell atlas tests, Windows .NET 8 single-file publish and Windows startup smoke all passed. Artifacts: `LazyG-Windows-x64` and `LazyGForeverProbe-0.4.0-dev` from this same action.
