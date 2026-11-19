@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace LazyG.Desktop.Engine;
 
-// Explicit Start/Stop for a read-only XML recommendation session.
-// Never sends keys. Every snapshot is evaluated fresh, with no replay on
-// disconnect, missing source identity, blocked conditions, or elapsed TTL.
+// XML recommendation session: evaluates current GameState only.
+// Logitech input is controlled separately by the MainWindow Start/Stop gate.
+// No recommendation survives disconnect, missing data, or elapsed TTL.
 internal sealed class RotationPreviewSession
 {
     private RotationProfileV2? profile;
@@ -24,7 +24,7 @@ internal sealed class RotationPreviewSession
         overrides=new Dictionary<string,int>(settings,StringComparer.Ordinal);
         profile=next;
         Current=null;
-        Status="AWAITING GAME DATA · READ-ONLY";
+        Status="AWAITING GAME DATA · XML ROTATION";
     }
     public void Stop(string reason="STOPPED")
     {
@@ -46,7 +46,7 @@ internal sealed class RotationPreviewSession
         Status=Current is null
             ? "WAITING · "+(evaluation.BlockReason.Length==0?
                 "NO ELIGIBLE RULE":evaluation.BlockReason)
-            : "RECOMMENDING SPELL "+Current.SpellId+" · READ-ONLY";
+            : "RECOMMENDING SPELL "+Current.SpellId+" · DEV";
         return Current;
     }
 }
