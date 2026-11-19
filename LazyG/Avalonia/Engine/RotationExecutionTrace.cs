@@ -106,7 +106,7 @@ internal sealed class RotationExecutionTrace
                 JsonSerializer.Serialize(new {schema=1,client="forever",
                     session,limitations="No input-to-cast attribution; LGE is optional and does not prove effect"})
             };
-            lines.AddRange(rows.Select(JsonSerializer.Serialize<RotationTraceEvent>));
+            lines.AddRange(rows.Select(row=>JsonSerializer.Serialize(row)));
             return string.Join("\n",lines)+"\n";
         }
     }
