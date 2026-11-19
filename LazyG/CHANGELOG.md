@@ -1,3 +1,17 @@
+## 2026-11-19 — Hunter BM Compact channel + spell overlay diagnostic FINAL CI PASS [DEV / GAME-UNTESTED]
+
+**SUCCESS:** [GitHub Actions 44488152290](https://github.com/Vi22Rus/LazyG/actions/runs/44488152290), source commit `884af6f183745ce5881376ea0a5e40838581f2e3`. All Windows C# regression tests, Lua 5.1, self-contained single-file EXE publish and startup smoke passed. Windows artifact **LazyG-Windows-x64 14511736573**; optional Forever diagnostic addon artifact **14510859710**.
+
+**User clarification:** all in-game tests were on **Hunter BM**, and the missing icon/name referred to the **spell** in overlay, not to Paladin. Therefore this failure is currently expected when XML outputs no recommendation: UI has nothing to display, and 381 recorded blocked evaluations / 0 recommendations support this. Core fix is default enabled Hunter Compact plus precise missing-field diagnostics, not displaying an invented spell icon. General overlay catalog/class correctness updates were also made, but do NOT claim a Paladin issue was reported. Fixed GCD 1.5 s remains explicitly deferred.
+
+To test: install updated Windows EXE and refresh the Forever Lua addon using Setup, /reload; Hunter Compact now defaults ON (can inspect/toggle via /lazygcompact on). Start Hunter BM PvE and export ZIP. Search events for COMPACT: BINDINGS_ONLY vs COMPACT_DECODE_OK with quality counters. Only if XML truly selects a spell should corresponding overlay name and icon appear. Driver inputs and correct casts are **not** verified by CI or in-game. For rollback use [44484987774](https://github.com/Vi22Rus/LazyG/actions/runs/44484987774).
+
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — User clarification: test is HUNTER BM, not Paladin [DEV]
 
 The user's phrase about the overlay was misheard: the missing **spell icon and spell name** were reported while testing **Hunter BM**. User explicitly confirmed they never mentioned Paladin. Main hypothesis remains: XML issues zero recommendations due to unavailable compact game states; therefore overlay correctly presents no recommended spell/icon (not necessarily an artwork defect). The separate general fix for hardcoded Hunter lookup and class selection is harmless but NOT the root-cause finding for this test and must NOT be presented as a Paladin diagnosis. Prioritize verifying Hunter Compact data availability, the XML Recommendation, and then Hunter overlay icon/name when a real recommendation exists. No fixed 1.5s GCD. No claims of successful gameplay until tested.
