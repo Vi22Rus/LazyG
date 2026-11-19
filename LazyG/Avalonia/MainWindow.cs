@@ -858,7 +858,10 @@ public sealed class MainWindow : Window
             lastPreviewStatus=status;
             lastPreviewSpell=rec?.SpellId;
         }
-        overlay?.SetReadOnlyRecommendation(true,rec?.SpellId,status);
+        // A lower-priority XML candidate is not a confirmed actionable cast
+        // while a previous mandatory debuff awaits same-target evidence.
+        overlay?.SetReadOnlyRecommendation(true,
+            debuffConfirmation.HasPending?null:rec?.SpellId,status);
         if(ghubArmed)
             QueueLogitechCommand(rec,at);
     }
@@ -955,6 +958,7 @@ public sealed class MainWindow : Window
             "modifier="+mod+" usage="+usage,attempt,rec.RuleId);
         ghubBusy=true;
         long generation=ghubGeneration;
+        var stateAtPlan=latestGameState;
         _=Task.Run(()=>{
             try
             {
@@ -966,7 +970,7 @@ public sealed class MainWindow : Window
                     ghub.TapKey(mod,usage);
                     Dispatcher.UIThread.Post(()=>{
                         if(generation!=ghubGeneration)return;
-                        if(debuffConfirmation.MarkSent(rec,latestGameState,
+                        if(debuffConfirmation.MarkSent(rec,stateAtPlan,
                             DateTimeOffset.UtcNow))
                             executionTrace.Add(DateTimeOffset.UtcNow,
                                 "DEBUFF_PENDING",rec.SpellId,
