@@ -176,27 +176,27 @@ internal static class RotationXmlV2
                         var family=(string?)c.Attribute("spellIds");
                         if((single is null)==(family is null))
                             throw new FormatException("Exactly one aura spellId/spellIds");
-                        int[] ids;
+                        int[] auraIds;
                         if(single is not null)
                         {
-                            int id=Number(c,"spellId");
-                            ids=new[]{id};
+                            int auraId=Number(c,"spellId");
+                            auraIds=new[]{auraId};
                         }
                         else
                         {
                             var parts=family!.Split(',');
                             if(parts.Length is <2 or >20 ||
                                parts.Any(x=>x.Length==0 || x.Trim()!=x ||
-                                   !int.TryParse(x,NumberStyles.None,CultureInfo.InvariantCulture,out var id) ||
-                                   id is <1 or >16777215))
+                                   !int.TryParse(x,NumberStyles.None,CultureInfo.InvariantCulture,out var parsedAuraId) ||
+                                   parsedAuraId is <1 or >16777215))
                                 throw new FormatException("Aura rank family");
-                            ids=parts.Select(x=>int.Parse(x,CultureInfo.InvariantCulture)).ToArray();
-                            if(ids.Distinct().Count()!=ids.Length)
+                            auraIds=parts.Select(x=>int.Parse(x,CultureInfo.InvariantCulture)).ToArray();
+                            if(auraIds.Distinct().Count()!=auraIds.Length)
                                 throw new FormatException("Duplicate aura rank");
                         }
-                        if(ids.Any(x=>x is <1 or >16777215))
+                        if(auraIds.Any(x=>x is <1 or >16777215))
                             throw new FormatException("Aura SpellID");
-                        conditions.Add(new(signal,"IsTrue",null,null,null,ids[0],ids));
+                        conditions.Add(new(signal,"IsTrue",null,null,null,auraIds[0],auraIds));
                         continue;
                     }
                     if(c.Attribute("spellId") is not null || c.Attribute("spellIds") is not null)
