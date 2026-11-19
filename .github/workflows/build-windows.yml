@@ -133,6 +133,9 @@ jobs:
       - name: Verify compact Hunter v3 extension shared Lua/C# fixture
         run: lua5.1 LazyG/Tests/hunter_compact_profile_test.lua
 
+      - name: Verify Hunter compact live collector fail-closed behavior (Lua mock)
+        run: lua5.1 LazyG/Tests/hunter_compact_collector_test.lua
+
       - name: Verify Forever cooldown audit behavior
         run: lua5.1 LazyG/Tests/forever_cooldown_audit_test.lua
 
