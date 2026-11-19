@@ -600,6 +600,31 @@ public sealed class MainWindow : Window
         view="common";
         var all=Stack(spacing:16);
         all.Children.Add(Text("Shared settings are planned per client, with independent PvE and PvP preferences.",13,"#CDB29C"));
+        var keyFile=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "LazyG","bindings","forever-fkeys.json");
+        var mapping=Stack(spacing:9);
+        mapping.Children.Add(Text("UNIVERSAL SPELL → KEY MAPPING (DEV)",15,"#45E5F7",FontWeight.Bold));
+        mapping.Children.Add(Text("One SpellID=F1..F12 per line, e.g. 3044=F1. Bind the same keys in WoW or a Logitech G HUB profile manually. This does NOT connect to G HUB or send keys.",12,"#CDB29C"));
+        string initial="";
+        try {initial=RotationKeyBindings.Format(RotationKeyBindings.Load(keyFile));}
+        catch(Exception ex){RuntimeDiagnostics.Add("BINDINGS","Load rejected: "+ex.GetType().Name);}
+        var bindingInput=new TextBox {Text=initial,AcceptsReturn=true,Height=120,
+            Watermark="3044=F1",TextWrapping=TextWrapping.NoWrap};
+        mapping.Children.Add(bindingInput);
+        var bindingStatus=Text("Executor not armed. No automatic input in this dev stage.",12,"#E5B778");
+        mapping.Children.Add(bindingStatus);
+        mapping.Children.Add(Action("Save bindings",()=>{
+            try {
+                var parsed=RotationKeyBindings.Parse(bindingInput.Text ?? "");
+                RotationKeyBindings.Save(keyFile,parsed);
+                bindingStatus.Text="Saved "+parsed.Count+" mappings. Commands still disabled.";
+                RuntimeDiagnostics.Add("BINDINGS","Validated mappings saved ("+parsed.Count+") · NO INPUT");
+            } catch(Exception ex) {
+                bindingStatus.Text="Invalid mapping: "+ex.Message;
+                RuntimeDiagnostics.Add("BINDINGS","Rejected: "+ex.GetType().Name);
+            }
+        }));
+        all.Children.Add(Pane(mapping));
         foreach(var group in new [] { ("RACIAL ABILITIES",new[]{"Offensive racials","Defensive racials","Racial interrupts","Racial utility"}),
                           ("CONSUMABLES",new[]{"Healing potions","Mana potions","Battle potions","Healthstone"}),
                           ("TRINKETS & ENGINEERING",new[]{"On-use trinkets","Engineering abilities"}) })
