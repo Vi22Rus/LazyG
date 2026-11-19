@@ -202,24 +202,27 @@ var beforeAudit=audit.Capture(hunter,hunterState,null,now);
 Check(beforeAudit.ExpectedSpellId==3044 &&
     beforeAudit.Verdict==RotationAuditVerdict.Unobservable,"XML expectation is not cast evidence");
 Check(audit.Observe(new(3044,now.AddMilliseconds(100),
-    RotationCastEvidence.None,7)) is null,"unverified cast attempt ignored");
+    RotationCastEvidence.None,7,true)) is null,"unverified cast attempt ignored");
+Check(audit.Observe(new(3044,now.AddMilliseconds(100),
+    RotationCastEvidence.CombatLogSuccess,7,false)) is null,
+    "cast from unverified player cannot be matched");
 Check(audit.Observe(new(14281,now.AddMilliseconds(200),
-    RotationCastEvidence.CombatLogSuccess,8)) is null,
+    RotationCastEvidence.CombatLogSuccess,8,true)) is null,
     "target-epoch mismatch cannot establish execution");
 var verified=audit.Observe(new(14281,now.AddMilliseconds(200),
-    RotationCastEvidence.CombatLogSuccess,7));
+    RotationCastEvidence.CombatLogSuccess,7,true));
 Check(verified?.Verdict==RotationAuditVerdict.Match &&
     verified.ObservedSpellId==14281,"trusted same-family cast observation matches");
 var mismatchAudit=new HunterRotationAudit();
 mismatchAudit.Capture(hunter,hunterState,null,now);
 var mismatch=mismatchAudit.Observe(new(75,now.AddMilliseconds(300),
-    RotationCastEvidence.CombatLogSuccess,7));
+    RotationCastEvidence.CombatLogSuccess,7,true));
 Check(mismatch?.Verdict==RotationAuditVerdict.Mismatch &&
     mismatch.Reason.Contains("AttributionUnproven"),"different observed cast is correlation, not LazyG fault");
 var noProofAudit=new HunterRotationAudit(2);
 noProofAudit.Capture(hunter,hunterState,null,now);
 Check(noProofAudit.Observe(new(3044,now.AddSeconds(3),
-    RotationCastEvidence.CombatLogSuccess,7)) is null,
+    RotationCastEvidence.CombatLogSuccess,7,true)) is null,
     "old expected frame cannot be matched to future cast");
 noProofAudit.Capture(hunter,hunterState,null,now.AddMilliseconds(400));
 noProofAudit.Capture(hunter,hunterState,null,now.AddMilliseconds(800));
