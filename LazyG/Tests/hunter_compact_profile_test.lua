@@ -2,10 +2,15 @@
 -- Does NOT render a new strip in the game.
 local packer=dofile("LazyG/AddonTemplate/HunterCompactProfileEncoder.lua")
 local v3=dofile("LazyG/AddonTemplate/RgbV3Encoder.lua")
+local realManifest=dofile("LazyG/AddonTemplate/HunterCompactManifest.lua")
 local function assertEquals(a,b,msg)
   if a~=b then error("compact Hunter test: "..msg..
       " expected "..tostring(b).." got "..tostring(a)) end
 end
+assert(realManifest.hash==3034231383 and #realManifest.spells==11 and
+    #realManifest.auras==2,"Hunter BM Lua manifest fingerprint and layout")
+local realCells=packer.Build(realManifest,{})
+assert(#realCells>8 and #realCells<96,"BM compact extension fits a bounded profile frame")
 local manifest={
   hash=0xA1B2C3D4,classId=3,specIndex=1,mode="PvE",
   spells={
