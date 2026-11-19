@@ -179,5 +179,5 @@ Check(RotationXmlV2.Evaluate(hunter,
     hunterState with {PowerBand=Observed<HealthBand>.Known(new HealthBand(25,29),now)},
     null,now.AddSeconds(2),"PvE").Recommendation is null,"Hunter stale state blocks");
 Reject(File.ReadAllText(Path.Combine("LazyG","Rotations","Forever","Experimental",
-    "hunter-beast-mastery-pve.xml")).Replace("step=\\"5\\"","step=\\"3\\""));
+    "hunter-beast-mastery-pve.xml")).Replace("step=" + (char)34 + "5" + (char)34, "step=" + (char)34 + "3" + (char)34));
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
