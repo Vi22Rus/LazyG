@@ -203,13 +203,13 @@ internal static class RotationXmlV2
         IReadOnlyDictionary<string,int>? overrides,DateTimeOffset now,string mode)
     {
         var traces=new List<RotationRuleTrace>();
-        if(state.Client!=profile.Client || mode!=profile.Mode ||
-            state.ClassId.Is(x=>x==profile.ClassId)!=Truth.True ||
-            state.SpecIndex.Is(x=>x==profile.SpecIndex)!=Truth.True)
-            return new(null,traces,"Profile identity or mode unknown/mismatch");
         if(now<state.CapturedAt || now-state.CapturedAt>TimeSpan.FromMilliseconds(900))
             return new(null,traces,"Snapshot expired");
         var fresh=state.Age(now,TimeSpan.FromMilliseconds(900));
+        if(state.Client!=profile.Client || mode!=profile.Mode ||
+            fresh.ClassId.Is(x=>x==profile.ClassId)!=Truth.True ||
+            fresh.SpecIndex.Is(x=>x==profile.SpecIndex)!=Truth.True)
+            return new(null,traces,"Profile identity or mode unknown/mismatch");
         if(ConditionEvaluator.AttackTarget(fresh)!=Truth.True ||
            ConditionEvaluator.GcdReady(fresh)!=Truth.True)
             return new(null,traces,"Target, transport or GCD unknown/blocked");
