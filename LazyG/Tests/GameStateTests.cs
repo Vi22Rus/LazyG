@@ -353,5 +353,54 @@ Assert(attackBase.GcdRemainingMilliseconds.Quality==Knowledge.Unknown);
 Assert(ConditionEvaluator.GcdReady(attackBase)==Truth.Unknown);
 Assert(XmlRotationDispatcher.Evaluate(parsed,attackBase,band04,now) is null);
 
+
+// Unified RGB transport diagnostic (0.3.0-dev): v2, v3, Curve,
+// optional LGD/LGC freshness, recoveries, errors and redacted report.
+// All data here is synthetic; this does not authorize game input.
+var rgbs=new RgbTransportMonitor();
+var s0=now.AddSeconds(10);
+RgbSample sample(DateTimeOffset at,byte? v3,byte? lgc,bool baseOk=true,
+    bool foreground=true,bool lgdOn=false,byte? lgd=null,bool curve=true)
+    => new(at,3.5,foreground,baseOk,v3.HasValue,v3,
+        curve,lgdOn,lgd.HasValue,lgd,true,lgc.HasValue,lgc,
+        foreground?"OK":"WindowOrCaptureUnavailable");
+rgbs.Accept(sample(s0,44,10));
+Assert(rgbs.Samples==1 && rgbs.BaseFrames==1 && rgbs.CurveFrames==1);
+Assert(rgbs.V3.Status=="Live" && rgbs.LGC.Status=="Live" &&
+       rgbs.LGD.Status=="Disabled");
+var json=rgbs.ExportJson();
+Assert(json.Contains(RgbTransportMonitor.Schema) &&
+    json.Contains("RGBv3_CRC") && json.Contains("LGC_Cooldown"));
+Assert(!json.Contains("LazyGForeverProbeDB"));
+Assert(!json.Contains("characterName"));
+rgbs.Accept(sample(s0.AddMilliseconds(500),44,10));
+Assert(rgbs.V3.Status=="Live" && rgbs.LGC.Status=="Live");
+rgbs.Accept(sample(s0.AddMilliseconds(1600),44,10));
+Assert(rgbs.V3.Status=="Stale" && rgbs.LGC.Status=="Stale");
+Assert(rgbs.V3.Frozen==1 && rgbs.LGC.Frozen==1);
+rgbs.Accept(sample(s0.AddMilliseconds(1700),45,11));
+Assert(rgbs.V3.Status=="Live" && rgbs.LGC.Status=="Live");
+Assert(rgbs.V3.Recovered==1 && rgbs.LGC.Recovered==1);
+rgbs.Accept(sample(s0.AddMilliseconds(1800),46,null));
+Assert(rgbs.LGC.Status=="Missing" && rgbs.LGC.Reason=="StripNotFoundOrInvalid");
+rgbs.Accept(sample(s0.AddMilliseconds(2000),47,12));
+Assert(rgbs.LGC.Recovered==2);
+rgbs.Accept(sample(s0.AddMilliseconds(2200),null,null,
+    baseOk:false,foreground:false,curve:false));
+Assert(rgbs.V3.Status=="Unavailable" &&
+    rgbs.LGC.Status=="Unavailable" && rgbs.CaptureStatus=="Unavailable");
+rgbs.Accept(sample(s0.AddMilliseconds(2400),48,13));
+Assert(rgbs.V3.Recovered==2 && rgbs.LGC.Recovered==3);
+Assert(rgbs.Summary().Contains("curve=OK"));
+var cleanReport=rgbs.ExportJson();
+Assert(cleanReport.Contains("MeanCaptureMilliseconds"));
+Assert(cleanReport.Contains("BaseV2Frames"));
+rgbs.Reset();
+Assert(rgbs.Samples==0 && rgbs.LGC.Recovered==0);
+Assert(rgbs.V3.Status=="NotObserved");
+// No transport health report changes action gating:
+Assert(ConditionEvaluator.GcdReady(attackBase)==Truth.Unknown);
+Assert(XmlRotationDispatcher.Evaluate(parsed,attackBase,band04,now) is null);
+
 Console.WriteLine("GameState, corpse safety, XML dispatch and preview regression: PASS");
 void Assert(bool ok){if(!ok)throw new Exception("GameState regression failed");}
