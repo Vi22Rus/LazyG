@@ -354,6 +354,26 @@ Assert(ConditionEvaluator.GcdReady(attackBase)==Truth.Unknown);
 Assert(XmlRotationDispatcher.Evaluate(parsed,attackBase,band04,now) is null);
 
 
+// New read-only bridge contract: 29515 boolean is distinct from millisecond
+// duration. It is usable for XML evaluation, NEVER sufficient to send input.
+var gcdBooleanState=attackBase with {
+    GcdActive=observed.Gcd29515Active
+};
+Assert(gcdBooleanState.GcdRemainingMilliseconds.Quality==Knowledge.Unknown);
+Assert(ConditionEvaluator.GcdReady(gcdBooleanState)==Truth.True);
+Assert(ConditionEvaluator.GcdReady(gcdBooleanState with {
+    GcdActive=Observed<bool>.Known(true,now)})==Truth.False);
+Assert(ConditionEvaluator.GcdReady(gcdBooleanState with {
+    GcdActive=Observed<bool>.Missing(Knowledge.Protected)})==Truth.Unknown);
+Assert(ConditionEvaluator.GcdReady(gcdBooleanState.Age(now.AddSeconds(2),
+    TimeSpan.FromMilliseconds(900)))==Truth.Unknown);
+Assert(ConditionEvaluator.GcdReady(attackBase with {
+    GcdActive=frozen.Gcd29515Active})==Truth.Unknown);
+Assert(ConditionEvaluator.GcdReady(attackBase with {
+    GcdActive=Observed<bool>.Missing()})==Truth.Unknown);
+Assert(ConditionEvaluator.GcdReady(ready with {
+    GcdActive=Observed<bool>.Known(true,now)})==Truth.False);
+
 // Unified RGB transport diagnostic (0.3.0-dev): v2, v3, Curve,
 // optional LGD/LGC freshness, recoveries, errors and redacted report.
 // All data here is synthetic; this does not authorize game input.
