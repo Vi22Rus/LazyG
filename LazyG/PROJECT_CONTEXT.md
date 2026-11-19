@@ -1,3 +1,16 @@
+## 2026-11-19 — Logitech virtual-bus integration FINAL CI VERIFIED [CI-PASSED / DEV / GAME-UNTESTED]
+
+**[CI SUCCESS]** [GitHub Actions #44480181452](https://github.com/Vi22Rus/LazyG/actions/runs/44480181452), source commit `b2c36bd70da64ddedc13ef7e55fa42f37955da87`. Lua 5.1 wire tests, C# GameState/rotation/gate/HID key mapping tests, win-x64 one-file EXE publish, startup smoke and paired artifacts passed. **Windows EXE artifact `LazyG-Windows-x64` ID 14508056569; separate optional probe `LazyGForeverProbe-0.4.0-dev` ID 14508256143.** A previous intermediate run failed in a unit test expecting old planner status text; fixed in the subsequent test commit and final run passed. No real Logitech virtual-bus device present in CI: **actual IOCTL delivery in installed G HUB / WoW is untested**; only end-to-end static wiring and build are confirmed. The existing RGB and Curve channels were not changed. For rollback use pre-G HUB SUCCESS [44478770227](https://github.com/Vi22Rus/LazyG/actions/runs/44478770227). User has not designated a release.
+
+**User setup for dev verification:** configure `SpellID=F1` (or `CTRL+F2`) for the **actual recommended concrete learned rank** in Common, bind the same key in WoW action bar, keep G HUB installed/running, select Hunter BM PvE, press Start and return focus to the WoW client. Start rejects missing driver/bindings. If the XML returns no recommendation (Unknown protected aura/rank/GCD/target), **no key is sent**. Stop always disarms and releases an in-flight HID key report. Never interpret a key IOCTL as confirmation the game cast a spell. No Hekili/JustAC source support until validated SRC provider channel.
+
+**Single EXE build command:**
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — Original DEV_LaZY_Forever Logitech G HUB virtual bus connected to XML Start/Stop [DEV / CI CHECK / GAME UNTESTED]
 
 **User decision:** Logitech G HUB virtual bus is the **only** input backend. Do not introduce generic alternative drivers or SendInput. Reviewed exact uploaded `DEV_LaZY_Forever.zip`: `Core/GHubDriver.cs` and `Core/GHubKeys.cs` discover `lghubvirtualbus` through Windows registry, connect with `CreateFileW`, send 8-byte keyboard HID reports via `DeviceIoControl` IOCTL `0x2A200C`, release after ~12 ms; HID mapping supports F1–F12, letters, digits, SPACE/TAB/ENTER and Ctrl/Shift/Alt/Win combinations. Logitech IOCTL is undocumented and driver compatibility is unverified outside the user's old tests.
