@@ -90,7 +90,7 @@ jobs:
       - name: Upload ready-to-install Forever diagnostic addon
         uses: actions/upload-artifact@v4
         with:
-          name: LazyGForeverProbe-0.2.17-dev
+          name: LazyGForeverProbe-0.2.18-dev
           path: release-addon/
           if-no-files-found: error
           retention-days: 30
@@ -113,6 +113,7 @@ jobs:
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownAudit.lua
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownStateProbe.lua
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownWatch.lua
+          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownRgb.lua
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/LazyGForeverProbe.lua
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/SpellDiagnosticRgb.lua
       - name: Verify Lua RGB v3 wire vectors
@@ -126,3 +127,6 @@ jobs:
 
       - name: Verify automatic 30-second cooldown observer
         run: lua5.1 LazyG/Tests/forever_cooldown_watch_test.lua
+
+      - name: Verify Forever cooldown RGB v1 wire vectors
+        run: lua5.1 LazyG/Tests/forever_cooldown_rgb_test.lua
