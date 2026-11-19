@@ -4,7 +4,9 @@ local manifest=LazyGHunterCompactManifest
 local packer=LazyGHunterCompactProfileEncoder
 if not manifest or not packer then return end
 LazyGCompactDB=LazyGCompactDB or {}
-local enabled=false
+-- Hunter BM data is required for the built-in XML engine: start enabled.
+-- /lazygcompact off remains available for diagnostic comparison.
+local enabled=true
 local targetEpoch=1
 local function plain(v)
   if type(issecretvalue)=="function" then
@@ -131,7 +133,7 @@ SlashCmdList.LAZYG_COMPACT=function(message)
     return
   end
   print("LazyG compact RGB: "..(enabled and "ON" or "OFF")..
-      " (same v3 row; no rotation input)")
+      " (same v3 row; sends observations only)")
 end
 local events=CreateFrame("Frame")
 events:RegisterEvent("PLAYER_TARGET_CHANGED")
