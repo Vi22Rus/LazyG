@@ -85,11 +85,6 @@ local hunterFamilies={
   {"AutoShot",{75}},
 }
 local function hunterRanks()
-  local qualityClass=call("UnitClassBase","player")
-  if qualityClass~="Type:string" then
-    -- UnitClassBase may be absent; do not assert a class identity from this probe.
-    log("HUNTER_RANK class validation unconfirmed: "..qualityClass)
-  end
   for _,family in ipairs(hunterFamilies) do
     for _,id in ipairs(family[2]) do
       local quality=call("IsPlayerSpell",id)
