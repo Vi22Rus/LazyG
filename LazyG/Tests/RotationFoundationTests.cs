@@ -88,4 +88,30 @@ try {
         Check(!data.Contains("Secret") && !data.Contains("Password") && !data.Contains("token"),"redaction");
     }
 } finally {if(Directory.Exists(supportDir))Directory.Delete(supportDir,true);}
+
+var paladin=RotationProfileCatalog.Load("paladin","retribution","PvP")!;
+Check(paladin.Client=="forever" && paladin.ClassId==2 && paladin.SpecIndex==3,"paladin profile isolation");
+Check(RotationProfileCatalog.Load("paladin","retribution","PvE") is null &&
+    RotationProfileCatalog.Status("mage","fire","PvP")=="Unavailable","no forged other specs");
+Check(RotationProfileCatalog.Load("warrior","arms","PvE")!.Rules[0].SpellId==12294,"Arms fixture");
+var paladinState=state with {ClassId=Observed<int>.Known(2,now),
+    SpecIndex=Observed<int>.Known(3,now),
+    Spells=new Dictionary<int,SpellState>{{853,spell}},
+    TargetHealthPercent=Observed<int>.Missing()};
+Check(RotationXmlV2.Evaluate(paladin,paladinState,null,now,"PvP").Recommendation?.SpellId==853,
+    "Hammer control not intrinsically limited by 20 percent");
+Check(RotationXmlV2.Evaluate(paladin,paladinState,
+    new Dictionary<string,int>{{"onlyLowHpHammer",1}},now,"PvP").Recommendation is null,
+    "opt-in low HP requires known signal");
+Check(RotationXmlV2.Evaluate(paladin,paladinState with {
+    TargetHealthPercent=Observed<int>.Known(18,now)},
+    new Dictionary<string,int>{{"onlyLowHpHammer",1}},now,"PvP").Recommendation?.SpellId==853,
+    "HP threshold 20 permits known 18");
+Check(RotationXmlV2.Evaluate(paladin,paladinState with {
+    TargetHealthPercent=Observed<int>.Known(40,now)},
+    new Dictionary<string,int>{{"onlyLowHpHammer",1}},now,"PvP").Recommendation is null,
+    "HP threshold prevents known 40");
+Check(RotationXmlV2.Evaluate(paladin,paladinState,
+    new Dictionary<string,int>{{"useHammerOfJustice",0}},now,"PvP").Recommendation is null,
+    "user can disable control");
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
