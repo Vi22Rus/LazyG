@@ -101,6 +101,19 @@ internal static class WowRgbBridge
         out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe,
         bool readCooldownProbe,out LazyG.Desktop.Diagnostics.CooldownRgbPacket? cooldownProbe,
         bool readCastEvent,out LazyG.Desktop.Diagnostics.ForeverCastEventPacket? castEvent)
+        => TryReadCombined(out player,out telemetry,out detail,out v3Detail,
+            out thresholds,readSpellProbe,out spellProbe,readCooldownProbe,
+            out cooldownProbe,readCastEvent,out castEvent,0);
+
+    // Optional manifest-indexed extension lives in the original v3 row.
+    // Zero preserves the byte-identical legacy RGB capture behavior.
+    public static bool TryReadCombined(out RgbPlayerState? player,
+        out RgbV3Packet? telemetry,out string detail,out string v3Detail,
+        out RgbThresholdProbe? thresholds,bool readSpellProbe,
+        out LazyG.Desktop.Diagnostics.SpellProbe? spellProbe,
+        bool readCooldownProbe,out LazyG.Desktop.Diagnostics.CooldownRgbPacket? cooldownProbe,
+        bool readCastEvent,out LazyG.Desktop.Diagnostics.ForeverCastEventPacket? castEvent,
+        int compactExtensionCells)
     {
         castEvent=null;
         cooldownProbe=null;
@@ -150,7 +163,10 @@ internal static class WowRgbBridge
             using (var g = Graphics.FromImage(bitmap))
                 g.CopyFromScreen(topLeft.X, topLeft.Y, 0, 0, new Size(width, height));
             bool v2 = RgbPanelDetector.FindPanel(bitmap, out player, out detail);
-            RgbV3PanelDetector.FindPanel(bitmap, out telemetry, out v3Detail);
+            if(!RgbV3PanelDetector.FindPanel(bitmap, out telemetry, out v3Detail) &&
+               compactExtensionCells>0)
+                RgbV3PanelDetector.FindProfilePanel(bitmap,compactExtensionCells,
+                    out telemetry,out v3Detail);
             if (telemetry != null)
                 RgbV3ThresholdDetector.FindPanel(bitmap, out thresholds);
             if (readSpellProbe)
