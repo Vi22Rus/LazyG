@@ -849,8 +849,25 @@ public sealed class MainWindow : Window
     }
     private void StopGhub(string reason)
     {
+        bool hadTrace=executionTrace.Recording;
         executionTrace.Stop(DateTimeOffset.UtcNow,reason);
         hunterAuditRecording=false;
+        if(hadTrace)
+        {
+            try
+            {
+                var dir=Path.Combine(Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
+                var file=executionTrace.ExportZip(dir,rgbMonitor.ExportJson(),
+                    RuntimeDiagnostics.Snapshot(),hunterAudit.ExportJson());
+                RuntimeDiagnostics.Add("REPORT","Automatic stop report: "+
+                    Path.GetFileName(file)+" in %LOCALAPPDATA%\\LazyG\\reports");
+            }
+            catch(Exception ex)
+            {
+                RuntimeDiagnostics.Add("REPORT","Auto-save failed: "+ex.GetType().Name);
+            }
+        }
         ghubArmed=false;
         ghubGeneration++;
         activeBindings=new System.Collections.Generic.Dictionary<int,string>();
@@ -907,6 +924,8 @@ public sealed class MainWindow : Window
         }
         lastInputGateReason="";
         long attempt=executionTrace.Attempt(now,rec.SpellId,rec.RuleId);
+        executionTrace.Add(now,"HID_BINDING",rec.SpellId,
+            "modifier="+mod+" usage="+usage,attempt,rec.RuleId);
         ghubBusy=true;
         long generation=ghubGeneration;
         _=Task.Run(()=>{
