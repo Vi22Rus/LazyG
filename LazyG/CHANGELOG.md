@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.2.18-dev LGC RGB verified two-artifact build [CI-PASSED / GAME-UNTESTED]
+
+- Exact successful run: https://github.com/Vi22Rus/LazyG/actions/runs/44439213580 , code commit `7d6c37094d9b53d8cd152924914c39cf69ebac8a`. All GitHub Actions jobs SUCCESS: Lua 5.1 syntax, RGB v3 wire vectors, Forever CD audit, state/widget, watch and new LGC cooldown RGB wire tests; Windows .NET RGB + GameState/XML regression, spell atlas, single EXE publish, 6-second Windows startup smoke and both artifact uploads.
+- Verified artifacts from that exact run: `LazyGForeverProbe-0.2.18-dev` ID `14491080661` (11,782 bytes, unexpired); `LazyG-Windows-x64` ID `14489748284` (77,720,822 bytes, unexpired).
+- User installation: replace standalone diagnostic `Interface/AddOns/LazyGForeverProbe` folder, launch new EXE, enable `LGC Cooldown RGB ON/OFF` in Support; in WoW issue `/lgprobe cdstrip 13795` once, use abilities naturally with WoW foreground, later check Support LGC diagnostics. `/lgprobe cdstrip off` disables the optional stripe.
+- Verified synthetic protocol only, **not real WoW screen capture**. The status is read-only and never makes `GcdRemainingMilliseconds` Known. Existing LGD and RGB v2/v3/Curve protocol unchanged. Rollback: successful 0.2.17-dev run https://github.com/Vi22Rus/LazyG/actions/runs/44437097191 .
+
 ## 2026-11-19 — 0.2.18-dev: LGC independent RGB cooldown/GCD diagnostic [DEV / CI IN PROGRESS / GAME-UNTESTED]
 
 - Based on two user-tested Forever SavedVariables journals (1130 and 13795), a **new opt-in diagnostic RGB channel LGC** has been implemented, independent of the existing LGD six-cell spell probe and RGB v2/v3/Curve. Do NOT infer remaining GCD milliseconds or permission to cast from plain `isActive=False`.
