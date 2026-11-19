@@ -365,6 +365,11 @@ RgbSample sample(DateTimeOffset at,byte? v3,byte? lgc,bool baseOk=true,
         curve,lgdOn,lgd.HasValue,lgd,true,lgc.HasValue,lgc,
         foreground?"OK":"WindowOrCaptureUnavailable");
 rgbs.Accept(sample(s0,44,10));
+rgbs.SetDecoded(new RgbDecodedView(
+    3,2,80,1,9,0x4c47,255,255,123,2,1,
+    "80–84%","35–39%","95–100%",
+    13795,"True","Unknown","True","False",
+    13795,"True","False","False","Unknown"));
 Assert(rgbs.Samples==1 && rgbs.BaseFrames==1 && rgbs.CurveFrames==1);
 Assert(rgbs.V3.Status=="Live" && rgbs.LGC.Status=="Live" &&
        rgbs.LGD.Status=="Disabled");
@@ -373,6 +378,11 @@ Assert(json.Contains(RgbTransportMonitor.Schema) &&
     json.Contains("RGBv3_CRC") && json.Contains("LGC_Cooldown"));
 Assert(!json.Contains("LazyGForeverProbeDB"));
 Assert(!json.Contains("characterName"));
+Assert(json.Contains("LatestDecoded") &&
+    json.Contains("CurvePlayerHealthBand") &&
+    json.Contains("LgcGcd29515Active") &&
+    json.Contains("80–84%") &&
+    json.Contains("Unknown"));
 rgbs.Accept(sample(s0.AddMilliseconds(500),44,10));
 Assert(rgbs.V3.Status=="Live" && rgbs.LGC.Status=="Live");
 rgbs.Accept(sample(s0.AddMilliseconds(1600),44,10));
