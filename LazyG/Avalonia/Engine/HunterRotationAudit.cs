@@ -64,7 +64,7 @@ internal static class HunterAuditReadiness
         if(fresh.TargetExists.Is(x=>x)!=Truth.True ||
            fresh.TargetHostile.Is(x=>x)!=Truth.True ||
            fresh.TargetAlive.Is(x=>x)!=Truth.True)gaps.Add("HostileLivingTarget");
-        if(fresh.GcdRemainingMilliseconds.Is(x=>x<=0)!=Truth.True)gaps.Add("GcdReady");
+        if(ConditionEvaluator.GcdReady(fresh)!=Truth.True)gaps.Add("GcdReady");
         if(fresh.PowerBand.Quality!=Knowledge.Known ||
             fresh.PowerBand.Value is not HealthBand band || !band.IsFivePercentCurveBand)
             gaps.Add("CurveManaBand");
