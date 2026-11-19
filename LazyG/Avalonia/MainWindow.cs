@@ -52,6 +52,8 @@ public sealed class MainWindow : Window
     private readonly HunterRotationAudit hunterAudit=new();
     private bool hunterAuditRecording;
     private DateTimeOffset lastHunterAuditSample;
+    private byte? lastCastEventSequence;
+    private int lastCastEventSpellId;
     private RotationProfileV2? hunterAuditProfile;
     private System.Collections.Generic.IReadOnlyDictionary<string,int>? hunterAuditSettings;
     private TextBlock? rgbHealthText;
@@ -590,6 +592,8 @@ public sealed class MainWindow : Window
                     hunterAuditSettings=RotationSettingsStore.Load(path,hunterAuditProfile);
                     hunterAudit.Clear();
                     lastHunterAuditSample=default;
+                    lastCastEventSequence=null;
+                    lastCastEventSpellId=0;
                     hunterAuditRecording=true;
                     RuntimeDiagnostics.Add("HUNTERAUDIT",
                         "Started XML snapshot comparison; cast success UNOBSERVABLE with current RGB; keys never sent");
@@ -614,7 +618,7 @@ public sealed class MainWindow : Window
                 "Save failed: "+ex.GetType().Name);}
             RefreshDiagnosticsView(force:true);
         }));
-        b.Children.Add(Text("Hunter BM audit is OPT-IN; compares XML rule evaluations with future verified cast events. RGB does NOT currently prove execution. Unknown is not a mismatch.",11,"#E9B26D"));
+        b.Children.Add(Text("Hunter BM: /lgprobe audit on (in WoW) enables optional LGE player spellcast event strip. Start Hunter BM audit enables Windows comparison; an event is NOT proof of hit/effect or LazyG input.",11,"#E9B26D"));
         b.Children.Add(Text(hunterAudit.Summary(),12,"#72D9F3"));
         actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
             fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
@@ -785,9 +789,10 @@ public sealed class MainWindow : Window
                 bool ok=WowRgbBridge.TryReadCombined(out var state,out var packet,
                     out var detail,out var v3,out var thresholds,
                     spellDiagnosticEnabled,out var spell,
-                    cooldownDiagnosticEnabled,out var cooldown);
+                    cooldownDiagnosticEnabled,out var cooldown,
+                    hunterAuditRecording,out var castEvent);
                 stopwatch.Stop();
-                return (ok,state,packet,detail,v3,thresholds,spell,cooldown,
+                return (ok,state,packet,detail,v3,thresholds,spell,cooldown,castEvent,
                     capturedAt:DateTimeOffset.UtcNow,
                     captureMs:stopwatch.Elapsed.TotalMilliseconds);
             });
@@ -923,6 +928,29 @@ public sealed class MainWindow : Window
                 lastHunterAuditSample=result.capturedAt;
                 if(hunterAudit.Rows.Count%20==0)
                     RuntimeDiagnostics.Add("HUNTERAUDIT",hunterAudit.Summary());
+            }
+            if(hunterAuditRecording && connected && result.castEvent is not null)
+            {
+                var cast=result.castEvent;
+                if(lastCastEventSequence is null)
+                {
+                    // Baseline a potentially old/latched event. First frame is
+                    // not evidence that the cast happened after recording began.
+                    lastCastEventSequence=cast.Sequence;
+                    lastCastEventSpellId=cast.SpellId;
+                    RuntimeDiagnostics.Add("HUNTERAUDIT","LGE event baseline established; historical event ignored");
+                }
+                else if(cast.Sequence!=lastCastEventSequence || cast.SpellId!=lastCastEventSpellId)
+                {
+                    lastCastEventSequence=cast.Sequence;
+                    lastCastEventSpellId=cast.SpellId;
+                    var correlated=hunterAudit.Observe(new RotationObservedCast(cast.SpellId,
+                        result.capturedAt,RotationCastEvidence.UnitSpellcastSucceeded,
+                        cast.TargetEpoch,cast.PlayerEvent));
+                    RuntimeDiagnostics.Add("HUNTERAUDIT",correlated is null
+                        ?"LGE player event observed but no eligible XML frame (not matched)"
+                        :"LGE player event "+cast.SpellId+" · "+correlated.Reason);
+                }
             }
             var engineDiagnostic=ForeverGameStateBridge.Diagnostic(latestGameState);
             if(engineDiagnostic!=lastGameStateDiagnostic)
