@@ -1,3 +1,9 @@
+## 2026-11-19 — experimental LGE Hunter cast-event strip (0.4.0-dev, game test pending)
+
+New **optional** `LazyGForeverProbe-0.4.0-dev` includes `CastEventRgb.lua` and manual `/lgprobe audit on|off`. When opted in, a **six-cell LGE v1** packet at UI y=87 sends a plain player `UNIT_SPELLCAST_SUCCEEDED` spell ID, changing event sequence, and local target-change counter; unknown/secret event spell IDs are ignored. The packet has checksum+complement and explicit idle baseline (seq0,id0,playerFlag0). The receiver can validate it from the **same bitmap** as all existing channels; it only scans when the Hunter audit in Windows is enabled and v2 identity exists. Repeated sequence/SpellID is not counted again; first old packet on activation is only a baseline, not a claimed new cast. No names, GUIDs, casts by other units, raw secrets or inputs are transferred. The addon does not cause combat actions.
+
+This is **a spellcast event hint, not proof that the spell hit, applied a debuff, was made by LazyG, or that the XML rotation is executing**. `HunterRotationAudit` labels it `EventOnly` and keeps `Match` reserved for future, independently verified `CombatLogSuccess` player events. Cross-target correlations are rejected when independently known target epochs disagree. The event signature (numeric third parameter) must be verified on actual user's WoW Forever build; otherwise events stay Unknown. The existing LGD/LGC and RGB v2/v3/Curve protocols and default opt-ins are unchanged. Prior `LazyGForeverProbe-0.3.0-dev` remains in earlier rollback artifacts.
+
 # LazyG Forever — unified RGB engine and diagnostic acceptance (0.3.0-dev)
 
 **Development build only; game-tested results are narrower than CI results.** This document scopes the current RGB stage. Its purpose is one comprehensive test instead of repeated tiny downloads. No claim that WoW secret values are directly readable, or that automatic XML rotations are implemented.
