@@ -1,3 +1,22 @@
+## 2026-11-19 — WarMate-style Hunter settings + exclusive shared cooldown toggles [DEV / UI + offline XML, not live gameplay]
+
+User supplied three WarMate Hunter BM screenshots: Essentials/Advanced tabs, row icon + ability name/description on left, right-aligned toggle/slider, nested child slider, search, Changed only, per-mode PvE/PvP and Reset defaults. In current `MainWindow.ShowSpec`, the XML-backed settings page uses a similar dense **warm dark/amber** row layout (rather than separate cards with checkboxes); spell icon from `ForeverSpellCatalog` when available (letter fallback), visual nested resource sliders, filtering, tier tab, Changed only, confirmation-before-reset, persisted overrides. This applies to available XML settings only: no fake Rapid Fire/Bestial Wrath/Pet configurations were added just to resemble the screenshots.
+
+**Approved additional requirement:** Any user-configurable abilities sharing the same cooldown are **mutually exclusive by preference**: enable one toggle → disable all others in that group immediately, even if on a different UI tab. The engine's `RotationSettingsExclusivity.Apply` normalizes an update transactionally; `RotationXmlV2.Resolve` rejects invalid multi-enabled configurations (including edited JSON), and `RotationSettingsStore.Save` persists the complete update. Shared cooldown is a **game-mechanic reference**; mutual exclusion is the **user's desired customization**, not a claim these abilities could never be used together at different times.
+
+Verified from user-provided `Sonah.zip/Sonah/Classes/Hunter.lua`:
+- `sharedCd="arcane"`: `Arcane Shot` (`3044`) and **`Summon Hawk` / «Призыв ястреба»** (`1293241`).
+- `sharedCd="shot"`: `Aimed Shot` (`19434`) and **`Multi-Shot`** (`2643`).
+- `sharedCd="trap"`: `Immolation Trap` (`13795`), `Explosive Trap` (`13813`), `Freezing Trap` (`1499`), `Frost Trap` (`13809`).
+- **Volley** (`1510`) is a different AoE ability from Multi-Shot, and has no `sharedCd="shot"` in this reference. Do not conflate them.
+- Reference data is **not** direct gameplay proof for the user's current Forever build.
+
+The Hunter experimental XML retains existing `useHuntersMark`, `useSerpentSting`, `useArcaneShot`, `useAutoShot`, `serpentManaMin`, `arcaneManaMin` (25/30% default, 5%-steps) and adds seven optional, default-OFF switches: `useSummonHawk`, `useAimedShot`, `useMultiShot`, `useImmolationTrap`, `useExplosiveTrap`, `useFreezingTrap`, `useFrostTrap`. Each toggle has a matching **offline-only** XML rule to prevent phantom controls; these spells lack verified live full readiness/auras/ranks, so not permitted for automatic input. Settings schema now optionally accepts `descriptionRu`, `descriptionEn`, `iconSpellId`, `exclusiveGroup`, `parent`; validates group bool type, conflicts in defaults, valid parent. `serpentManaMin` and `arcaneManaMin` are visual children of the appropriate toggles (currently Essentials tab), usable only via safe 5% Curve bands. Python/WoW file formats are unchanged; no added RGB strips.
+
+**CI:** tests cover the three exclusivity groups, automatic reverse switching, invalid dual-enabled configurations, unchanged defaults, manifest extension, metadata parsing and prior XML behavior. Status [CI-PASSED] only when Actions win-x64 publish completes; [GAME-TESTED] not yet. Current XML has 11 offline rules, not a complete live rotation. UI screenshot/interaction still needs user confirmation after a successful dev Windows build.
+
+---
+
 # LazyG Forever — полноценные ротации охотника: реализация по этапам
 **Дата:** 2026-11-19. **Статус:** DEV / архитектура + первый кодовый этап manifest; **не объявлять боевым релизом**. **Цель:** полноценные BM/MM/Survival в PvE/PvP на WoW Forever, начиная с Hunter BM PvE уровня 30. **Основной принцип:** общий Windows EXE, профильно-зависимое наполнение **ОДНОГО** компактного RGB-пакета, отдельный секретный Curve UI-сегмент. Никаких полосок на каждую способность.
 
