@@ -53,6 +53,8 @@ public sealed class MainWindow : Window
     private readonly RotationPreviewSession rotationPreview=new();
     private readonly GHubDriver ghub=new();
     private readonly RotationCommandGate commandGate=new();
+    private readonly DebuffConfirmationGate debuffConfirmation=new();
+    private DebuffConfirmationState lastDebuffState=DebuffConfirmationState.Idle;
     private readonly RotationExecutionTrace executionTrace=new();
     private readonly AutoBindingRegistry autoBindings=new();
     private System.Collections.Generic.IReadOnlyDictionary<int,string> activeBindings=
@@ -783,6 +785,8 @@ public sealed class MainWindow : Window
             catch {ghub.Disconnect();throw;}
             activeBindings=new System.Collections.Generic.Dictionary<int,string>();
             commandGate.Reset();
+            debuffConfirmation.Reset();
+            lastDebuffState=DebuffConfirmationState.Idle;
             ghubGeneration++;
             ghubArmed=true;
             LastGhubStatus="CONNECTED / RUNNING";
@@ -834,7 +838,17 @@ public sealed class MainWindow : Window
             return;
         }
         var rec=rotationPreview.Update(latestGameState,at);
+        var debuffStatus=debuffConfirmation.Observe(latestGameState,at);
+        if(debuffStatus.State!=lastDebuffState)
+        {
+            executionTrace.Add(at,"DEBUFF_VERIFICATION",debuffStatus.PendingSpellId,
+                debuffStatus.State+": "+debuffStatus.Detail);
+            RuntimeDiagnostics.Add("DEBUFF",debuffStatus.State+": "+debuffStatus.Detail);
+            lastDebuffState=debuffStatus.State;
+        }
         string status=rotationPreview.Status;
+        if(debuffConfirmation.HasPending)
+            status+=" · "+debuffStatus.Detail;
         if(status!=lastPreviewStatus || rec?.SpellId!=lastPreviewSpell)
         {
             RuntimeDiagnostics.Add("ROTATION",status);
@@ -873,6 +887,8 @@ public sealed class MainWindow : Window
         ghubGeneration++;
         activeBindings=new System.Collections.Generic.Dictionary<int,string>();
         commandGate.Reset();
+        debuffConfirmation.Reset();
+        lastDebuffState=DebuffConfirmationState.Idle;
         LastGhubStatus=reason;
         // The 12-ms report already in flight always releases its key.
         // No new report may start after generation invalidation.
@@ -883,6 +899,16 @@ public sealed class MainWindow : Window
     {
         if(!ghubArmed || ghubBusy || rec is null)return;
         var now=DateTimeOffset.UtcNow;
+        if(!debuffConfirmation.MaySend(rec,latestGameState,now,out var debuffReason))
+        {
+            if(debuffReason!=lastInputGateReason)
+            {
+                executionTrace.Add(now,"INPUT_BLOCKED",rec.SpellId,
+                    debuffReason,null,rec.RuleId);
+                lastInputGateReason=debuffReason;
+            }
+            return;
+        }
         // SRC has not shipped: explicitly running embedded Internal XML may
         // use only the locally verified internal path + freshly decoded RGB.
         // A failed/confirmed external provider never qualifies for fallback.
@@ -938,6 +964,15 @@ public sealed class MainWindow : Window
                    ghubArmed && ghub.Connected)
                 {
                     ghub.TapKey(mod,usage);
+                    Dispatcher.UIThread.Post(()=>{
+                        if(generation!=ghubGeneration)return;
+                        if(debuffConfirmation.MarkSent(rec,latestGameState,
+                            DateTimeOffset.UtcNow))
+                            executionTrace.Add(DateTimeOffset.UtcNow,
+                                "DEBUFF_PENDING",rec.SpellId,
+                                "HID completed; waiting for observed target aura",attempt,
+                                rec.RuleId);
+                    });
                     executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
                         attempt,true,"DeviceIoControl press/release returned; WoW action not proven");
                 }
