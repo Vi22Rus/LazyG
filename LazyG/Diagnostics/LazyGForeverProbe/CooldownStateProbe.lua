@@ -39,31 +39,49 @@ function LazyGCooldownStateProbe.Gcd()
   local active=info(61304)
   return active
 end
-local scratch
+-- Never hide the ancestor when testing widget visibility. Instead maintain
+-- an SHOWN, fully transparent parent for each independent SpellID, preventing
+-- a hidden-parent false negative and cross-spell widget state interference.
+-- IsShown remains experimental: visibility is not cooldown authorization.
+local widgets={}
+local function obtain(id)
+  if widgets[id] then return widgets[id] end
+  if type(CreateFrame)~="function" or not UIParent then return nil end
+  local ok,holder=pcall(CreateFrame,"Frame",nil,UIParent)
+  if not ok or not holder then return nil end
+  local prepared=pcall(function()
+    holder:SetSize(1,1)
+    holder:SetPoint("TOPLEFT",UIParent,"TOPLEFT",0,0)
+    holder:SetAlpha(0)
+    holder:Show()
+  end)
+  if not prepared then return nil end
+  local created,widget=pcall(CreateFrame,"Cooldown",nil,holder,"CooldownFrameTemplate")
+  if not created or not widget then return nil end
+  local sized=pcall(function()
+    widget:SetAllPoints(holder)
+    widget:Show()
+  end)
+  if not sized then return nil end
+  widgets[id]=widget
+  return widget
+end
 function LazyGCooldownStateProbe.WidgetExperiment(id,ignoreGcd)
   if not validId(id) or not C_Spell or
      type(C_Spell.GetSpellCooldownDuration)~="function" then return "ApiMissing" end
   local ok,duration=pcall(C_Spell.GetSpellCooldownDuration,id,ignoreGcd==true)
   if not ok then return "ProtectedOrError" end
-  -- Never compare a potentially-secret duration object outside pcall.
-  -- It is passed into the native widget without extracting its fields.
+  -- A secret duration is only passed through; no field is read.
   local nilOk,isNil=pcall(function() return duration==nil end)
-  if nilOk and isNil then return "Unknown" end
-  if not scratch then
-    if type(CreateFrame)~="function" or not UIParent then return "WidgetMissing" end
-    local created,holder=pcall(CreateFrame,"Frame",nil,UIParent)
-    if not created or not holder then return "WidgetMissing" end
-    holder:Hide()
-    local okFrame,widget=pcall(CreateFrame,"Cooldown",nil,holder,"CooldownFrameTemplate")
-    if not okFrame or not widget then return "WidgetMissing" end
-    scratch=widget
-  end
-  if type(scratch.SetCooldownFromDurationObject)~="function" or
-     type(scratch.IsShown)~="function" then return "WidgetMissing" end
-  local applied=pcall(scratch.SetCooldownFromDurationObject,scratch,duration)
+  if not nilOk then return "ProtectedOrError" end
+  if isNil then return "Unknown" end
+  local widget=obtain(id)
+  if not widget then return "WidgetMissing" end
+  if type(widget.SetCooldownFromDurationObject)~="function" or
+     type(widget.IsShown)~="function" then return "WidgetMissing" end
+  local applied=pcall(widget.SetCooldownFromDurationObject,widget,duration)
   if not applied then return "WidgetError" end
-  local observed,shown=pcall(scratch.IsShown,scratch)
-  pcall(function() scratch:SetCooldown(0,0) end)
+  local observed,shown=pcall(widget.IsShown,widget)
   if not observed or type(shown)~="boolean" then return "WidgetUnknown" end
   return shown and "Shown" or "Hidden"
 end
