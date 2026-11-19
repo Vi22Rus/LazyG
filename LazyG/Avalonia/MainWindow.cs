@@ -382,6 +382,24 @@ public sealed class MainWindow : Window
             if(clipboard is not null)
                 await clipboard.SetTextAsync(rgbMonitor.ExportJson());
         }));
+        actions.Children.Add(Action("Save RGB report",()=>{
+            try
+            {
+                string folder=Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "LazyG","diagnostics");
+                Directory.CreateDirectory(folder);
+                string filename="RGB-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+".json";
+                File.WriteAllText(Path.Combine(folder,filename),rgbMonitor.ExportJson());
+                RuntimeDiagnostics.Add("RGBMON",
+                    "Saved private report to %LOCALAPPDATA%\\LazyG\\diagnostics\\"+filename);
+            }
+            catch(Exception ex)
+            {
+                RuntimeDiagnostics.Add("RGBMON","Report save failed: "+ex.GetType().Name);
+            }
+            RefreshDiagnosticsView();
+        }));
         actions.Children.Add(Action("Full RGB diagnostics ON/OFF",()=>{
             fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
             spellDiagnosticEnabled=fullRgbDiagnosticMode;
