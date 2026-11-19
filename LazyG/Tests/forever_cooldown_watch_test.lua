@@ -33,13 +33,13 @@ assert(not watch.IsRunning())
 local started,reason=watch.Start(1130,save)
 assert(started and reason=="Started" and watch.IsRunning())
 assert(linesContaining("CDWATCH START")==1)
-assert(linesContaining("gcd29515")==1)
+assert(linesContaining("gcd29515 spell=29515")==1)
 assert(linesContaining("widget61304")==1)
 for i=1,10 do
   clock=clock+0.05
   script()
 end
-assert(linesContaining("gcd29515")==1) -- unchanged states not repeated
+assert(linesContaining("gcd29515 spell=29515")==1) -- unchanged states not repeated
 phase=1
 clock=clock+0.1;script()
 assert(linesContaining("gcd61304")==2)
