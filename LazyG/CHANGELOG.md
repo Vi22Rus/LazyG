@@ -23,6 +23,15 @@
 
 ---
 
+## 2026-11-19 — 0.2.20-dev LGC recovery after addon reload [DEV / CI PENDING / GAME-UNTESTED]
+
+- Based on actual 0.2.19-dev WoW Forever user logs: LGC showed `STALE` and then `unavailable`, while base v3/Curve eventually returned, but no live LGC reacquisition was recorded. Logs also contained `Ready` events after addon reload. **Potential contributor (not proven sole cause):** existing `CooldownRgb.lua` started disabled every addon reload, and enabling via `/lgprobe cdstrip ID` was not saved.
+- Fixed optional addon explicit opt-in persistence: `LazyGForeverProbe.lua` writes only `lgcEnabled` and `lgcSpellId` into its existing SavedVariables, restores the previously enabled LGC strip at `ADDON_LOADED`, and logs `LGC strip RESTORED ...`. Explicit `cdstrip off` persists OFF, and default without prior opt-in remains OFF. Does NOT save character identifiers, secret values or combat state.
+- Windows `ForeverCooldownObserver` now tracks `LastLossReason` (FrozenLgcSequence, BaseRgbIdentityLost, LgcPacketMissing, CaptureClockReversed, SameSequenceConflict) and `Recoveries` for transitions to new verified read-only packets after a loss. Existing strict 1200ms frozen-frame, Unknown/Protected and XML no-cast safety boundaries preserved. Support diagnostic app version 0.2.20-dev; optional diagnostic addon version 0.2.20-dev.
+- Added Lua 5.1 mock test `Tests/forever_cooldown_rgb_reload_test.lua` and CI step for explicit ON/OFF/default/SpellID across simulated reloads. Extended .NET GameState tests to validate lost/recovery counts and reasons. Changed README and artifact name `LazyGForeverProbe-0.2.20-dev`.
+- **Not yet user-tested in game**; this is an evidence-based correction and more informative diagnostics, not guaranteed recovery. Future test: opt-in once, `/reload`, verify `LGC strip RESTORED` in SavedVariables, then record Windows Support after switch/reconnect. No numeric durations, GameState action authorization, XML dispatch or RGB v2/v3/Curve wire changes.
+- Rollback: successful 0.2.19-dev https://github.com/Vi22Rus/LazyG/actions/runs/44440949347 .
+
 ## 2026-11-19 — 0.2.19-dev LGC freshness real WoW Forever verification [USER-TESTED / PARTIAL / DOCS-ONLY]
 
 - User provided live 0.2.19-dev Windows Support transcript (`Pasted text.txt`, 149 lines) and WoW SavedVariables `LazyGForeverProbe.lua` confirming `LGC strip ON SpellID=13795`. Raw private logs not committed to GitHub.
