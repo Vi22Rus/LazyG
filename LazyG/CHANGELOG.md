@@ -1,3 +1,12 @@
+## 2026-11-19 — 0.4.0-dev foundation (IN PROGRESS; NO USER TEST)
+
+- Added `Avalonia/Engine/RotationFoundation.cs`: independent, strict `RotationXmlV2` with client/class/spec/mode identity, validated int/bool settings, real setting-to-rule references, typed percent comparisons, bounded XML and prohibited DTD; diagnostic-only evaluation, tri-state signal safety and per-rule trace. Legacy `XmlRotationDispatcher` v1 is unchanged.
+- Added `RotationSourceManager` and immutable `RotationRecommendation` contract. SRC/REC RGB decoder, Lua minimap, Hekili and JustAC live adapters are **NOT implemented**. No automatic Internal fallback. Invalid/stale external packets remove actionable recommendations. The manager is not wired into live input.
+- Added embedded `Rotations/Forever/Examples/synthetic-v2.xml` (offline synthetic Hunter example, not a game-ready rotation), plus `RotationFoundationTests` and a CI step. The foundation is compiled into the Avalonia EXE but is not connected to keyboard execution or a new settings UI.
+- RGB v2/v3/Curve/LGD/LGC, existing diagnostics and existing key handling **unchanged**. No claim of production XML rotations, all classes/specs, user-facing settings, simulator UI, crash ZIP or provider integration.
+- Baseline rollback: 0.3.0-dev run https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 . Current CI run after YAML repair: https://github.com/Vi22Rus/LazyG/actions/runs/44454306603 ; outcome must be checked independently.
+- Next work: finish source confirmation protocol + settings persistence/UI, safe crash ZIP, and full integration/regression tests as a single dev acceptance package. **Not a release.**
+
 # LazyG — CHANGELOG
 
 Журнал истории разработки текущего репозитория `Vi22Rus/LazyG` (ветка `main`).
