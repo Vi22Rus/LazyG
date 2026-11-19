@@ -539,7 +539,7 @@ public sealed class MainWindow : Window
         var atlasIcon=spell is null?null:ForeverSpellCatalog.Icon(spell);
         Control visual=atlasIcon is null
             ? Text(string.IsNullOrEmpty(fallback)?"?":fallback[..1],size/2,"#F9B72E",FontWeight.Bold)
-            : new Image {Source=atlasIcon,Stretch=Stretch.UniformToFill,
+            : new Avalonia.Controls.Image {Source=atlasIcon,Stretch=Stretch.UniformToFill,
                 Width=size-2,Height=size-2};
         return new Border {Width=size,Height=size,Child=visual,
             CornerRadius=new CornerRadius(5),ClipToBounds=true,
