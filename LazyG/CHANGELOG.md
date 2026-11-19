@@ -23,6 +23,17 @@
 
 ---
 
+## 2026-11-19 — 0.3.0-dev unified RGB subsystem and one-shot diagnostics [DEV / CI VALIDATION / GAME-UNTESTED]
+
+- User explicitly requested **one comprehensive RGB batch + one integrated WoW test**, not repeated incremental 65-kbit downloads and one-line test cycles. This dev version consolidates previously user-tested Forever RGB v2, v3 direct8+CRC, 5% Curve bands, optional LGD (spell) and LGC (CD/GCD), preserves wire compatibility and isolated WoW 3.3.5 profiles.
+- New `Avalonia/Diagnostics/RgbTransportMonitor.cs`: per-channel v3/LGD/LGC state machine (`Live/Missing/Unavailable/Disabled/Stale`), sequence-based 1.5s freshness, frame/missing/freeze/loss/recovery counters, v2/Curve availability, capture timings, and sanitized JSON report with latest safe decoded v2/v3/Curve/LGD/LGC observations. Never writes GameState GCD/CD milliseconds, cast permissions, user names, raw pixels or screenshots.
+- Support now provides **Full RGB diagnostics ON/OFF** (one Windows button for LGD and LGC receive), summary of all channels, **Copy RGB report** and **Save RGB report** to `%LOCALAPPDATA%\\LazyG\\diagnostics\\RGB-*.json`. Keeps `Copy all` for events. The v3 `PROBE` event log no longer repeats one event for each frame counter; health and transitions remain in summary/counters. Support title/footer version `0.3.0-dev`.
+- Existing WoW addon `/lgprobe diag <SpellID|on|off>` now enables/disables LGD+LGC together and remembers selection across `/reload`; individual legacy `/lgprobe rgb [ID|on|off]` and `/lgprobe cdstrip [ID|on|off]` still work. LGD is now selectable (not fixed 1130), uses observed Forever GCD candidate 29515 instead of consistently Unknown 61304, but remains **diagnostic-only** and doesn't authorize gameplay. Both opt-in states and numeric selected IDs persist across addon reload. Standalone probe metadata/artifact `0.3.0-dev`.
+- `RgbV3PanelDetector` now locates either 24-cell direct8 or 43-cell stepped4 physical v3 packets, with existing strict CRC and profile checks unchanged. **Stepped4 has only synthetic pixel-level and codec validation, not live-game validation.**
+- Expanded CI: .NET GameState/XML + transport monitor failure/recovery/stale/JSON tests, v3 direct8/stepped4 **rendered bitmap detector** tests and Curve band fixtures; Lua 5.1 tests for selectable LGD flags, unified opt-in and reload, LGC and cooldown observers; Windows single-file publish and startup smoke.
+- New `LazyG/RGB_ENGINE.md` documents channel matrix, wire and trust policy, capability gaps, performance, full JSON report, **single integrated user acceptance plan**, and boundaries. XML editor and full rotation engine **not** included in this RGB batch; next separate stage after user acceptance. No new game test has been run on this build yet.
+- Previous CI SUCCESS 0.2.20-dev for rollback: https://github.com/Vi22Rus/LazyG/actions/runs/44442661847 . Candidate comprehensive build to verify: https://github.com/Vi22Rus/LazyG/actions/runs/44445632827 .
+
 ## 2026-11-19 — 0.2.20-dev verified recovery diagnostics [CI-PASSED / GAME-UNTESTED]
 
 - Confirmed SUCCESS https://github.com/Vi22Rus/LazyG/actions/runs/44442661847 on code commit `137fa74262b1dca4f1aa66b6e98029c7c8d033cd`. Both GitHub Actions jobs completed successfully: Lua 5.1 syntax, existing RGB v3/cooldown mock tests, **new Lua 5.1 LGC ON/OFF/SpellID reload persistence test**; .NET 8 RGB/GameState/XML including recovery counters, Forever atlas, single Windows EXE publish, Windows startup smoke, and both artifact uploads.
