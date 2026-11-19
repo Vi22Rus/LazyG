@@ -49,6 +49,7 @@ Check(!sources.CanUseInternal(now),"external disables internal");
 Check(sources.ExternalRecommendation(now.AddMilliseconds(5))?.SpellId==1130,"external suggestion");
 Check(!sources.Accept(RotationSourceId.Hekili,true,true,2,1,1130,now.AddMilliseconds(6)),"duplicate rejected");
 Check(sources.ExternalRecommendation(now.AddMilliseconds(6)) is null,"duplicate clears recommendation");
+Check(!sources.Accept(RotationSourceId.Hekili,true,true,2,1,1130,now.AddMilliseconds(6)),"duplicate after disconnect still rejected");
 Check(sources.Accept(RotationSourceId.JustAC,true,true,3,1,null,now.AddMilliseconds(7)),"no-recommendation status accepted");
 Check(sources.ExternalRecommendation(now.AddMilliseconds(7)) is null,"no old recommendation");
 Check(sources.Snapshot(now.AddSeconds(2)).Health==RotationSourceHealth.Stale,"freshness");
