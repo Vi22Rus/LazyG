@@ -122,9 +122,9 @@ internal sealed class SetupDialog : Window
             Directory.CreateDirectory(target);
             try
             {
-                var toc=$"## Interface: 16001\n## Title: {name}\n## Notes: LazyG Forever RGB adapter\n## Version: 0.2.3-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nHunterCompactManifest.lua\nHunterCompactProfileEncoder.lua\nHunterCompactCollector.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n";
+                var toc=$"## Interface: 16001\n## Title: {name}\n## Notes: LazyG Forever RGB adapter\n## Version: 0.2.3-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nHunterCompactManifest.lua\nHunterCompactProfileEncoder.lua\nHunterCompactCollector.lua\nAutoBindings.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n";
                 File.WriteAllText(Path.Combine(target,name+".toc"),toc,new UTF8Encoding(false));
-                foreach(var f in new[]{"HunterProfile.lua","Panel.lua","RgbV3Encoder.lua","HunterCompactManifest.lua","HunterCompactProfileEncoder.lua","HunterCompactCollector.lua","RgbV3Panel.lua","RgbV3Thresholds.lua"})
+                foreach(var f in new[]{"HunterProfile.lua","Panel.lua","RgbV3Encoder.lua","HunterCompactManifest.lua","HunterCompactProfileEncoder.lua","HunterCompactCollector.lua","AutoBindings.lua","RgbV3Panel.lua","RgbV3Thresholds.lua"})
                 {
                     using var src=typeof(SetupDialog).Assembly.GetManifestResourceStream("LazyG."+f)
                         ?? throw new FileNotFoundException("Embedded addon missing: "+f);
