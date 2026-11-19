@@ -1,3 +1,9 @@
+## 2026-11-19 — Hunter BM read-only Start/Stop + live XML overlay: FINAL CI VERIFIED
+
+**[CI-PASSED / DEV / NOT USER-GAME-TESTED / NO INPUT]** [GitHub Actions run 44476309376](https://github.com/Vi22Rus/LazyG/actions/runs/44476309376) **SUCCESS** for application code `ed75a80a74d1a3e666ed9fee8afac66f02d661d1`; Lua 5.1 tests and full .NET RGB/GameState/XML/preview regression, Windows single-file publish, startup smoke PASSED. Same-run artifacts: `LazyG-Windows-x64` ID **14506103680**, `LazyGForeverProbe-0.4.0-dev` ID **14507080471** (standalone diagnostic addon, NOT the bundled Forever main adapter). This stage ONLY enables explicit read-only Start/Stop + actual XML recommendation icons, with fail-closed clearing on stale/unknown/Stop. The XML Hunter BM is still experimental/incomplete and may show **NO RECOMMENDATION** until verified Forever aura/spell signals exist. No Logitech G Hub or key input implemented. Full details: [HUNTER_START_OVERLAY_INTEGRATION.md](HUNTER_START_OVERLAY_INTEGRATION.md). Rollback to pre-stage [44474263087](https://github.com/Vi22Rus/LazyG/actions/runs/44474263087). No release confirmation.
+
+---
+
 # LazyG — Hunter BM Start/Stop and Overlay wiring (read-only, 2026-11-19)
 **Status:** DEV, code integrated, CI final verification pending. User has approved the first of two stages: **connect the existing Start/Stop button and live spell-icon overlay to Hunter BM XML recommendations, without sending any key presses**. Logitech G Hub / universal input executor belongs to the second stage and is **NOT implemented**. Never label a recommendation or UI demonstration as a real cast.
 
