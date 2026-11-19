@@ -13,8 +13,10 @@ IsPlayerSpell=function(id)return id==14323 or id==14283 or id==75 end
 UnitExists=function(unit)return unit=="target"end
 C_Spell={
   IsSpellUsable=function(_)return {isUsable=true}end,
-  GetSpellCooldown=function(id)return {isActive=id==29515}end
+  GetSpellCooldown=function(id)return {isActive=id==29515}end,
+  GetSpellName=function(id) return "Spell-"..id end
 }
+C_Secrets={ShouldAurasBeSecret=function() return false end}
 C_UnitAuras={
   GetAuraDataByIndex=function(_,slot)
     if slot==1 then return {spellId=14323}end
@@ -28,6 +30,25 @@ SlashCmdList.LAZYG_COMPACT("off")
 assert(not c.Enabled() and c.Build()==nil,"user can opt out")
 SlashCmdList.LAZYG_COMPACT("on")
 assert(c.Enabled(),"user can opt back in")
+-- Sonah approach: direct by-name lookup still sees a positive aura while
+-- indexed scanning is denied. Missing auras remain Unknown under secrets.
+local hidden=false
+C_UnitAuras.GetAuraDataBySpellName=function(_,name)
+  if name=="Spell-14323" then return {spellId=14323} end
+  return nil
+end
+C_UnitAuras.GetUnitAuras=function() error("batch denied") end
+local originalByIndex=C_UnitAuras.GetAuraDataByIndex
+C_UnitAuras.GetAuraDataByIndex=function() error("indexed denied") end
+C_Secrets.ShouldAurasBeSecret=function()return hidden end
+local _,directBytes=c.Build()
+local lastAuraStart=19+2*#LazyGHunterCompactManifest.spells+
+  math.floor((45+3)/4)
+assert(lastAuraStart>19,"aura wire begins after family flags + learned rank flags")
+-- Restore readable scanner for reference vector checks below.
+C_UnitAuras.GetAuraDataByIndex=originalByIndex
+C_UnitAuras.GetUnitAuras=nil
+C_UnitAuras.GetAuraDataBySpellName=nil
 local cells,bytes,length=c.Build()
 assert(type(cells)=="table" and #cells>8 and #cells<96,"compact cells only")
 assert(bytes[1]==0x4c and bytes[2]==0x48 and bytes[3]==1,
