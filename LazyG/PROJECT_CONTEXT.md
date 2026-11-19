@@ -1,3 +1,20 @@
+## 2026-11-19 — Hunter Compact RGB-to-GameState diagnosis + Paladin overlay correction [DEV / GAME-UNTESTED]
+
+**User-requested recovery after diagnostic ZIP `LazyG-Diagnostic-20261119-081419-187.zip`:** 360 validated base RGB v2 frames, 359 v3 CRC frames, 359 Curve samples, up to 27 auto-bindings; 381 Hunter XML audit snapshots, 0 XML recommendations, 0 HID attempts. Report does NOT reveal whether the full Hunter Compact gameplay payload was present; earlier UI conflated CRC-valid binding-only v3 frames with full combat telemetry. Optional LGD/LGC were OFF. Do not blame Logitech for the zero recommendations. Some in-game abilities were used manually; never attribute independent cast events to LazyG.
+
+**Implemented:** `HunterCompactCollector.lua` now **defaults ON** for experimental Hunter BM PvE; manual `/lazygcompact off` and `/lazygcompact on` still work, no fixed GCD value. This sends real observations via the same existing v3 row, not a new strip. `HunterCompactProfileWire.Explain` diagnoses `NO_V3_FRAME`, `BINDINGS_ONLY`, `CORE_ONLY`, unexpected profile cell count, manifest/layout mismatch, or decoded quality counts (`rankFlags`, `usableFlags`, `auraFlags`, `gcd`, `epoch`). `MainWindow` records every transition as a `COMPACT` diagnostic event and structured trace; Unknown remains Unknown, no weakening of XML's safety gates. Lua 5.1 collector mock changed to verify default enabled and opt-out; C# regression ensures a binding-only valid CRC frame is never misreported as compact gameplay state. **Important:** reinstall Lua addon via Setup and /reload to activate this change; old Lua may still transmit only binds.
+
+**Overlay Paladin report:** `OverlayWindow.SetReadOnlyRecommendation` incorrectly looked up ALL live SpellIDs through `ForeverSpellCatalog.Find("hunter",id)`; now uses selected class and applies Hunter rank fallback only for Hunter. Open overlay updates its class when `MainWindow.ShowSpec` changes selection; removed misleading Hunter demo fallback for other classes; no fake recommendation or icon when there is no verified XML recommendation. **Paladin is NOT an active live XML execution profile yet** (the current runtime `RotationPreviewSession.Start` accepts only Hunter BM PvE); paladin icons/names render only for actually available preview/catalog entries, not an invented live spell. Existing visible strings referring to read-only/no keys or removed Support audit buttons were corrected.
+
+**Safety:** No 1.5-second GCD assumption or default timer was added. The collector remains subject to real WoW Forever Lua API availability/protection. The new run is a diagnostic improvement and activation fix, not proof that Hunter XML has enough observed signals to cast. Preserve previous successful dev [44484987774](https://github.com/Vi22Rus/LazyG/actions/runs/44484987774) for rollback.
+
+**CI:** pending final GitHub Actions confirmation. PowerShell win-x64 single EXE:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — Support diagnostic log + XML-to-Logitech-to-WoW comparison FINAL CI VERIFIED [DEV / GAME-UNTESTED]
 
 **[CI SUCCESS]** [GitHub Actions 44484987774](https://github.com/Vi22Rus/LazyG/actions/runs/44484987774), code commit `ded2e2fdba6e7a26b6f3a768470cd20ef8b9930d`. C# GameState, RGB v3, full RotationFoundationTests including new structured trace regression, self-contained win-x64 single EXE publish and startup smoke all succeeded; Lua 5.1 wire/diagnostics regressions succeeded. Windows **LazyG-Windows-x64** artifact ID **14510181797**; diagnostic Lua **LazyGForeverProbe-0.4.0-dev** ID **14509707495**. Tests prove compilation and static logic, not an actual driver or in-game effect. Earlier intermediate runs failed compiling new logging/test code; final code run passed.
