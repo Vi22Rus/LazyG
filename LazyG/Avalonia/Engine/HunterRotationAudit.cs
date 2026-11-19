@@ -12,7 +12,7 @@ internal static class HunterSpellFamilies
     private static readonly IReadOnlyDictionary<int,int[]> Families=new Dictionary<int,int[]> {
         [1130]=new[] {1130,14323,14324,14325}, // Hunter's Mark
         [1978]=new[] {1978,13549,13550,13551,13552,13553,13554,13555,25295}, // Serpent Sting
-        [3044]=new[] {3044,14281,14282,14283,14284,14285,14286}, // Arcane Shot; higher variants need game verification
+        [3044]=new[] {3044,14281,14282,14283,14284,14285,14286,14287}, // Arcane Shot; higher variants need game verification
         [75]=new[] {75} // Auto Shot
     };
     public static int[] Ranks(int baseSpellId) =>
