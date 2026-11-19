@@ -411,6 +411,8 @@ public sealed class MainWindow : Window
             pane.Children.Add(Text("Signals: "+
                 (referencedSignals.Length==0?"spell/GCD/target proof":string.Join(", ",referencedSignals))+
                 " · Live readiness unverified (Unknown blocks).",11,"#B7A88E"));
+            if(referencedSignals.Contains("PowerPercent"))
+                pane.Children.Add(Text("Forever Curve: только интервалы 0–4%, 5–9%, 10–14%…95–100%; порог с шагом 5%. Не точная мана или ярость.",11,"#B7A88E"));
             int current=overrides.TryGetValue(setting.Id,out var saved)?saved:setting.Default;
             void SaveSetting(int newValue)
             {
