@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: LazyG Forever API Probe
 ## Notes: Manual diagnostic, separate from RGB and rotations
-## Version: 0.2.18-dev
+## Version: 0.2.20-dev
 ## SavedVariables: LazyGForeverProbeDB
 CooldownStateProbe.lua
 CooldownWatch.lua
