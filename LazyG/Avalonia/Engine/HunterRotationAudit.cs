@@ -51,6 +51,46 @@ internal sealed record RotationAuditRow(DateTimeOffset At,int? ExpectedSpellId,
     string? ExpectedRule, int? ObservedSpellId,RotationAuditVerdict Verdict,
     string Reason,string[] Conditions,int? TargetEpoch=null);
 
+internal static class HunterAuditReadiness
+{
+    // Fully separate diagnostic matrix: no Known value is inferred from missing fields.
+    public static string[] Missing(GameState state,DateTimeOffset now)
+    {
+        var fresh=state.Age(now,TimeSpan.FromMilliseconds(900));
+        var gaps=new List<string>();
+        if(fresh.Transport!=Knowledge.Known)gaps.Add("RgbTransport");
+        if(fresh.ClassId.Is(x=>x==3)!=Truth.True)gaps.Add("HunterIdentity");
+        if(fresh.SpecIndex.Is(x=>x==1)!=Truth.True)gaps.Add("BeastMasteryIdentity");
+        if(fresh.TargetExists.Is(x=>x)!=Truth.True ||
+           fresh.TargetHostile.Is(x=>x)!=Truth.True ||
+           fresh.TargetAlive.Is(x=>x)!=Truth.True)gaps.Add("HostileLivingTarget");
+        if(fresh.GcdRemainingMilliseconds.Is(x=>x<=0)!=Truth.True)gaps.Add("GcdReady");
+        if(fresh.PowerBand.Quality!=Knowledge.Known ||
+            fresh.PowerBand.Value is not HealthBand band || !band.IsFivePercentCurveBand)
+            gaps.Add("CurveManaBand");
+        foreach(var baseSpell in new[] {1130,1978,3044,75})
+        {
+            if(ConditionEvaluator.SpellReady(fresh,baseSpell)!=Truth.True)
+                gaps.Add("SpellReady:"+baseSpell);
+            if(HunterSpellFamilies.Find(fresh,baseSpell,now).SelectedRank is null)
+                gaps.Add("VerifiedRank:"+baseSpell);
+        }
+        if(fresh.TargetEpoch.Quality!=Knowledge.Known)
+            gaps.Add("TargetEpoch");
+        foreach(var baseSpell in new[] {1130,1978})
+        {
+            var family=HunterSpellFamilies.Ranks(baseSpell);
+            if(fresh.TargetEpoch.Quality!=Knowledge.Known ||
+               fresh.TargetEpoch.Value is not int epoch ||
+               !family.All(id=>fresh.Auras.TryGetValue(
+                    new AuraKey("target-epoch-"+epoch,id,true),out var aura) &&
+                    aura.Present.Quality==Knowledge.Known))
+                gaps.Add("TargetDebuffRanks:"+baseSpell);
+        }
+        return gaps.ToArray();
+    }
+}
+
 internal sealed class HunterRotationAudit
 {
     private readonly List<RotationAuditRow> rows=new();
@@ -63,6 +103,7 @@ internal sealed class HunterRotationAudit
     private int duplicateEvents;
     private int eventSameFamily;
     private int eventDifferentFamily;
+    private string[] latestMissing=Array.Empty<string>();
     public HunterRotationAudit(int capacity=1500,TimeSpan? matchWindow=null)
     {
         if(capacity is <1 or >2000)throw new ArgumentOutOfRangeException(nameof(capacity));
@@ -74,6 +115,7 @@ internal sealed class HunterRotationAudit
     {
         rows.Clear();lastCapture=default;profile=null;overrides=null;
         orphanEvents=duplicateEvents=eventSameFamily=eventDifferentFamily=0;
+        latestMissing=Array.Empty<string>();
     }
     public void RecordUncorrelatedEvent()=>orphanEvents++;
     public void RecordDuplicateEvent()=>duplicateEvents++;
@@ -82,6 +124,7 @@ internal sealed class HunterRotationAudit
         IReadOnlyDictionary<string,int>? settings,DateTimeOffset at)
     {
         var evaluation=RotationXmlV2.Evaluate(rotation,state,settings,at,rotation.Mode);
+        latestMissing=HunterAuditReadiness.Missing(state,at);
         var trace=evaluation.Trace.Select(t=>t.RuleId+":"+t.Outcome+" "+t.Reason)
             .Take(20).Concat(rotation.Rules.Select(r=>{
                 var rank=HunterSpellFamilies.Find(state,r.SpellId,at);
@@ -168,6 +211,7 @@ internal sealed class HunterRotationAudit
         return JsonSerializer.Serialize(new {
             schema=1,client="forever",spec="hunter-beast-mastery",mode="PvE",
             note="Diagnostic only; absence of cast evidence is not an execution failure. No automatic input.",
+            missingCapabilities=latestMissing,
             eventSummary=new {
                 SameRuleFamily=eventSameFamily,
                 DifferentOrBlocked=eventDifferentFamily,
@@ -190,6 +234,6 @@ internal sealed class HunterRotationAudit
             " (effect unverified; same family="+eventSameFamily+
             ", different/blocked="+eventDifferentFamily+") | unmatched="+orphanEvents+
             " | duplicate="+duplicateEvents+" | rule blocked="+blocked+
-            " | cast unobservable="+unverified;
+            " | cast unobservable="+unverified+" | missing signals="+latestMissing.Length;
     }
 }
