@@ -23,6 +23,13 @@
 
 ---
 
+## 2026-11-19 — 0.4.0-dev rotation-settings architecture accepted [PLANNED / DOCS-ONLY]
+
+- User explicitly clarified after reviewing WarMate Arms Essentials/Advanced screenshot: LazyG contains its **own** packaged XML rotations, without dependence on external Aster-style addons; user does **not** need a visual XML rule editor.
+- Crucial rule: **every meaningful tunable value already used by any specialization rotation rule must be exposed as a typed setting**. E.g., HP/resource thresholds, effects' remaining time, AoE target count, delay/burst reserve, boolean enable. Settings must drive the evaluated condition directly; avoid dead UI toggles and duplicated hard-coded constants. Default, units, range, step, Essentials/Advanced, PvE/PvP, RU/EN labels, descriptions, validation and usages defined centrally.
+- New permanent handoff document `LazyG/ROTATION_SETTINGS_PLAN.md`: design of schema-driven spec settings UI, XML v2 parser, profile registry, offline evaluator, diagnostics/trace, persistence/rollback, tests/CI, single acceptance build, safety gating, game-version separation and current verified baseline.
+- No code or binaries changed. Baseline `0.3.0-dev` CI SUCCESS https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 . `0.4.0-dev` is only planned, no game or CI claims. Firefox archive-detection investigation deferred per user.
+
 ## 2026-11-19 — 0.3.0-dev integrated user game capture and Firefox security warning [USER-TESTED / PARTIAL / SECURITY REVIEW OPEN / DOCS-ONLY]
 
 - User supplied real Forever SavedVariables and 150-line Windows Support log for consolidated 0.3.0-dev. Addon recorded `RGB DIAGNOSTICS ON SpellID=13795` with saved `lgdEnabled=true,lgcEnabled=true,lgdSpellId=13795,lgcSpellId=13795`. **No `LGD/LGC strip RESTORED` event is present; actual persisted reload restoration is NOT proved by these two files.** No raw user data committed.
