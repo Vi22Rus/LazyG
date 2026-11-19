@@ -52,6 +52,13 @@ public sealed class MainWindow : Window
     private readonly HunterRotationAudit hunterAudit=new();
     private TextBlock? hunterAuditSummaryText;
     private bool hunterAuditRecording;
+    private bool hunterExecutionArmed;
+    private readonly System.Collections.Generic.Dictionary<int,int> hunterExecutionKeys=new();
+    private DateTimeOffset hunterLastKeyAt;
+    private int? hunterLastAutoShotEpoch;
+    private int hunterKeyAttempts;
+    private int hunterKeySubmitted;
+
     private DateTimeOffset lastHunterAuditSample;
     private byte? lastCastEventSequence;
     private int lastCastEventSpellId;
@@ -619,6 +626,63 @@ public sealed class MainWindow : Window
                 "Save failed: "+ex.GetType().Name);}
             RefreshDiagnosticsView(force:true);
         }));
+        b.Children.Add(Text("HUNTER BM DEV · Experimental F-key execution (not yet game-tested)",13,"#E9B26D",FontWeight.Bold));
+        b.Children.Add(Text("Map only F1..F12 keys that you bound to the matching spell ranks in WoW. No defaults. Disabled until explicit ARM. Does not bypass Unknown GCD, target, debuffs or ranks. DISARM before typing/chatting.",11,"#E9B26D"));
+        var keyInputs=new System.Collections.Generic.Dictionary<int,TextBox>();
+        var keyRow=Stack(Orientation.Horizontal,9);
+        foreach(var pair in new[] {(1130,"Mark"),(1978,"Sting"),(3044,"Arcane"),(75,"Auto")})
+        {
+            keyRow.Children.Add(Text(pair.Item2,12,"#AACCDD"));
+            var keyInput=new TextBox {
+                Width=64,Watermark="F1-F12",
+                Text=hunterExecutionKeys.TryGetValue(pair.Item1,out int previous) ?
+                    "F"+(previous-0x70+1) : ""
+            };
+            keyInputs[pair.Item1]=keyInput;
+            keyRow.Children.Add(keyInput);
+        }
+        b.Children.Add(keyRow);
+        actions.Children.Add(Action(hunterExecutionArmed?"DISARM Hunter keys":"ARM Hunter F-keys",()=>{
+            if(hunterExecutionArmed)
+            {
+                hunterExecutionArmed=false;
+                RuntimeDiagnostics.Add("HUNTEREXEC","Manually DISARMED");
+            }
+            else
+            {
+                var chosen=new System.Collections.Generic.Dictionary<int,int>();
+                bool valid=true;
+                foreach(var id in new[] {1130,1978,3044,75})
+                {
+                    string value=(keyInputs[id].Text??"").Trim().ToUpperInvariant();
+                    if(value.Length<2 || value[0]!='F' ||
+                       !int.TryParse(value.Substring(1),out int number) ||
+                       number is <1 or >12){valid=false;break;}
+                    chosen[id]=0x6F+number;
+                }
+                if(!valid || chosen.Values.Distinct().Count()!=4)
+                    RuntimeDiagnostics.Add("HUNTEREXEC","NOT ARMED: four distinct F1..F12 bindings required");
+                else
+                {
+                    hunterExecutionKeys.Clear();
+                    foreach(var item in chosen)hunterExecutionKeys[item.Key]=item.Value;
+                    hunterLastKeyAt=default;
+                    hunterLastAutoShotEpoch=null;
+                    hunterKeyAttempts=hunterKeySubmitted=0;
+                    hunterExecutionArmed=true;
+                    RuntimeDiagnostics.Add("HUNTEREXEC","ARMED: strict evidence-only Hunter BM pilot. No keys on Unknown values.");
+                }
+            }
+            ShowSupport();
+        }));
+        actions.Children.Add(Action("Emergency DISARM",()=>{
+            hunterExecutionArmed=false;
+            RuntimeDiagnostics.Add("HUNTEREXEC","Emergency DISARM");
+            ShowSupport();
+        }));
+        b.Children.Add(Text("Execution attempt/submitted: "+hunterKeyAttempts+"/"+hunterKeySubmitted+
+            " · "+(hunterExecutionArmed?"ARMED":"DISARMED")+
+            ". Key submission is not proof of spell execution.",11,"#B7A88E"));
         b.Children.Add(Text("Hunter BM: /lgprobe audit on (in WoW) enables optional LGE player spellcast event strip. Start Hunter BM audit enables Windows comparison; an event is NOT proof of hit/effect or LazyG input.",11,"#E9B26D"));
         hunterAuditSummaryText=Text(hunterAudit.Summary(),12,"#72D9F3");
         b.Children.Add(hunterAuditSummaryText);
@@ -917,6 +981,53 @@ public sealed class MainWindow : Window
                 {
                     RuntimeDiagnostics.Add("XML",preview);
                     lastXmlPreview=preview;
+                }
+            }
+            // Opt-in dev pilot, entirely separate from read-only Hunter audit.
+            // Foreground is rechecked natively by the sender, and UNKNOWN
+            // input predicates never become True.
+            if(hunterExecutionArmed && !connected)
+            {
+                hunterExecutionArmed=false;
+                RuntimeDiagnostics.Add("HUNTEREXEC","Auto DISARM: RGB identity unavailable");
+            }
+            if(hunterExecutionArmed && connected &&
+               (hunterLastKeyAt==default ||
+                result.capturedAt-hunterLastKeyAt>=TimeSpan.FromMilliseconds(1700)))
+            {
+                try
+                {
+                    var executeProfile=hunterAuditProfile ??
+                        RotationProfileCatalog.Load("hunter","beast-mastery","PvE");
+                    var plan=HunterExecutionGate.Decide(executeProfile,latestGameState,
+                        hunterAuditSettings,hunterExecutionKeys,true,foreground,
+                        result.capturedAt);
+                    if(plan is not null)
+                    {
+                        int epoch=latestGameState.TargetEpoch.Value??-1;
+                        // Auto Shot is a toggle; never send it twice for the
+                        // same target epoch from this pilot.
+                        if(plan.BaseSpellId!=75 || hunterLastAutoShotEpoch!=epoch)
+                        {
+                            hunterKeyAttempts++;
+                            bool sent=WowRgbBridge.TrySendBoundFKey(plan.VirtualKey);
+                            hunterLastKeyAt=result.capturedAt;
+                            if(sent)
+                            {
+                                hunterKeySubmitted++;
+                                if(plan.BaseSpellId==75)hunterLastAutoShotEpoch=epoch;
+                            }
+                            RuntimeDiagnostics.Add("HUNTEREXEC",
+                                "F-key "+(plan.VirtualKey-0x6F)+" base="+plan.BaseSpellId+
+                                " learned="+plan.LearnedSpellId+" submitted="+sent+
+                                "; game effect unverified");
+                        }
+                    }
+                }
+                catch(Exception ex)
+                {
+                    hunterExecutionArmed=false;
+                    RuntimeDiagnostics.Add("HUNTEREXEC","DISARM after exception: "+ex.GetType().Name);
                 }
             }
             if(hunterAuditRecording && hunterAuditProfile is not null &&
