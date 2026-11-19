@@ -332,6 +332,58 @@ var hunterState=state with {
 };
 // Universal command planning is explicitly disarmed until a verified SRC
 // transport and a separately approved input driver exist.
+// CRC v3 auto-bind extension: decode native HID, no user-entered mapping.
+RgbV3Packet AutoFrame(byte generation,byte index,byte count,int id,
+    byte modifier,byte usage,byte frame=1,int hunterCells=0)
+{
+    int extension=hunterCells+AutoBindingCodec.Cells;
+    var rgb=new byte[(23+extension+1)*3];
+    int offset=(23+hunterCells)*3;
+    rgb[offset]=76;rgb[offset+1]=66;rgb[offset+2]=1;
+    rgb[offset+3]=generation;rgb[offset+4]=index;rgb[offset+5]=count;
+    rgb[offset+6]=(byte)(id>>16);rgb[offset+7]=(byte)(id>>8);
+    rgb[offset+8]=(byte)id;rgb[offset+9]=modifier;rgb[offset+10]=usage;
+    return new RgbV3Packet(rgb,0,frame,0x4c47,0,extension);
+}
+var autoRegistry=new AutoBindingRegistry();
+Check(GHubKeys.TryParse("HID:3:4",out var autoMod,out var autoUsage) &&
+    autoMod==3 && autoUsage==4,"auto key uses real HID Ctrl+Shift+A");
+Check(!GHubKeys.TryParse("HID:16:4",out _,out _) &&
+    !GHubKeys.TryParse("HID:1:0",out _,out _),"bad HID payload blocked");
+var autoPacket=AutoFrame(1,1,2,3044,3,4);
+Check(AutoBindingCodec.TryDecode(autoPacket,0,out var autoDecoded) &&
+    autoDecoded?.SpellId==3044 && autoDecoded.Modifiers==3,
+    "spell and modifier extracted from versioned RGB tail");
+Check(autoRegistry.Accept(autoPacket,0,now) &&
+    autoRegistry.Bindings(now)[3044]=="HID:3:4",
+    "automatic binding is collected without manual file");
+Check(autoRegistry.Accept(AutoFrame(1,2,2,75,0,58,2),0,
+    now.AddMilliseconds(300)) &&
+    autoRegistry.Bindings(now.AddMilliseconds(300)).Count==2,
+    "multiple abilities accumulate through successive v3 frames");
+Check(!autoRegistry.Accept(AutoFrame(1,2,2,75,0,58,2),0,
+    now.AddMilliseconds(400)),"replayed frame ignored");
+Check(autoRegistry.Accept(AutoFrame(2,1,1,75,2,58,3),0,
+    now.AddMilliseconds(500)) &&
+    !autoRegistry.Bindings(now.AddMilliseconds(500)).ContainsKey(3044) &&
+    autoRegistry.Bindings(now.AddMilliseconds(500))[75]=="HID:2:58",
+    "mapping generation replacement clears old spell binds");
+Check(autoRegistry.Bindings(now.AddSeconds(47)).Count==0,
+    "stale binding table cannot cause keypresses");
+autoRegistry.Reset();
+Check(autoRegistry.Accept(AutoFrame(1,1,1,3044,0,4,1,19),
+    19,now),"Hunter compact and auto bindings coexist");
+Check(!AutoBindingCodec.TryDecode(AutoFrame(1,1,1,3044,16,4),0,out _),
+    "invalid modifier bits rejected");
+Check(!AutoBindingCodec.TryDecode(AutoFrame(1,1,1,3044,0,0),0,out _),
+    "missing HID code rejected");
+autoRegistry.Reset();
+Check(!autoRegistry.Accept(AutoFrame(0,1,1,3044,0,4),0,now) &&
+    autoRegistry.Bindings(now).Count==0,"malformed RGB resets bindings");
+// Legacy no-extension packets cannot be mistaken for trusted binding data.
+Check(!autoRegistry.Accept(new RgbV3Packet(new byte[24*3],0,1,0x4c47,0,0),
+    0,now) && autoRegistry.Bindings(now).Count==0,
+    "old v3 remains valid but never authorizes key mapping");
 var bindings=RotationKeyBindings.Parse("3044=F1\n75=F2");
 Check(bindings[3044]=="F1" && RotationKeyBindings.Parse(
     RotationKeyBindings.Format(bindings)).Count==2,"binding roundtrip");
