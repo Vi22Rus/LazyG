@@ -233,24 +233,34 @@ internal static class RotationXmlV2
         var values=Resolve(profile,overrides);
         foreach(var rule in profile.Rules)
         {
+            var details=new List<string>();
             Truth result=rule.EnabledBy is null?Truth.True:
                 values[rule.EnabledBy]==1?Truth.True:Truth.False;
+            if(rule.EnabledBy is not null)
+                details.Add(rule.EnabledBy+"="+values[rule.EnabledBy]);
             foreach(var c in rule.Conditions)
             {
                 if(c.WhenEnabled is not null && values[c.WhenEnabled]==0)
-                    continue; // opt-in constraint does not block ordinary use
+                {
+                    details.Add(c.WhenEnabled+"=0 (conditional limit skipped)");
+                    continue;
+                }
                 int threshold=c.SettingRef is null?c.Constant!.Value:values[c.SettingRef];
                 var observed=c.Signal switch {
                     "PlayerHealthPercent"=>fresh.PlayerHealthPercent,
                     "TargetHealthPercent"=>fresh.TargetHealthPercent,
                     _=>fresh.PowerPercent
                 };
-                result=TruthLogic.And(result,observed.Is(v=>c.Compare=="Below"?v<threshold:v>=threshold));
+                var answer=observed.Is(v=>c.Compare=="Below"?v<threshold:v>=threshold);
+                result=TruthLogic.And(result,answer);
+                details.Add(c.Signal+" "+c.Compare+" "+(c.SettingRef??"literal")+
+                    "="+threshold+" ("+observed.Quality+" => "+answer+")");
             }
-            result=TruthLogic.And(result,ConditionEvaluator.SpellReady(fresh,rule.SpellId));
+            var readiness=ConditionEvaluator.SpellReady(fresh,rule.SpellId);
+            result=TruthLogic.And(result,readiness);
+            details.Add("SpellReady="+readiness);
             traces.Add(new(rule.Id,rule.SpellId,result,
-                result==Truth.True?"Eligible (diagnostic only)":result==Truth.Unknown?
-                    "Required signal is Unknown/Protected/Stale":"Condition false or spell unavailable"));
+                string.Join("; ",details)+"; outcome="+result+"; diagnostic only"));
             if(result==Truth.True)
                 return new(new(RotationSourceId.Internal,rule.SpellId,rule.Priority,rule.Id,now),traces,"");
         }
