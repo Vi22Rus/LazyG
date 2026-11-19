@@ -1,3 +1,7 @@
+### Additional 0.4.0-dev foundation code and verification
+
+`RotationSettingsStore.cs` saves a validated per-client/class/spec/mode override dictionary atomically with a backup on replacement, supporting reset without modifying embedded XML. `RotationSupportArchive.cs` writes a local allowlisted ZIP with safe health/state summaries and no screenshots, raw pixels, logs or free-text secrets. This ZIP writer is **not** hooked to automatic fatal handling or Support UI; stop/disarm integration is still required. Both modules have offline regression tests in `RotationFoundationTests.cs`. Source confirmation RGB and production settings UI are outstanding. New CI after fixing XML project formatting: https://github.com/Vi22Rus/LazyG/actions/runs/44454711919 . Existing rollback remains run 44445922892.
+
 ## Current 0.4.0-dev foundation checkpoint — 2026-11-19
 
 **Status: implementation in progress, CI not yet confirmed at documentation update; game test not performed.** The approved `ROTATION_SETTINGS_PLAN.md`, `ROTATION_SOURCES_PLAN.md` and `CRASH_REPORT_PLAN.md` remain the controlling specifications. This checkpoint is a partial code milestone, **not** the finished 0.4.0-dev acceptance build.
