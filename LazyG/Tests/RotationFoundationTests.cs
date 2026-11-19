@@ -233,4 +233,27 @@ Check(noProofAudit.ExportJson().Contains("NoVerifiedCastEvent") &&
     !noProofAudit.ExportJson().Contains("target-epoch-7"),"export is safe, no identity keys");
 Console.WriteLine("Hunter rank and rotation audit regression: PASS");
 
+
+// LGE optional cast-event transport: strict schema, checksum and event-only verdict.
+byte[] lge={0x4c,0x47,0x45,1,5,0,0x0b,0xe4,0,7,1,0,0,0,0,0xa5,0,0};
+int lgeSum=0;
+for(int n=0;n<16;n++)lgeSum=(lgeSum+lge[n])&255;
+lge[16]=(byte)lgeSum;lge[17]=(byte)(255-lgeSum);
+Check(LazyG.Desktop.Diagnostics.ForeverCastEventCodec.TryDecode(lge,out var castEvent) &&
+    castEvent?.SpellId==3044 && castEvent.TargetEpoch==7,
+    "LGE valid player-cast event");
+var corrupted=(byte[])lge.Clone();corrupted[7]^=1;
+Check(!LazyG.Desktop.Diagnostics.ForeverCastEventCodec.TryDecode(corrupted,out _),
+    "LGE CRC rejects corrupted bytes");
+var spoof=(byte[])lge.Clone();spoof[10]=0;
+Check(!LazyG.Desktop.Diagnostics.ForeverCastEventCodec.TryDecode(spoof,out _),
+    "LGE non-player event blocked");
+var auditEvent=new HunterRotationAudit();
+auditEvent.Capture(hunter,hunterState,null,now);
+var eventOnly=auditEvent.Observe(new(3044,now.AddMilliseconds(150),
+    RotationCastEvidence.UnitSpellcastSucceeded,7,true));
+Check(eventOnly?.Verdict==RotationAuditVerdict.EventOnly &&
+    eventOnly.Reason.Contains("EffectUnverified"),
+    "UNIT_SPELLCAST_SUCCEEDED must never prove hit or effect");
+
 Console.WriteLine("Rotation foundation v2 offline regression: PASS");
