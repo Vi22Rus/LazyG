@@ -203,6 +203,38 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     end
   elseif cmd=="spell" then spell(tonumber(arg))
   elseif cmd=="target" then target()
+  elseif cmd=="diag" then
+    if not LazyGCooldownRgb or not LazyGSpellDiagnostic then
+      log("RGB diagnostic strips missing")
+    elseif arg=="on" or arg=="off" then
+      local on=arg=="on"
+      LazyGCooldownRgb.SetEnabled(on)
+      LazyGSpellDiagnostic.SetEnabled(on)
+      if saved then
+        saved.lgcEnabled=on
+        saved.lgdEnabled=on
+        saved.lgcSpellId=LazyGCooldownRgb.GetSpellId()
+        saved.lgdSpellId=LazyGSpellDiagnostic.GetSpellId()
+      end
+      log("RGB DIAGNOSTICS "..(on and "ON" or "OFF")..
+          " LGC="..LazyGCooldownRgb.GetSpellId()..
+          " LGD="..LazyGSpellDiagnostic.GetSpellId()..
+          " [no rotations]")
+    else
+      local id=tonumber(arg)
+      if id and LazyGCooldownRgb.SetSpellId(id) and
+          LazyGSpellDiagnostic.SetSpellId(id) then
+        LazyGCooldownRgb.SetEnabled(true)
+        LazyGSpellDiagnostic.SetEnabled(true)
+        if saved then
+          saved.lgcEnabled=true; saved.lgdEnabled=true
+          saved.lgcSpellId=id; saved.lgdSpellId=id
+        end
+        log("RGB DIAGNOSTICS ON SpellID="..id.." [no rotations]")
+      else
+        log("Usage /lgprobe diag <SpellID|on|off>")
+      end
+    end
   elseif cmd=="cdstrip" then
     if not LazyGCooldownRgb then
       log("LGC cooldown RGB module missing")
@@ -318,6 +350,6 @@ SlashCmdList.LAZYGFOREVERPROBE=function(message)
     if saved then saved.lines={} end
     log("Cleared")
   else
-    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | cdstrip [ID|on|off] | target | aura [player|target] | rgb [ID|on|off] | events on/off | show | clear")
+    log("Commands: /lgprobe api | spell <ID> | cooldown [ID] | cdcompare [ID] | cdwatch [ID|status|stop] | cdstrip [ID|on|off] | diag [ID|on|off] | target | aura [player|target] | rgb [ID|on|off] | events on/off | show | clear")
   end
 end
