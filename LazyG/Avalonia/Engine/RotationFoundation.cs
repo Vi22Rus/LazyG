@@ -74,7 +74,9 @@ internal sealed class RotationSourceManager
 
 internal enum RotationSettingType { Boolean, Integer }
 internal sealed record RotationSetting(string Id, RotationSettingType Type, string Unit, int Default,
-    int Min, int Max, int Step, string Tier, string Group, string LabelRu, string LabelEn);
+    int Min, int Max, int Step, string Tier, string Group, string LabelRu, string LabelEn,
+    string DescriptionRu="", string DescriptionEn="", int IconSpellId=0,
+    string? ExclusiveGroup=null, string? Parent=null);
 internal sealed record RotationCondition(string Signal, string Compare, string? SettingRef, int? Constant, string? WhenEnabled, int? AuraSpellId = null, IReadOnlyList<int>? AuraRanks = null);
 internal sealed record RotationRuleV2(string Id, int Priority, int SpellId,
     string? EnabledBy, IReadOnlyList<RotationCondition> Conditions);
@@ -123,7 +125,8 @@ internal static class RotationXmlV2
             foreach(var el in children[0].Elements())
             {
                 if(el.Name!="Setting" || el.HasElements)throw new FormatException("Setting element");
-                Attributes(el,"id","type","unit","default","min","max","step","tier","group","ru","en");
+                Attributes(el,"id","type","unit","default","min","max","step","tier","group","ru","en",
+                    "descriptionRu","descriptionEn","iconSpellId","exclusiveGroup","parent");
                 var id=Required(el,"id");
                 if(!System.Text.RegularExpressions.Regex.IsMatch(id,@"^[a-z][A-Za-z0-9]{0,63}$"))
                     throw new FormatException("Setting id");
@@ -137,10 +140,33 @@ internal static class RotationXmlV2
                     throw new FormatException("Setting bounds");
                 var tier=Required(el,"tier");
                 if(tier is not ("Essentials" or "Advanced"))throw new FormatException("Tier");
+                string? exclusive=(string?)el.Attribute("exclusiveGroup");
+                string? parent=(string?)el.Attribute("parent");
+                int icon=el.Attribute("iconSpellId") is null?0:Number(el,"iconSpellId");
+                if(icon<0 || icon>16777215 ||
+                    (exclusive is not null &&
+                        (type!=RotationSettingType.Boolean ||
+                         !System.Text.RegularExpressions.Regex.IsMatch(exclusive,@"^[a-z][A-Za-z0-9]{0,63}$"))) ||
+                    (parent is not null &&
+                        !System.Text.RegularExpressions.Regex.IsMatch(parent,@"^[a-z][A-Za-z0-9]{0,63}$")))
+                    throw new FormatException("Setting display/exclusive metadata");
                 var s=new RotationSetting(id,type,Required(el,"unit"),def,min,max,step,tier,
-                    Required(el,"group"),Required(el,"ru"),Required(el,"en"));
+                    Required(el,"group"),Required(el,"ru"),Required(el,"en"),
+                    (string?)el.Attribute("descriptionRu")??"",
+                    (string?)el.Attribute("descriptionEn")??"",icon,exclusive,parent);
                 if(!settings.TryAdd(id,s) || settings.Count>128)throw new FormatException("Duplicate/too many settings");
             }
+            foreach(var setting in settings.Values)
+                if(setting.Parent is not null &&
+                   (!settings.TryGetValue(setting.Parent,out var parentSetting) ||
+                    parentSetting.Type!=RotationSettingType.Boolean ||
+                    setting.Parent==setting.Id ||
+                    parentSetting.Tier!=setting.Tier))
+                    throw new FormatException("Invalid setting parent");
+            foreach(var group in settings.Values.Where(x=>x.ExclusiveGroup is not null)
+                .GroupBy(x=>x.ExclusiveGroup,StringComparer.Ordinal))
+                if(group.Count(x=>x.Default==1)>1)
+                    throw new FormatException("Conflicting exclusive defaults");
             var rules=new List<RotationRuleV2>();
             var ids=new HashSet<string>(StringComparer.Ordinal);
             var priorities=new HashSet<int>();
@@ -252,6 +278,10 @@ internal static class RotationXmlV2
                 (value-s.Min)%s.Step!=0)throw new FormatException("Invalid override: "+key);
             values[key]=value;
         }
+        foreach(var group in profile.Settings.Values.Where(x=>x.ExclusiveGroup is not null)
+            .GroupBy(x=>x.ExclusiveGroup,StringComparer.Ordinal))
+            if(group.Count(x=>values[x.Id]==1)>1)
+                throw new FormatException("Conflicting exclusive toggles: "+group.Key);
         return values;
     }
     // Diagnostics only. Separate CanExecute policy must be implemented and verified before any keys.
