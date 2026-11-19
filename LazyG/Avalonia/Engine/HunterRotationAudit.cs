@@ -42,8 +42,8 @@ internal sealed record HunterRankFinding(int BaseSpellId,int? SelectedRank,strin
 
 // Diagnostic-only audit: predicted rotations and *trusted observed* cast events are
 // different channels; absence of combat events is never labeled wrong execution.
-internal enum RotationAuditVerdict { Unobservable, Match, Mismatch, Blocked }
-internal enum RotationCastEvidence { None, CombatLogSuccess }
+internal enum RotationAuditVerdict { Unobservable, Match, Mismatch, Blocked, EventOnly }
+internal enum RotationCastEvidence { None, UnitSpellcastSucceeded, CombatLogSuccess }
 // TargetEpoch is only meaningful when both sides independently prove it.
 internal sealed record RotationObservedCast(int SpellId,DateTimeOffset At,
     RotationCastEvidence Evidence,int? TargetEpoch,bool PlayerConfirmed=false);
@@ -97,7 +97,8 @@ internal sealed class HunterRotationAudit
     // No LGD state flip, mouse event, pending key press or inferred cooldown is proof.
     public RotationAuditRow? Observe(RotationObservedCast observed)
     {
-        if(observed.Evidence!=RotationCastEvidence.CombatLogSuccess || !observed.PlayerConfirmed ||
+        if(observed.Evidence is not (RotationCastEvidence.CombatLogSuccess or RotationCastEvidence.UnitSpellcastSucceeded) ||
+           !observed.PlayerConfirmed ||
            observed.SpellId<=0 ||
            lastCapture==default || observed.At<lastCapture ||
            observed.At-lastCapture>window)return null;
@@ -118,10 +119,15 @@ internal sealed class HunterRotationAudit
                  (expectedFamily is not null && expectedFamily==actualFamily));
             // Different cast during this window may be a manually triggered skill,
             // so "Mismatch" means observed != expected, NOT proven LazyG failure.
-            var verdict=row.ExpectedSpellId is null?RotationAuditVerdict.Blocked:
-                matched?RotationAuditVerdict.Match:RotationAuditVerdict.Mismatch;
+            var verdict=observed.Evidence==RotationCastEvidence.UnitSpellcastSucceeded
+                ? RotationAuditVerdict.EventOnly
+                : row.ExpectedSpellId is null?RotationAuditVerdict.Blocked:
+                  matched?RotationAuditVerdict.Match:RotationAuditVerdict.Mismatch;
             var updated=row with { ObservedSpellId=observed.SpellId,Verdict=verdict,
                 Reason=verdict switch {
+                    RotationAuditVerdict.EventOnly=>matched
+                        ?"PlayerSpellcastEventSameFamily;EffectUnverified"
+                        :"PlayerSpellcastEventDifferentOrBlocked;EffectUnverified",
                     RotationAuditVerdict.Match=>"ObservedCastMatchesRuleFamily",
                     RotationAuditVerdict.Mismatch=>"ObservedDifferentCast;ActorAttributionUnproven",
                     _=>"CastObservedButRuleBlocked;ActorAttributionUnproven"
@@ -156,9 +162,11 @@ internal sealed class HunterRotationAudit
         int matches=rows.Count(r=>r.Verdict==RotationAuditVerdict.Match);
         int mismatches=rows.Count(r=>r.Verdict==RotationAuditVerdict.Mismatch);
         int blocked=rows.Count(r=>r.Verdict==RotationAuditVerdict.Blocked);
+        int events=rows.Count(r=>r.Verdict==RotationAuditVerdict.EventOnly);
         int unverified=rows.Count(r=>r.Verdict==RotationAuditVerdict.Unobservable);
         return "Hunter BM XML audit: "+rows.Count+" samples | observed matches="+matches+
-            " | differences="+mismatches+" (attribution unproven) | rule blocked="+blocked+
+            " | differences="+mismatches+" (attribution unproven) | player cast events="+events+
+            " (effect unverified) | rule blocked="+blocked+
             " | cast unobservable="+unverified;
     }
 }
