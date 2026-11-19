@@ -136,3 +136,6 @@ jobs:
 
       - name: Verify unified optional RGB diagnostics commands and settings
         run: lua5.1 LazyG/Tests/forever_rgb_diagnostics_test.lua
+
+      - name: Verify LGD selectable spell and GCD quality RGB
+        run: lua5.1 LazyG/Tests/forever_spell_rgb_test.lua
