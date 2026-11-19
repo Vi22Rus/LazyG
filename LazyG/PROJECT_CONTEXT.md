@@ -1,3 +1,21 @@
+## 2026-11-19 — Forever-only Sonah + JustAC aura-read adaptation [0.4.0-dev / GAME-UNTESTED]
+
+**Clarification by user:** For WoW Forever the two addon code references are **Sonah.zip** and **JustAC.zip** only. Do not blend in WarMate, Hekili 3.3.5 or other client APIs. Inspected actual uploaded archives in this session, not recalled excerpts.
+
+**Source findings:**
+- Sonah `Core/Atoms/Auras.lua` lines ~216-249 prefers protected-safe per-spell name lookups `C_UnitAuras.GetAuraDataBySpellName(unit,name,filter)`; distinguishes positive result, positive absence when secrecy is demonstrably OFF, and `nil` for denied/hidden observations. It has a separate target-epoch/GUID/nameplate/cast-tracking fallback with recorded duration, not equivalent to positively observed active aura.
+- JustAC `BlizzardAPI/SecretValues.lua` lines ~251-292 prefers `C_UnitAuras.GetUnitAuras` batch; falls back to indexed reads, treats access denied as UNKNOWN rather than empty. `DotTracker.lua` lines ~128-166, 196-256 separately tracks `UNIT_SPELLCAST_SUCCEEDED`, pending casts and `UNIT_AURA` instance updates; its short post-cast suppression is an INFERENCE, not guaranteed hit/effect confirmation.
+- Existing LazyG `HunterCompactCollector.lua` used only a `GetAuraDataByIndex` loop, which would lose all aura flags during protected indexed lookup. It now tries **direct spell-name lookup for manifest ranks**, then **batch GetUnitAuras**, then the legacy indexed scan; it accepts only plain, unprotected AuraData spell IDs and always uses actual spell ID to match known ranks. It may emit known-absent only after a fully successful scan AND explicit non-secret status (`C_Secrets.ShouldAurasBeSecret==false`, or trusted out-of-combat `UnitAffectingCombat("player")==false` fallback); otherwise `Unknown`, never `false` from denied lookup. Known present may be observed independently even if another API branch was denied. No synthetic aura inferred from attempted Logitech input. Existing compact RGB encoder/Windows packet layout unchanged; no forced/fixed GCD.
+- Expanded `Tests/hunter_compact_collector_test.lua` for direct-by-name positive Hunter Mark when batch/index denied, secret-hidden absence remaining unknown, and opt-in/target epoch. For actual gameplay, verify `auraFlags` transition and Mark/Sting same-target confirmations from new ZIP.
+- **Not yet ported:** Sonah/JustAC's target GUID/nameplate/event-driven inferred aura cache; it needs separate quality flag on RGB to distinguish observed aura from cast-derived prediction. Copying an inferred `true` into the existing boolean wire would falsely 'prove' a hit. No macro binding support in this change. If direct/batch reads still return secret in combat, new logs must lead next design step instead of unsafe casts.
+
+**Status:** Await final GitHub Actions run. Keep rollback [last CI success 44490976300](https://github.com/Vi22Rus/LazyG/actions/runs/44490976300). PowerShell self-contained single EXE:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-19 — Hunter Mark/Sting debuff confirmation FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
 
 **[CI SUCCESS]** [Actions 44490976300](https://github.com/Vi22Rus/LazyG/actions/runs/44490976300), code SHA `a0fff4b79486409f88e183a801cf40a38764770f`. Both Windows build/tests (including `RotationFoundationTests` with new debuff confirmation state-machine assertions), self-contained single-file EXE publish, Windows startup smoke, and Lua 5.1 diagnostic regression succeeded. Windows artifact **LazyG-Windows-x64** ID **14512454786**; optional Forever probe addon artifact ID **14513610004**. Subsequent documentation-only commits do not alter build. This is NOT a release and no in-game success has been verified.
