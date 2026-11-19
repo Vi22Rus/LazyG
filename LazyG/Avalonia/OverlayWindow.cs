@@ -28,6 +28,7 @@ internal sealed class OverlayWindow : Window
     private readonly TextBlock pauseReason;
     private readonly TextBlock spellTitle;
     private readonly TextBlock spellCaption;
+    private readonly TextBlock spellContext;
     private readonly TextBlock gcdLabel;
     private readonly Border iconSurface;
     private readonly ArcPath gcdArc;
@@ -109,8 +110,9 @@ internal sealed class OverlayWindow : Window
         next.Children.Add(iconStack);
 
         var right=new StackPanel {Spacing=4,VerticalAlignment=VAlign.Center};
-        right.Children.Add(new TextBlock {Text="SPELL PREVIEW · NO ROTATION ENGINE",
-            FontSize=10,FontWeight=FontWeight.Bold,Foreground=Palette.Brush("#85DDEE")});
+        spellContext=new TextBlock {Text="SPELL DEMO · NO ROTATION EXECUTION",
+            FontSize=10,FontWeight=FontWeight.Bold,Foreground=Palette.Brush("#85DDEE")};
+        right.Children.Add(spellContext);
         spellTitle=new TextBlock {Text="NOT AVAILABLE",FontSize=19,
             FontWeight=FontWeight.Bold,Foreground=Palette.White,TextWrapping=TextWrapping.Wrap};
         right.Children.Add(spellTitle);
@@ -185,6 +187,8 @@ internal sealed class OverlayWindow : Window
     {
         readonlySession=running;
         previewButton.IsEnabled=!running;
+        spellContext.Text=running?"LIVE XML RECOMMENDATION · READ-ONLY":
+            "PREVIEW STOPPED · NO INPUT";
         rotationLabel.Text=running?"XML PREVIEW ON":"ROTATION IDLE";
         pauseReason.Text=running?status:"Read-only preview stopped · no input";
         if(!running)
