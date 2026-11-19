@@ -1,3 +1,7 @@
+### 2026-11-19 — SRC replay hardening (0.4.0-dev foundation)
+
+`RotationSourceManager` keeps the last valid (source, epoch, sequence) watermark across disconnects. Same-epoch duplicate/old sequence or source change without a new epoch rejects and clears recommendations instead of reactivating a prior source. Added offline replay regression in `RotationFoundationTests.cs`. No live SRC channel or Lua selector shipped. Current full regression/build run for code commit: https://github.com/Vi22Rus/LazyG/actions/runs/44455119810 . Rollback: https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
+
 ### 0.4.0-dev foundation — Support and startup integration (not final acceptance)
 
 Support UI now offers a locally generated `Create support ZIP` with allowlisted source/RGB metadata; startup and process unhandled exceptions have best-effort ZIP creation with a reentrancy guard and optional emergency-stop callback. There is no automatic upload, no screenshots or key history. The active rotation source shows `AwaitingTransport` because SRC/REC is **not yet implemented**; do not confuse an internal test contract with verified in-game source selection. Running user-visible label is `0.4.0-dev foundation`, not release. Unimplemented items remain in the 0.4.0 approved plans and must be completed before declaring milestone finished. Earlier CI success for pre-UI foundation: https://github.com/Vi22Rus/LazyG/actions/runs/44454711919 ; later UI/crash changes need their own successful Actions run. Backout point https://github.com/Vi22Rus/LazyG/actions/runs/44445922892 .
