@@ -112,6 +112,7 @@ jobs:
       - name: Verify Lua 5.1 syntax for both RGB v3 modules
         run: |
           luac5.1 -p LazyG/AddonTemplate/RgbV3Encoder.lua
+          luac5.1 -p LazyG/AddonTemplate/HunterCompactProfileEncoder.lua
           luac5.1 -p LazyG/AddonTemplate/RgbV3Panel.lua
           luac5.1 -p LazyG/AddonTemplate/RgbV3Thresholds.lua
           luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownAudit.lua
@@ -126,6 +127,9 @@ jobs:
 
       - name: Verify Lua RGB v3 wire vectors
         run: lua5.1 LazyG/Tests/rgb_v3_encoder_test.lua
+
+      - name: Verify compact Hunter v3 extension shared Lua/C# fixture
+        run: lua5.1 LazyG/Tests/hunter_compact_profile_test.lua
 
       - name: Verify Forever cooldown audit behavior
         run: lua5.1 LazyG/Tests/forever_cooldown_audit_test.lua
