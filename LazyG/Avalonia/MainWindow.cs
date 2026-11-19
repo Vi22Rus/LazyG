@@ -896,6 +896,17 @@ public sealed class MainWindow : Window
                     latestGameState.ClassId.Quality==Knowledge.Known,
                     result.cooldown,result.capturedAt);
             else cooldownObserver.Reset();
+            // LGC 29515.isActive is already observed in live Forever.
+            // Publish only the fresh boolean into GameState: no synthetic
+            // remaining GCD milliseconds, no effect/cast authorization.
+            var gcdObservation=cooldownObserver.Snapshot;
+            if(connected && gcdObservation.Transport==Knowledge.Known &&
+               gcdObservation.Gcd29515Active.UpdatedAt<=result.capturedAt &&
+               result.capturedAt-gcdObservation.Gcd29515Active.UpdatedAt <=
+                   ForeverCooldownObserver.MaxFrameAge)
+                latestGameState=latestGameState with {
+                    GcdActive=gcdObservation.Gcd29515Active
+                };
             string cooldownStatus=!cooldownDiagnosticEnabled?"OFF":
                 cooldownObserver.Describe();
             if(cooldownStatus!=lastCooldownDiagnostic)
