@@ -76,6 +76,58 @@ var state=empty with {
     PowerBand=Observed<HealthBand>.Known(new HealthBand(75,79),now),
     Spells=KnownFamily(1130,1130)
 };
+// A Logitech key press is NOT proof of Hunter's Mark / Serpent Sting.
+var confirm=new DebuffConfirmationGate();
+var markRec=new RotationRecommendation(RotationSourceId.Internal,1130,10,
+    "markMissing",now);
+var shotRec=new RotationRecommendation(RotationSourceId.Internal,3044,30,
+    "arcaneShot",now);
+GameState TargetAuraAt(DateTimeOffset at,int epoch,bool? markPresent)
+{
+    var auras=new Dictionary<AuraKey,AuraState>();
+    if(markPresent is bool present)
+    {
+        foreach(var id in HunterSpellFamilies.Ranks(1130))
+            auras[new AuraKey("target-epoch-"+epoch,id,true)]=new AuraState(
+                Observed<bool>.Known(present && id==1130,at),
+                Observed<int>.Missing(),Observed<int>.Missing());
+    }
+    return state with {
+        CapturedAt=at,TargetExists=Observed<bool>.Known(true,at),
+        TargetEpoch=Observed<int>.Known(epoch,at),Auras=auras
+    };
+}
+var pendingState=TargetAuraAt(now,5,null);
+Check(confirm.MarkSent(markRec,pendingState,now),
+    "valid mark HID delivery must await actual aura evidence");
+Check(!confirm.MaySend(shotRec,pendingState,now.AddMilliseconds(450),
+        out var markBlocked) && markBlocked.Contains("UNCONFIRMED"),
+    "unknown aura cannot authorize moving to unrelated shot");
+Check(!confirm.MaySend(markRec,pendingState,now.AddMilliseconds(450),out _),
+    "unknown aura cannot authorize repeated blind Mark attempts");
+var absentState=TargetAuraAt(now.AddSeconds(2),5,false);
+Check(!confirm.MaySend(shotRec,absentState,now.AddSeconds(2),out _),
+    "explicitly absent Mark must retain priority over other shots");
+Check(confirm.MaySend(markRec,absentState,now.AddSeconds(2),out _),
+    "explicitly absent Mark allows retry with independent XML/GCD gates");
+var presentState=TargetAuraAt(now.AddSeconds(3),5,true);
+Check(confirm.Observe(presentState,now.AddSeconds(3)).State==
+    DebuffConfirmationState.Confirmed && !confirm.HasPending,
+    "same-target positive aura evidence clears pending Mark");
+Check(confirm.MaySend(shotRec,presentState,now.AddSeconds(3),out _),
+    "confirmed Mark allows unrelated XML rule afterward");
+Check(confirm.MarkSent(markRec,pendingState,now),"new pending before target change");
+Check(confirm.Observe(TargetAuraAt(now.AddMilliseconds(100),6,null),
+    now.AddMilliseconds(100)).State==DebuffConfirmationState.TargetChanged &&
+    !confirm.HasPending,"target epoch change invalidates earlier Mark");
+Check(!confirm.MarkSent(shotRec,pendingState,now),
+    "ordinary shot is not tracked as a required debuff");
+var stingRec=new RotationRecommendation(RotationSourceId.Internal,1978,20,
+    "stingMissing",now);
+Check(confirm.MarkSent(stingRec,pendingState,now),
+    "Serpent Sting also requires same-target debuff confirmation");
+confirm.Reset();
+Check(!confirm.HasPending,"Stop clears confirmation state");
 var syntheticEval=RotationXmlV2.Evaluate(profile,state,null,now,"PvE");
 Check(syntheticEval.Recommendation?.SpellId==1130,
     "simulation suggestion; "+syntheticEval.BlockReason+" "+
