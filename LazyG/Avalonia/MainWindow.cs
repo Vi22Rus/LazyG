@@ -952,6 +952,12 @@ public sealed class MainWindow : Window
                     lastCastEventSpellId=cast.SpellId;
                     RuntimeDiagnostics.Add("HUNTERAUDIT","LGE event baseline established; historical event ignored");
                 }
+                else if(cast.PlayerEvent)
+                {
+                    // Unchanged latched event means a repeated RGB frame, NOT
+                    // a second cast. Track separately for transport diagnostics.
+                    hunterAudit.RecordDuplicateEvent();
+                }
                 else if(cast.Sequence!=lastCastEventSequence || cast.SpellId!=lastCastEventSpellId)
                 {
                     lastCastEventSequence=cast.Sequence;
