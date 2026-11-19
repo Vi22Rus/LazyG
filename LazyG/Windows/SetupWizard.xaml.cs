@@ -75,11 +75,13 @@ public partial class SetupWizard : Window
             Directory.CreateDirectory(dir);
             try
             {
-                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB Bridge v2 for WoW Forever\n## Version: 0.1.19-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n",new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(dir,AddonName.Text+".toc"),$"## Interface: {SelectedInterfaceNumber()}\n## Title: {AddonName.Text}\n## Notes: RGB Bridge v2 for WoW Forever\n## Version: 0.1.19-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nHunterCompactManifest.lua\nHunterCompactProfileEncoder.lua\nHunterCompactCollector.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n",new UTF8Encoding(false));
                 // Embedded addon is maintained as our own source, no WarMate assets.
                 File.WriteAllText(Path.Combine(dir,"Panel.lua"),AddonTemplate.PanelLua,new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(dir,"HunterProfile.lua"),AddonTemplate.HunterProfileLua,new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(dir,"RgbV3Encoder.lua"),AddonTemplate.ReadEmbeddedLua("RgbV3Encoder.lua"),new UTF8Encoding(false));
+                foreach(var module in new[]{"HunterCompactManifest.lua","HunterCompactProfileEncoder.lua","HunterCompactCollector.lua"})
+                    File.WriteAllText(Path.Combine(dir,module),AddonTemplate.ReadEmbeddedLua(module),new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(dir,"RgbV3Panel.lua"),AddonTemplate.ReadEmbeddedLua("RgbV3Panel.lua"),new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(dir,"RgbV3Thresholds.lua"),AddonTemplate.ReadEmbeddedLua("RgbV3Thresholds.lua"),new UTF8Encoding(false));
             }
