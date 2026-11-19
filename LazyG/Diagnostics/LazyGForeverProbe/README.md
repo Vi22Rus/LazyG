@@ -1,4 +1,4 @@
-# LazyGForeverProbe — WoW Forever manual API audit (0.2.16-dev)
+# LazyGForeverProbe — WoW Forever manual API audit (0.2.17-dev)
 
 This is an isolated optional diagnostic addon, **not** installed by LazyG.exe. Its only purpose is to identify which Blizzard functions are present, return ordinary values, expose protected/unknown results, and which cast/aura events arrive in the exact user's Forever build. It does **not** bypass secret values, access their content, or drive rotations.
 
@@ -38,3 +38,9 @@ The manual command `/lgprobe cooldown 1130` writes two groups (`1130` and `61304
 ## Automatic 30-second capture (0.2.16-dev)
 
 Enter `/lgprobe cdwatch 1130` once, close chat, and use an ability naturally during the next 30 seconds. The recorder samples spellID 1130 (or chosen integer ID), candidates 61304 and 29515, and a separately marked experimental visual widget. It records transitions and initial/final states with a `+0.000s` relative offset. The existing SavedVariables ring has capacity for 400 lines, so earlier records may roll off; a watch typically produces far fewer. Sample frequency is best-effort (`OnUpdate`), not a real-time guarantee. For a spell not known to your character, specify a valid known spell ID. After 30 seconds type `/reload` and inspect `WTF/Account/<account>/SavedVariables/LazyGForeverProbe.lua`; no character name or GUID is intentionally logged, but review all contents before sharing. Running the command does NOT need an active LazyG Windows program. No `DurationObject` widget finding is used to authorize the XML dispatcher. The current Windows EXE still displays 0.2.13-dev and has no rotation input from the recorder.
+
+## 0.2.17-dev — distinct spell cooldown vs GCD and corrected widget setup
+
+The real 0.2.16 Forever log showed seven 29515 `isActive=True` intervals aligned with 1130, while 61304 remained Unknown; that alone does not prove a spell-specific cooldown. With `/lgprobe cdwatch <SpellID>`, choose an ability that actually has an independent cooldown longer than the GCD (ideally 10–30 seconds). The capture prints `comparison` changes: `SpellActiveWhileGcdInactive` means *both plain booleans* are readable and show that the spell is active while 29515 is false. `SameBooleanState` is inconclusive, and `Unknown` never implies readiness. Do not use a synthetic SpellID unless it is known and actually castable for your character.
+
+The native Cooldown widget diagnostic now uses a separate shown (not hidden) but alpha-zero 1×1 parent for each SpellID. This removes the previous hidden-parent confound and avoids reusing a single widget for different spells. **The widget result is still experimental:** `IsShown` describes visibility, not guaranteed cooldown activity. It is logged separately every ~200 ms, never transferred into RGB, GameState, or XML. These diagnostic changes do not affect Windows EXE (`0.2.13-dev` UI), base addon or key input. In WoW, enable the 0.2.17 probe, enter the command once, use the chosen ability naturally during the 30-second window, then `/reload` and inspect SavedVariables before sharing.
