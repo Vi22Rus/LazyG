@@ -149,6 +149,22 @@ Check(confirm.Observe(presentState,now.AddSeconds(3)).State==
     "same-target positive aura evidence clears pending Mark");
 Check(confirm.MaySend(shotRec,presentState,now.AddSeconds(3),out _),
     "confirmed Mark allows unrelated XML rule afterward");
+// No source code ever assumes a HID success is a game cast event.
+var unseenCast=pendingState with {
+    TargetDebuffCastHints=new Dictionary<int,Observed<bool>> {
+        [1130]=Observed<bool>.Known(true,now)
+    }
+};
+Check(confirm.MarkSent(markRec,pendingState,now),"new Mark attempt for cast-event estimate");
+Check(confirm.Observe(unseenCast,now).State==DebuffConfirmationState.Estimated &&
+    !confirm.HasPending,"matching WoW cast event releases unknown-aura wait as ESTIMATED");
+Check(confirm.MarkSent(markRec,pendingState,now),"Mark pending when explicit aura absent");
+var directlyAbsent=TargetAuraAt(now,5,false) with {
+    TargetDebuffCastHints=unseenCast.TargetDebuffCastHints
+};
+Check(confirm.Observe(directlyAbsent,now).State==DebuffConfirmationState.StillAbsent,
+    "known-absent aura overrides event-derived estimate");
+confirm.Reset();
 Check(confirm.MarkSent(markRec,pendingState,now),"new pending before target change");
 Check(confirm.Observe(TargetAuraAt(now.AddMilliseconds(100),6,null),
     now.AddMilliseconds(100)).State==DebuffConfirmationState.TargetChanged &&
@@ -368,6 +384,32 @@ Check(mapped.TargetEpoch.Is(x=>x==7)==Truth.True &&
     mapped.Auras[new AuraKey("target-epoch-7",14323,true)].Present.Value==true &&
     mapped.Auras[new AuraKey("target-epoch-7",1130,true)].Present.Value==false,
     "compact profile translates known booleans, learned ranks, epoch auras without synthetic CD ms");
+// v1 CRC-valid frames remain backward-compatible, and MUST NOT pretend
+// they contain cast-derived hints (the old header byte was reserved).
+Check(compact!.TargetDebuffCastHints.Count==0,
+    "legacy compact v1 contains no cast hints");
+var extensionV2=(byte[])extension.Clone();
+extensionV2[2]=2;
+extensionV2[17]=1; // mark cast estimate bit, distinct from aura flags
+Check(RgbV3Codec.TryDecode(BuildProfileFrame(extensionV2),8,0x4c47,
+    out var eventFrame,out wireError) &&
+    HunterCompactProfileWire.TryDecode(eventFrame,compactManifest,now,
+        out var eventCompact) && eventCompact is not null,
+    "new v2 event-hint bit accepted without changing RGB cell count");
+var mappedHint=HunterCompactProfileWire.ToGameState(compactBase,eventCompact!);
+Check(mappedHint.TargetDebuffCastHints.TryGetValue(1130,out var markHint) &&
+    markHint.Is(x=>x)==Truth.True &&
+    !mappedHint.TargetDebuffCastHints.ContainsKey(3044),
+    "cast hint is separate from observed aura and rank flags");
+var invalidHint=(byte[])extensionV2.Clone();
+invalidHint[17]=4; // unused bit beyond manifest family count
+Check(RgbV3Codec.TryDecode(BuildProfileFrame(invalidHint),8,0x4c47,
+    out var invalidHintFrame,out wireError) &&
+    !HunterCompactProfileWire.TryDecode(invalidHintFrame,compactManifest,now,out _),
+    "unknown cast hint bits are rejected");
+Check(mappedHint.Age(now.AddSeconds(2),TimeSpan.FromMilliseconds(900))
+    .TargetDebuffCastHints[1130].Quality==Knowledge.Stale,
+    "stale cast-event RGB cannot extend estimated effect forever");
 Check(HunterCompactProfileWire.ToGameState(compactBase with {
     SpecIndex=Observed<int>.Known(2,now)},compact!).Spells.Count==0,
     "different spec cannot inherit Hunter profile observations");
