@@ -28,11 +28,17 @@ local snapshot={
   auras={[1130]=false,[14323]=true}
 }
 local cells,bytes,length=packer.Build(manifest,snapshot)
-local reference={0x4c,0x48,1,0xA1,0xB2,0xC3,0xD4,3,1,1,0,7,1,1,2,2,4,0,
+local reference={0x4c,0x48,2,0xA1,0xB2,0xC3,0xD4,3,1,1,0,7,1,1,2,2,4,0,
     2,1,2,2,0x99,0x09}
 assertEquals(length,24,"logical length")
 assertEquals(#cells,8,"extra cell count")
 for i,v in ipairs(reference) do assertEquals(bytes[i],v,"payload byte "..i) end
+local hinted={epoch=7,epochQuality="known",gcd=false,spells=snapshot.spells,
+    auras=snapshot.auras,castHints={[1130]=true}}
+local _,hintBytes,hintLength=packer.Build(manifest,hinted)
+assertEquals(hintLength,24,"cast hints do not add a new RGB cell")
+assertEquals(hintBytes[18],1,"successful player cast hint in separate v2 bit")
+assertEquals(hintBytes[24],bytes[24],"same actual aura flags despite cast hint")
 local core=v3.BuildCore({frame=11,profileHash=0x4c47,profileActive=true,
     classId=3,talentTree=1})
 local result=v3.Encode(core,cells,"direct8")
