@@ -114,17 +114,12 @@ public sealed class MainWindow : Window
         Background = Palette.Background; Foreground = Palette.White;
         SystemDecorations = SystemDecorations.None;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        try
-        {
-            var bm=RotationProfileCatalog.Load("hunter","beast-mastery","PvE");
-            if(bm is not null)hunterCompactManifest=ProfileDataManifestBuilder.Build(bm);
-        }
-        catch(Exception ex) {RuntimeDiagnostics.Add("COMPACT","Profile rejected: "+ex.GetType().Name);}
+        // External addon supplies the already-computed recommendation.
         Content = CreateShell();
         ShowClasses();
         timer.Tick += async (_, _) => await PollBridgeAsync();
         timer.Start();
-        Closed += (_, _) => { finished = true; StopGhub("WINDOW CLOSED"); rotationPreview.Stop("WINDOW CLOSED"); timer.Stop(); overlay?.Close(); };
+        Closed += (_, _) => { finished = true; StopGhub("WINDOW CLOSED"); timer.Stop(); overlay?.Close(); };
         Opened += (_, _) =>
         {
             if (!session.ForeverConfigured)
@@ -406,7 +401,7 @@ public sealed class MainWindow : Window
         mapping.Children.Add(Text("AUTOMATIC WOW KEYBINDS · RGB V3",15,"#45E5F7",FontWeight.Bold));
         mapping.Children.Add(Text("Bindings are read from the actual WoW action bars (Ctrl/Alt/Shift combinations included) and sent through the existing RGB v3 row. No manual SpellID mapping required. Logitech G HUB is the only input driver.",12,"#CDB29C"));
         mapping.Children.Add(Text("Verified RGB bindings currently received: "+
-            autoBindings.Bindings(DateTimeOffset.UtcNow).Count+
+            0+
             ". No matching key = no input. Macros and ambiguous matches are blocked pending separate validation.",12,"#E5B778"));
         all.Children.Add(Pane(mapping));
         foreach(var group in new [] { ("RACIAL ABILITIES",new[]{"Offensive racials","Defensive racials","Racial interrupts","Racial utility"}),
@@ -433,19 +428,17 @@ public sealed class MainWindow : Window
         var body=Stack(spacing:13);
         body.Children.Add(Text("SUPPORT · ROTATION DIAGNOSTICS",18,"#45E5F7",FontWeight.Bold));
         body.Children.Add(Text("JustAC/Hekili → RGB v3 → Logitech G HUB. No internal rotation/XML/GCD. Successful driver IO does not prove a WoW cast.",12,"#E9B26D"));
-        rgbHealthText=Text(rgbMonitor.Summary(),12,"#72D9F3");
-        body.Children.Add(Pane(rgbHealthText));
+        body.Children.Add(Text("Connector RGB v3 only · see source/CRC diagnostic log below",12,"#72D9F3"));
         body.Children.Add(Text("Bindings: from connector RGB · Logitech: "+LastGhubStatus,12,"#C5E1EF"));
         body.Children.Add(Text("Rotation trace: "+executionTrace.Summary(),12,"#72D9F3"));
-        hunterAuditSummaryText=Text(hunterAudit.Summary(),11,"#C5E1EF");
-        body.Children.Add(hunterAuditSummaryText);
+
 
         var actions=Stack(Orientation.Horizontal,8);
         actions.Children.Add(Action(executionTrace.Recording?"Stop recording":"Start recording",()=>{
             if(executionTrace.Recording)
             {
                 executionTrace.Stop(DateTimeOffset.UtcNow,"USER STOP RECORDING");
-                hunterAuditRecording=false;
+                // External recommendations only.
             }
             else
             {
@@ -460,8 +453,8 @@ public sealed class MainWindow : Window
             {
                 var folder=Path.Combine(Environment.GetFolderPath(
                     Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
-                var file=executionTrace.ExportZip(folder,rgbMonitor.ExportJson(),
-                    RuntimeDiagnostics.Snapshot(),hunterAudit.ExportJson());
+                var file=executionTrace.ExportZip(folder,"{\"source\":\"LazyGConnector-v3\"}",
+                    RuntimeDiagnostics.Snapshot());
                 RuntimeDiagnostics.Add("REPORT","Diagnostic ZIP saved to "+
                     Path.GetFileName(file)+" in %LOCALAPPDATA%\\LazyG\\reports");
             }
@@ -587,15 +580,15 @@ public sealed class MainWindow : Window
     {
         bool hadTrace=executionTrace.Recording;
         executionTrace.Stop(DateTimeOffset.UtcNow,reason);
-        hunterAuditRecording=false;
+        // No internal Hunter XML audit.
         if(hadTrace)
         {
             try
             {
                 var dir=Path.Combine(Environment.GetFolderPath(
                     Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
-                var file=executionTrace.ExportZip(dir,rgbMonitor.ExportJson(),
-                    RuntimeDiagnostics.Snapshot(),hunterAudit.ExportJson());
+                var file=executionTrace.ExportZip(dir,"{\"source\":\"LazyGConnector-v3\"}",
+                    RuntimeDiagnostics.Snapshot());
                 RuntimeDiagnostics.Add("REPORT","Automatic stop report: "+
                     Path.GetFileName(file)+" in %LOCALAPPDATA%\\LazyG\\reports");
             }
@@ -612,10 +605,7 @@ public sealed class MainWindow : Window
         lastNativeInputSequence=null;
         lastNativeInputAt=default;
         ghubGeneration++;
-        activeBindings=new System.Collections.Generic.Dictionary<int,string>();
-        commandGate.Reset();
-        debuffConfirmation.Reset();
-        lastDebuffState=DebuffConfirmationState.Idle;
+        // No internal command/debuff planners.
         LastGhubStatus=reason;
         // The 12-ms report already in flight always releases its key.
         // No new report may start after generation invalidation.
@@ -688,8 +678,7 @@ public sealed class MainWindow : Window
                 Dispatcher.UIThread.Post(()=>{
                     if(generation!=ghubGeneration)return;
                     StopGhub("NATIVE LOGITECH ERROR: "+ex.GetType().Name);
-                    rotationPreview.Stop("LOGITECH DISCONNECTED");
-                    overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+                    overlay?.SetReadOnlyRecommendation(false,null,"LOGITECH DISCONNECTED");
                 });
             }
             finally
@@ -723,9 +712,8 @@ public sealed class MainWindow : Window
             if(overlayButton is not null)overlayButton.Content="Overlay OFF";
         };
         overlay.Show();
-        if(rotationPreview.Running)
-            overlay.SetReadOnlyRecommendation(true,rotationPreview.Current?.SpellId,
-                rotationPreview.Status);
+        if(connectorRunning)
+            overlay.SetReadOnlyRecommendation(true,lastPreviewSpell,lastPreviewStatus);
         if(overlayButton is not null)overlayButton.Content="Overlay ON";
         RuntimeDiagnostics.Add("OVERLAY",$"Shown · icon preview class {previewClass} · {ForeverSpellCatalog.Count} Forever spell records");
     }
@@ -744,15 +732,13 @@ public sealed class MainWindow : Window
                 clientText.Text="WOW FOREVER";
                 ShowClasses();
                 StopGhub("SETUP CHANGED");
-                rotationPreview.Stop("SETUP CHANGED");
                 RuntimeDiagnostics.Add("SETUP","Finished · Forever client active");
             }
             else RuntimeDiagnostics.Add("SETUP","Closed without completing RGB setup");
             if(!finished){Show();Activate();}
         };
         StopGhub("SETUP OPENED");
-        rotationPreview.Stop("SETUP OPENED");
-        overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+        overlay?.SetReadOnlyRecommendation(false,null,"SETUP OPENED");
         dialog.Show();
         Hide();
     }
