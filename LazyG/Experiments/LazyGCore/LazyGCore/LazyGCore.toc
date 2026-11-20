@@ -46,6 +46,7 @@ Core\Init.lua
 
 # Atoms - secret-safe reads of game state
 Core\Atoms\Secret.lua
+Core\Atoms\NativeBindings.lua
 Core\Atoms\RgbWire.lua
 Core\Atoms\TalentRangeData.lua
 Core\Atoms\TrinketData.lua
