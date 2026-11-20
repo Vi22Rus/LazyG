@@ -151,6 +151,31 @@ function R.Encode(rec,sequence)
       b[15]=v
     end
   end
+  -- Additional native-only comparison observations in reserved bytes:
+  -- 16 = Serpent Sting aura (0 unknown, 1 observed absent, 2 observed present)
+  -- 17 = player power percent (255 unknown). Both are quality-carrying,
+  -- never turn protected/unknown combat API results into known values.
+  b[17]=255
+  if S.classToken=="HUNTER" and S.Registry and S.Registry.Class then
+    local class=S.Registry.Class()
+    local sting=class and class.spells and class.spells.SerpentSting
+    if sting and S.Atoms and S.Atoms.Auras then
+      local remaining=readPlain(function()
+        return S.Atoms.Auras.DebuffRemaining("target",sting)
+      end)
+      if type(remaining)=="number" then
+        b[16]=remaining<=0 and 1 or 2
+      end
+    end
+    if S.Atoms and S.Atoms.Units then
+      local mana=readPlain(function()
+        return S.Atoms.Units.PowerPercent("player")
+      end)
+      if type(mana)=="number" and mana>=0 and mana<=100 then
+        b[17]=floor(mana)
+      end
+    end
+  end
   local c=crc(b,21)
   b[22]=floor(c/256);b[23]=c%256;b[24]=8
   return b
