@@ -1,3 +1,18 @@
+## 2026-11-20 — ISOLATED NATIVE CORE RGB + CORE/XML COMPARISON RECORDER [DEV / CI-PENDING / GAME-UNTESTED]
+
+Requested change: experiment/lazygcore must read ONLY 8 native LazyGCore RGB cells. No legacy v2/v3/LGC frame may influence this experiment, directly or as a concealed HID gate. In MainWindow.PollBridgeAsync experimental NativeOnlyExperiment=true returns after WowRgbBridge.TryReadLazyGCore; TryReadCombined is not invoked. latestGameState stays GameState.Empty; autoBindings are cleared; no Logitech key is sent. This is intentional fail-closed behavior, NOT proof that automated execution works. Neither old Lua telemetry addon nor old XML execution is required to observe native recommendations.
+
+Hunter BM PvE displays Start LazyGCore (DEV). Support now has Record CORE / XML comparison and Export diagnostic ZIP. Every ~500 ms while recording, existing execution trace records CORE_XML_COMPARE with native core SpellID/status and read-only XML shadow candidate. XML result is explicitly UNKNOWN because the native 8-cell packet contains no full target identity, auras, GCD, individual spell cooldowns or trusted key bindings. Any UNVERIFIED_XML_CANDIDATE is diagnostic only and must NEVER be treated as independently justified XML advice or permission for HID. This is a preliminary comparison tool, not yet a valid two-engine accuracy benchmark.
+
+Next: run experimental Windows CI and then user test of native RGB/recording. To make actual live XML-vs-core comparisons meaningful without old RGB, design an expanded versioned native protocol exposing the minimum observed game facts with quality flags. Do not silently read old RGB or guess protected game state; user must approve a protocol expansion if necessary. Keep main untouched. Rollback to experiment commit 0fb57a1dc079f5fc180bc3213a017e09e2a966e9.
+
+Single EXE from repo root:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-20 — WORKING CI TEST BUNDLE: LazyGCore native RGB + Windows decoder [0.1.0-dev + 0.4.0-dev / CI-PASSED / GAME-UNTESTED]
 
 **User explicitly requested:** an immediately downloadable installable Lua core and Windows EXE to test together, with real Windows RGB decoding and the existing Logitech G HUB executor, all isolated from main.
