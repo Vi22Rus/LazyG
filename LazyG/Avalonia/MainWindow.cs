@@ -472,11 +472,10 @@ public sealed class MainWindow : Window
         view="support";
         var body=Stack(spacing:13);
         body.Children.Add(Text("SUPPORT · ROTATION DIAGNOSTICS",18,"#45E5F7",FontWeight.Bold));
-        body.Children.Add(Text("One report compares XML decisions, Logitech driver IO and independently observed WoW events. An IOCTL call never proves that WoW cast the spell.",12,"#E9B26D"));
+        body.Children.Add(Text("JustAC/Hekili → RGB v3 → Logitech G HUB. No internal rotation/XML/GCD. Successful driver IO does not prove a WoW cast.",12,"#E9B26D"));
         rgbHealthText=Text(rgbMonitor.Summary(),12,"#72D9F3");
         body.Children.Add(Pane(rgbHealthText));
-        body.Children.Add(Text("Auto keybinds: "+autoBindings.Bindings(DateTimeOffset.UtcNow).Count+
-            " · Logitech: "+LastGhubStatus,12,"#C5E1EF"));
+        body.Children.Add(Text("Bindings: from connector RGB · Logitech: "+LastGhubStatus,12,"#C5E1EF"));
         body.Children.Add(Text("Rotation trace: "+executionTrace.Summary(),12,"#72D9F3"));
         hunterAuditSummaryText=Text(hunterAudit.Summary(),11,"#C5E1EF");
         body.Children.Add(hunterAuditSummaryText);
@@ -491,19 +490,9 @@ public sealed class MainWindow : Window
             else
             {
                 executionTrace.Start(DateTimeOffset.UtcNow,
-                    rotationPreview.Running?"Forever Hunter BM PvE":"Forever diagnostic only");
-                if(rotationPreview.Running)StartRotationAudit();
+                    connectorRunning?"JustAC/Hekili external connector":"Forever diagnostic only");
+                // No internal Hunter XML audit in connector mode.
             }
-            ShowSupport();
-        }));
-        actions.Children.Add(Action(coreComparisonRecording?"Stop CORE / XML comparison":"Record CORE / XML comparison",()=>{
-            coreComparisonRecording=!coreComparisonRecording;
-            lastCoreComparisonAt=default;
-            if(coreComparisonRecording && !executionTrace.Recording)
-                executionTrace.Start(DateTimeOffset.UtcNow,"LazyGCore native vs XML (native-only evidence)");
-            RuntimeDiagnostics.Add("CORE_XML_COMPARE",coreComparisonRecording?
-                "Recording enabled: CORE=native RGB; XML=shadow from native-only evidence; missing state is UNKNOWN":
-                "Recording disabled; export diagnostic ZIP to save comparison events");
             ShowSupport();
         }));
         actions.Children.Add(Action("Export diagnostic ZIP",()=>{
@@ -522,17 +511,6 @@ public sealed class MainWindow : Window
             }
             RefreshDiagnosticsView(true);
         }));
-        actions.Children.Add(Action(fullRgbDiagnosticMode?"Deep RGB OFF":"Deep RGB ON",()=>{
-            fullRgbDiagnosticMode=!fullRgbDiagnosticMode;
-            spellDiagnosticEnabled=fullRgbDiagnosticMode;
-            cooldownDiagnosticEnabled=fullRgbDiagnosticMode;
-            lastSpellPacket=null;lastSpellSequence=null;lastSpellDiagnostic="";
-            cooldownObserver.Reset();lastCooldownDiagnostic="";
-            RuntimeDiagnostics.Add("RGBMON",fullRgbDiagnosticMode?
-                "Deep LGD/LGC capture enabled (in-game probe setup required)":
-                "Optional LGD/LGC capture disabled");
-            ShowSupport();
-        }));
         body.Children.Add(actions);
 
         var tools=Stack(Orientation.Horizontal,8);
@@ -547,7 +525,7 @@ public sealed class MainWindow : Window
             RefreshDiagnosticsView(true);
         }));
         body.Children.Add(tools);
-        body.Children.Add(Text("For optional WoW spellcast observations enable /lgprobe audit on in game. Without LGE events the report marks results UNOBSERVABLE, never FAILED. XML audit is captured automatically when a rotation runs.",11,"#E9B26D"));
+        body.Children.Add(Text("Use /lgconnector justac or /lgconnector hekili in WoW. Log records source, SpellID, HID binding and driver result; game cast is not verified.",11,"#E9B26D"));
         diagnosticsOutput=new TextBox {
             Text=RuntimeDiagnostics.Snapshot(),
             IsReadOnly=true,AcceptsReturn=true,
@@ -558,7 +536,7 @@ public sealed class MainWindow : Window
             BorderThickness=new Thickness(0),Height=285
         };
         body.Children.Add(Pane(diagnosticsOutput,"#041624",8,"#275B78",new Thickness(12)));
-        Go(Page("SUPPORT","RGB status · XML versus Logitech versus WoW",Pane(body)));
+        Go(Page("SUPPORT","External RGB source · Logitech G HUB",Pane(body)));
         RefreshDiagnosticsView(true);
     }
     private void StartRotationAudit()
