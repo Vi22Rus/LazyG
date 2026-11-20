@@ -23,6 +23,11 @@ internal sealed class DebuffConfirmationGate
     private DebuffConfirmationState current=DebuffConfirmationState.Idle;
     private const int MinRetryMilliseconds=900; // retry pacing ONLY; NOT a GCD
     public bool HasPending=>pending is not null;
+    // Display intent only: a pending debuff remains the advised action,
+    // even while the XML input engine has no eligible command.
+    // This is NOT an input authorization or confirmation of an aura.
+    public int? PendingSpellId=>pending?.SpellId;
+    public string? PendingRuleId=>pending?.RuleId;
     public void Reset() {pending=null;current=DebuffConfirmationState.Idle;}
 
     public static bool RequiresTargetDebuff(string? ruleId) =>
