@@ -47,16 +47,24 @@ internal static class WowRgbBridge
     // Native LazyGCore recommendation row is at WoW CLIENT x=0..38,y=54..57.
     // Independently captured: a missing old v2 addon cannot be mistaken for a
     // valid game state, and the read-only frame cannot authorize input by itself.
-    public static bool TryReadLazyGCore(out LazyGCoreRgbPacket? packet)
+    public static bool TryReadLazyGCore(out LazyGCoreRgbPacket? packet) =>
+        TryReadLazyGCore(out packet,out _);
+
+    public static bool TryReadLazyGCore(out LazyGCoreRgbPacket? packet,
+        out string detail)
     {
         packet=null;
+        detail="NATIVE RGB UNKNOWN";
         using var game=FindGame();
-        if(game is null || GetForegroundWindow()!=game.MainWindowHandle ||
-           !GetClientRect(game.MainWindowHandle,out var client) ||
+        if(game is null){detail="WOW WINDOW NOT FOUND";return false;}
+        if(GetForegroundWindow()!=game.MainWindowHandle)
+        {detail="WOW NOT FOREGROUND";return false;}
+        if(!GetClientRect(game.MainWindowHandle,out var client) ||
            client.Right-client.Left<45 || client.Bottom-client.Top<65)
-            return false;
+        {detail="INVALID WOW CLIENT RECT";return false;}
         var topLeft=new Point();
-        if(!ClientToScreen(game.MainWindowHandle,ref topLeft))return false;
+        if(!ClientToScreen(game.MainWindowHandle,ref topLeft))
+        {detail="WOW CLIENT SCREEN ORIGIN FAILED";return false;}
         try
         {
             // UI scale changes physical y position and pixel pitch. Search
@@ -67,13 +75,15 @@ internal static class WowRgbBridge
             using var bitmap=new Bitmap(width,height);
             using(var graphics=Graphics.FromImage(bitmap))
                 graphics.CopyFromScreen(topLeft.X,topLeft.Y,0,0,new Size(width,height));
+            int syncCount=0,versionCount=0,failedCrc=0;
             for(int y=0;y<height;y++)
             for(int x=0;x<Math.Min(32,width);x++)
             {
                 var sync=bitmap.GetPixel(x,y);
                 if(Math.Abs(sync.R-76)>3 || Math.Abs(sync.G-71)>3 ||
                    Math.Abs(sync.B-67)>3)continue;
-                for(int pitch=3;pitch<=12;pitch++)
+                syncCount++;
+                for(int pitch=2;pitch<=14;pitch++)
                 {
                     if(x+pitch*7>=width)break;
                     var second=bitmap.GetPixel(x+pitch,y);
@@ -82,6 +92,7 @@ internal static class WowRgbBridge
                     // the same eight cells. Do not reject v2 before CRC validation.
                     if(second.R!=1 && second.R!=2)continue;
                     if(second.B>3)continue;
+                    versionCount++;
                     Span<byte> frame=stackalloc byte[24];
                     for(int i=0;i<8;i++)
                     {
@@ -91,12 +102,20 @@ internal static class WowRgbBridge
                         frame[i*3+2]=color.B;
                     }
                     if(LazyGCoreRgbCodec.TryDecode(frame,out packet))
+                    {
+                        detail="NATIVE CRC OK v"+packet!.Version+
+                            " pitch="+pitch+" x="+x+" y="+y;
                         return true;
+                    }
+                    failedCrc++;
                 }
             }
+            detail=syncCount==0?"NATIVE SYNC LGC NOT FOUND":
+                versionCount==0?"NATIVE MARKER FOUND / VERSION OR STATUS NOT FOUND":
+                "NATIVE CANDIDATE CRC/SHAPE REJECTED "+failedCrc;
             return false;
         }
-        catch(Exception) {return false;}
+        catch(Exception ex) {detail="NATIVE CAPTURE ERROR "+ex.GetType().Name;return false;}
     }
 
     public static bool GameRunning()
