@@ -60,6 +60,13 @@ public sealed class MainWindow : Window
     private System.Collections.Generic.IReadOnlyDictionary<int,string> activeBindings=
         new System.Collections.Generic.Dictionary<int,string>();
     private bool ghubArmed;
+    // Isolated experiment: direct LazyGCore-native recommendations.
+    private bool lazyGCoreMode;
+    private LazyGCoreRgbPacket? lazyGCorePacket;
+    private byte? lastLazyGCoreSequence;
+    private DateTimeOffset lastLazyGCoreSequenceAt;
+    private bool lazyGCoreSequenceEstablished;
+    private string lastLazyGCoreDiagnostic="";
     private bool ghubBusy;
     private long ghubGeneration;
     private string LastGhubStatus="STOPPED";
@@ -403,8 +410,11 @@ public sealed class MainWindow : Window
         body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
         if(cls.Id=="hunter" && spec.Id=="beast-mastery" && mode=="PvE")
         {
-            body.Children.Add(Action(rotationPreview.Running?"Stop":"Start",
-                ()=>{RequestStart(cls,spec);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
+            body.Children.Add(Action(rotationPreview.Running && !lazyGCoreMode?"Stop XML":"Start XML",
+                ()=>{RequestStart(cls,spec,false);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
+            body.Children.Add(Action(rotationPreview.Running && lazyGCoreMode?"Stop LazyGCore":"Start LazyGCore (DEV)",
+                ()=>{RequestStart(cls,spec,true);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
+            body.Children.Add(Text("LazyGCore mode reads the forked engine's native RGB (not XML priorities). It still requires the standard LazyG RGB addon for trusted GCD, spell-readiness and auto keybinds; UNKNOWN signals block HID. Install both Lua addons for this experiment.",11,"#E5C694"));
             body.Children.Add(Text("Start connects Logitech G HUB; Lua automatically reads the WoW action bar bindings through RGB v3. Only a fresh exact SpellID match can send a key. In-game validation required.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
             body.Children.Add(Text("Для теста: Start включает XML-аудит; Support сохраняет полный диагностический ZIP. Успешное нажатие Logitech не доказывает каст WoW.",11,"#B7A88E"));
@@ -754,12 +764,13 @@ public sealed class MainWindow : Window
         if(diagnosticsOutput.Text!=snapshot)
             diagnosticsOutput.Text=snapshot;
     }
-    private void RequestStart(GameClass cls, Specialization spec)
+    private void RequestStart(GameClass cls, Specialization spec,bool useLazyGCore=false)
     {
         if(rotationPreview.Running)
         {
             StopGhub("STOPPED BY USER");
             rotationPreview.Stop("STOPPED BY USER");
+            lazyGCoreMode=false;
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
@@ -801,6 +812,12 @@ public sealed class MainWindow : Window
             lastDebuffState=DebuffConfirmationState.Idle;
             ghubGeneration++;
             ghubArmed=true;
+            lazyGCoreMode=useLazyGCore;
+            // Never inherit an old core recommendation when arming the driver.
+            lazyGCorePacket=null;
+            lastLazyGCoreSequence=null;
+            lastLazyGCoreSequenceAt=default;
+            lazyGCoreSequenceEstablished=false;
             LastGhubStatus="CONNECTED / RUNNING";
             executionTrace.Start(DateTimeOffset.UtcNow,
                 "forever/"+cls.Id+"/"+spec.Id+"/PvE");
@@ -814,12 +831,14 @@ public sealed class MainWindow : Window
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(true,null,rotationPreview.Status);
-            RuntimeDiagnostics.Add("ROTATION","Started XML rotation with Logitech virtual bus · DEV game-untested");
+            RuntimeDiagnostics.Add("ROTATION",lazyGCoreMode?
+                "Started LazyGCore native RGB test; HID requires independent RGB readiness/range":"Started XML rotation with Logitech virtual bus · DEV game-untested");
             if(view=="classes")ShowClasses();
         }
         catch(Exception ex)
         {
             StopGhub("START FAILED");
+            lazyGCoreMode=false;
             RuntimeDiagnostics.Add("ROTATION","Start rejected: "+ex.GetType().Name+" · "+ex.Message);
             var notice=new Window {
                 Title=ghubMissingOnStart?"LazyG · Logitech G HUB required":
@@ -848,6 +867,31 @@ public sealed class MainWindow : Window
             rotationPreview.Stop("EXTERNAL SOURCE SELECTED");
             overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
             RuntimeDiagnostics.Add("ROTATION","Internal XML preview stopped: external source");
+            return;
+        }
+        if(lazyGCoreMode)
+        {
+            var c=lazyGCorePacket;
+            bool fresh=lazyGCoreSequenceEstablished &&
+                lastLazyGCoreSequenceAt!=default &&
+                at-lastLazyGCoreSequenceAt<=TimeSpan.FromMilliseconds(900);
+            RotationRecommendation? nativeRec=fresh && c?.Status==1?
+                new(RotationSourceId.Internal,c.SpellId,0,"lazygcore",at):null;
+            string nativeStatus=!fresh?"LAZYGCORE RGB STALE / WAITING":
+                c?.Status==1?"LAZYGCORE RGB SPELL "+c.SpellId:
+                "LAZYGCORE RGB NO SPELL / STATUS "+(c?.Status.ToString()??"NONE");
+            if(nativeStatus!=lastPreviewStatus ||
+               nativeRec?.SpellId!=lastPreviewSpell)
+            {
+                RuntimeDiagnostics.Add("LAZYGCORE",nativeStatus);
+                if(nativeRec is not null)
+                    executionTrace.Recommend(at,nativeRec.SpellId,"lazygcore");
+                lastPreviewStatus=nativeStatus;
+                lastPreviewSpell=nativeRec?.SpellId;
+            }
+            overlay?.SetReadOnlyRecommendation(true,nativeRec?.SpellId,nativeStatus);
+            if(ghubArmed && nativeRec is not null)
+                QueueLogitechCommand(nativeRec,at);
             return;
         }
         var rec=rotationPreview.Update(latestGameState,at);
@@ -913,6 +957,9 @@ public sealed class MainWindow : Window
             }
         }
         ghubArmed=false;
+        lazyGCoreMode=false;
+        lazyGCorePacket=null;
+        lazyGCoreSequenceEstablished=false;
         ghubGeneration++;
         activeBindings=new System.Collections.Generic.Dictionary<int,string>();
         commandGate.Reset();
@@ -928,7 +975,28 @@ public sealed class MainWindow : Window
     {
         if(!ghubArmed || ghubBusy || rec is null)return;
         var now=DateTimeOffset.UtcNow;
-        if(!debuffConfirmation.MaySend(rec,latestGameState,now,out var debuffReason))
+        if(lazyGCoreMode && (!lazyGCoreSequenceEstablished ||
+            now-lastLazyGCoreSequenceAt>TimeSpan.FromMilliseconds(900) ||
+            lazyGCorePacket?.SpellId!=rec.SpellId ||
+            lazyGCorePacket.Status!=1 ||
+            !lazyGCorePacket.HasRangeEvidence ||
+            lazyGCorePacket.OutOfRange ||
+            (lazyGCorePacket.HasWaitingEvidence && lazyGCorePacket.Waiting) ||
+            (lazyGCorePacket.HasPowerEvidence && lazyGCorePacket.NoPower) ||
+            ConditionEvaluator.AttackTarget(latestGameState)!=Truth.True ||
+            ConditionEvaluator.GcdReady(latestGameState)!=Truth.True ||
+            ConditionEvaluator.SpellReady(latestGameState,rec.SpellId)!=Truth.True))
+        {
+            if(lastInputGateReason!="LAZYGCORE UNVERIFIED READINESS / RANGE")
+            {
+                executionTrace.Add(now,"INPUT_BLOCKED",rec.SpellId,
+                    "LAZYGCORE UNVERIFIED READINESS / RANGE",null,rec.RuleId);
+                lastInputGateReason="LAZYGCORE UNVERIFIED READINESS / RANGE";
+            }
+            return;
+        }
+        if(!lazyGCoreMode &&
+           !debuffConfirmation.MaySend(rec,latestGameState,now,out var debuffReason))
         {
             if(debuffReason!=lastInputGateReason)
             {
@@ -1100,11 +1168,44 @@ public sealed class MainWindow : Window
                     hunterCompactManifest is null?0:
                         HunterCompactProfileWire.ExtensionCells(hunterCompactManifest));
                 stopwatch.Stop();
-                return (ok,state,packet,detail,v3,thresholds,spell,cooldown,castEvent,
+                bool coreOk=WowRgbBridge.TryReadLazyGCore(out var core);
+                return (ok,state,packet,detail,v3,thresholds,spell,cooldown,castEvent,coreOk,core,
                     capturedAt:DateTimeOffset.UtcNow,
                     captureMs:stopwatch.Elapsed.TotalMilliseconds);
             });
             if(finished)return;
+            if(result.coreOk && result.core is not null)
+            {
+                var pkt=result.core;
+                lazyGCorePacket=pkt;
+                if(lastLazyGCoreSequence is not byte prev)
+                    lastLazyGCoreSequence=pkt.Sequence;
+                else if(prev!=pkt.Sequence)
+                {
+                    lastLazyGCoreSequence=pkt.Sequence;
+                    lastLazyGCoreSequenceAt=result.capturedAt;
+                    lazyGCoreSequenceEstablished=true;
+                }
+            }
+            else
+            {
+                lazyGCorePacket=null;
+                lastLazyGCoreSequence=null;
+                lastLazyGCoreSequenceAt=default;
+                lazyGCoreSequenceEstablished=false;
+            }
+            string coreStatus=lazyGCorePacket is null?"NO NATIVE RGB":
+                "NATIVE CRC OK status="+lazyGCorePacket.Status+
+                " spell="+lazyGCorePacket.SpellId+
+                " sequence="+lazyGCorePacket.Sequence+
+                " rangeKnown="+lazyGCorePacket.HasRangeEvidence+
+                " outOfRange="+lazyGCorePacket.OutOfRange+
+                " stream="+(lazyGCoreSequenceEstablished?"LIVE":"BASELINE");
+            if(coreStatus!=lastLazyGCoreDiagnostic)
+            {
+                RuntimeDiagnostics.Add("LAZYGCORE",coreStatus);
+                lastLazyGCoreDiagnostic=coreStatus;
+            }
             var connected=result.ok && result.state is not null;
             if(connected && result.packet is not null)
                 autoBindings.Accept(result.packet,hunterCompactManifest is null?0:
@@ -1357,7 +1458,7 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("GAMESTATE",engineDiagnostic);
                 lastGameStateDiagnostic=engineDiagnostic;
             }
-            overlay?.SetConnection(connected,crc,curve,connected && result.state?.InCombat == true,
+            overlay?.SetConnection(connected || lazyGCoreSequenceEstablished,crc,curve,connected && result.state?.InCombat == true,
                 result.state?.ClassName, result.state?.SpecName);
             RefreshDiagnosticsView();
         }
