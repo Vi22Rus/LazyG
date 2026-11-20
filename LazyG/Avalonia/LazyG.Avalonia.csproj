@@ -33,7 +33,7 @@
     <EmbeddedResource Include="Assets/midnight-backdrop.txt" LogicalName="LazyG.MidnightBackdrop" />
     <EmbeddedResource Include="Assets/forever-spells.txt" LogicalName="LazyG.ForeverSpellCatalog" />
     <EmbeddedResource Include="Assets/forever-spell-atlas.txt" LogicalName="LazyG.ForeverSpellAtlas" />
-    <Compile Include="../Windows/LazyGCoreRgbCodec.cs" Link="Bridge/LazyGCoreRgbCodec.cs" />
+    <Compile Include="../Windows/LazyGConnectorRgbCodec.cs" Link="Bridge/LazyGConnectorRgbCodec.cs" />
     <Compile Include="../Windows/WowRgbBridge.cs" Link="Bridge/WowRgbBridge.cs" />
   </ItemGroup>
 </Project>
