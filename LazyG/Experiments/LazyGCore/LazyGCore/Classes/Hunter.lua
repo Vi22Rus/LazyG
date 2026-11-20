@@ -378,14 +378,14 @@ local mmPriority = {
     -- Nov 10 model, seconds per kill: +8.2% at 10, +16.0% at 20, +18.1% at 30, +3.2% at 50, +10.7% at 60).
     -- Not in raids: there it loses 1.2% (max gear Patchwerk), so the filler Arcane Shot below stays last
     { sp.ArcaneShot, when = { C.questing, ManaOK(25) }, strictRange = true, text = "Arcane Shot", reason = "Instant damage between Auto Shots." },
-    { sp.MultiShot, when = { C.enemies(2), aoeOn, C.any(C.groupContent, C.all(C.questing, C.solo, C.levelBelow(40))), C.hasPower(sp.AimedShot) }, strictRange = true, text = "Multi-Shot", reason = "Group: instant, shares Aimed Shot's cooldown." },
+    { sp.MultiShot, when = { aoeOn, C.enemies(2), aoeOn, C.any(C.groupContent, C.all(C.questing, C.solo, C.levelBelow(40))), C.hasPower(sp.AimedShot) }, strictRange = true, text = "Multi-Shot", reason = "Group: instant, shares Aimed Shot's cooldown." },
     With(MarkRule(), C.no(mmLate)),
     With(SerpentRule(25, "Enables Rapid Recuperation and Rapid Killing."), C.no(mmLate)),
     { sp.AimedShot, when = { rapidKilling, C.standing }, strictRange = true, text = "Aimed Shot", reason = "Spend Rapid Killing (+20%)." },
     { sp.AimedShot, when = { C.standing, singleTarget }, strictRange = true, text = "Aimed Shot", reason = "Single target: your hardest-hitting shot." },
     With(MarkRule(), mmLate),
     -- only while Aimed Shot is affordable: low on mana the cheaper Multi-Shot kept delaying it (sim, build 70450: +10% at 60)
-    { sp.MultiShot, when = { C.enemies(2), aoeOn, C.hasPower(sp.AimedShot) }, strictRange = true, text = "Multi-Shot", reason = "Shares Aimed Shot's 6s cooldown (instant)." },
+    { sp.MultiShot, when = { aoeOn, C.enemies(2), aoeOn, C.hasPower(sp.AimedShot) }, strictRange = true, text = "Multi-Shot", reason = "Shares Aimed Shot's 6s cooldown (instant)." },
     -- 4s cast fills the 4s left on Aimed Shot's cooldown; from 35-45 yd (Aimed out of range) it is the opener
     { sp.SniperShot, when = { C.standing, C.any(C.targetElite, C.groupContent, C.no(C.inCombat)) }, strictRange = true, text = "Sniper Shot", reason = "4s cast - fits Aimed Shot's cooldown; only if it will finish." },
     { sp.ArcaneShot, when = { ManaOK(25) }, strictRange = true, text = "Arcane Shot", reason = "Instant damage between Auto Shots." },
@@ -543,7 +543,7 @@ S:RegisterClass("HUNTER", {
                 { sp.ImmolationTrap, when = { inMelee, C.any(bigTarget, C.all(C.questing, C.any(C.levelBelow(30), C.talent("Resourcefulness")))), ccSafe }, unit = "player", text = "Immolation Trap", reason = "At your feet - scales with attack power." },
                 -- Out of melee: ranged fallback
                 { sp.AimedShot, when = { atRange, C.standing }, strictRange = true, text = "Aimed Shot", reason = "Not in melee yet." },
-                { sp.MultiShot, when = { C.enemies(2), atRange, aoeOn }, strictRange = true, text = "Multi-Shot", reason = "Not in melee yet." },
+                { sp.MultiShot, when = { aoeOn, C.enemies(2), atRange, aoeOn }, strictRange = true, text = "Multi-Shot", reason = "Not in melee yet." },
                 { sp.ArcaneShot, when = { atRange }, strictRange = true, text = "Arcane Shot", reason = "Not in melee yet." },
                 AutoShotRule(atRange),
                 -- In melee with everything on cooldown: keep swinging
@@ -553,7 +553,7 @@ S:RegisterClass("HUNTER", {
             aoe = {
                 { sp.ExplosiveTrap, when = { inMelee }, unit = "player", text = "Explosive Trap", reason = "At your feet: Fire damage to every mob within 10 yd." },
                 { sp.ImmolationTrap, when = { inMelee, C.unknown(sp.ExplosiveTrap) }, unit = "player", text = "Immolation Trap", reason = "At your feet: burns the first mob to reach it." },
-                { sp.MultiShot, when = { C.enemies(2), atRange }, strictRange = true, text = "Multi-Shot", reason = "Hits 3 targets." },
+                { sp.MultiShot, when = { aoeOn, C.enemies(2), atRange }, strictRange = true, text = "Multi-Shot", reason = "Hits 3 targets." },
                 { sp.Volley, when = { atRange, C.standing, C.enemies(4), ManaOK(40) }, text = "Volley", reason = "Channeled: hits everything in the area for 6s." },
             },
             builds = {
