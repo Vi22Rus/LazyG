@@ -6,7 +6,8 @@ namespace LazyGPrototype;
 // This is a recommendation-only channel: it does not attest GCD or cast success.
 internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
     byte Flags,byte HidModifier=0,byte HidUsage=0,byte Gate=0,byte Version=1,
-    byte HunterMarkDiagnostics=0,byte SerpentAura=0,byte ManaPercent=255)
+    byte HunterMarkDiagnostics=0,byte SerpentAura=0,byte ManaPercent=255,
+    byte MarkAura=0)
 {
     public bool HasNativeBinding => Version==2 && (Gate&1)!=0 &&
         HidModifier<=15 && HidUsage>=4 && HidUsage<=115;
@@ -63,9 +64,10 @@ internal static class LazyGCoreRgbCodec
         }
         else
         {
-            for(int i=17;i<=20;i++)
+            for(int i=18;i<=20;i++)
                 if(bytes[i]!=0)return false;
-            if(bytes[15]>2 || (bytes[16]>100 && bytes[16]!=255))
+            if(bytes[15]>2 || (bytes[16]>100 && bytes[16]!=255) ||
+               bytes[17]>2)
                 return false;
             if((bytes[13]&~63)!=0 || bytes[11]>15 ||
                ((bytes[13]&1)!=0 && (bytes[12]<4 || bytes[12]>115)) ||
@@ -82,7 +84,8 @@ internal static class LazyGCoreRgbCodec
             bytes[3]==2?bytes[13]:(byte)0,bytes[3],
             bytes[3]==2?bytes[14]:(byte)0,
             bytes[3]==2?bytes[15]:(byte)0,
-            bytes[3]==2?bytes[16]:(byte)255);
+            bytes[3]==2?bytes[16]:(byte)255,
+            bytes[3]==2?bytes[17]:(byte)0);
         return true;
     }
 }
