@@ -77,17 +77,11 @@ internal static class WowRgbBridge
                 {
                     if(x+pitch*7>=width)break;
                     var second=bitmap.GetPixel(x+pitch,y);
-                    var third=bitmap.GetPixel(x+2*pitch,y);
-                    if(Math.Abs(second.R-1)>3 || Math.Abs(second.G-0)>3 ||
-                       Math.Abs(second.B-0)>3 ||
-                       Math.Abs(third.R-0)>3 || Math.Abs(third.G-0)>3 ||
-                       Math.Abs(third.B-0)>3)
-                    {
-                        // Cell 1 = LGC, cell 2 = version, sequence, status,
-                        // cell 3 = SpellID. Version sequence are variable.
-                        // Only validate stable version channel here.
-                        if(second.R!=1)continue;
-                    }
+                    // Pixel 1=magic LGC, pixel 2=(version,sequence,status).
+                    // Native v2 adds trusted HID/gate information while keeping
+                    // the same eight cells. Do not reject v2 before CRC validation.
+                    if(second.R!=1 && second.R!=2)continue;
+                    if(second.B>3)continue;
                     Span<byte> frame=stackalloc byte[24];
                     for(int i=0;i<8;i++)
                     {
