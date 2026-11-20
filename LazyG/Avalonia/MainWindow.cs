@@ -1135,9 +1135,11 @@ public sealed class MainWindow : Window
                TimeSpan.FromMilliseconds(900))reason="NATIVE RGB STALE / INVALID";
         else if(!packet.NativeInputReady)reason=
             "NATIVE UNVERIFIED: binding="+packet.HasNativeBinding+
+            " selfBuff="+packet.NativeSelfBuff+
             " target="+packet.NativeTargetReady+
             " gcd="+packet.NativeGcdReady+" spell="+packet.NativeSpellReady+
-            " range="+(packet.HasRangeEvidence && !packet.OutOfRange);
+            " range="+packet.NativeRangeReady+
+            " usable="+packet.NativeUsableReady;
         else if(lastNativeInputSequence==packet.Sequence)reason="NATIVE DUPLICATE FRAME";
         else if(lastNativeInputAt!=default && now-lastNativeInputAt<
                 TimeSpan.FromMilliseconds(1500))reason="NATIVE INPUT PACING";
@@ -1155,14 +1157,17 @@ public sealed class MainWindow : Window
         lastInputGateReason="";
         if(!packet!.NativeGcdReady || !packet.NativeSpellReady)
             executionTrace.Add(now,"NATIVE_COOLDOWN_UNVERIFIED",rec.SpellId,
-                "Prototype: WoW cooldown APIs unknown; 1500ms minimum input pacing; target/range/usable confirmed");
+                "Prototype: WoW cooldown APIs unknown; 1500ms minimum input pacing; "+
+                (packet.NativeSelfBuff?"self-buff: no hostile target/range required":
+                    "attack: hostile target/range/usable confirmed"));
         lastNativeInputSequence=packet.Sequence;
         lastNativeInputAt=now;
         var mod=packet.HidModifier;
         var usage=packet.HidUsage;
         long attempt=executionTrace.Attempt(now,rec.SpellId,"lazygcore-native");
         executionTrace.Add(now,"NATIVE_HID_BINDING",rec.SpellId,
-            "modifier="+mod+" usage="+usage+" sequence="+packet.Sequence,attempt,
+            "modifier="+mod+" usage="+usage+" sequence="+packet.Sequence+
+            " category="+(packet.NativeSelfBuff?"SELF_BUFF":"HOSTILE_ACTION"),attempt,
             "lazygcore-native");
         ghubBusy=true;
         long generation=ghubGeneration;
