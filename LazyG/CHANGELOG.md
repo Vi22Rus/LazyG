@@ -1,3 +1,18 @@
+## 2026-11-20 — Connector migration CI closure [DEV / GAME-UNTESTED]
+
+**Windows CI PASS:** [Actions 44711593971](https://github.com/Vi22Rus/LazyG/actions/runs/44711593971), tested code SHA `7d60cead1af7f647a7cbd025a0d9e2fb71b85032`, self-contained win-x64 single EXE artifact [14617243850](https://github.com/Vi22Rus/LazyG/actions/runs/44711593971/artifacts/14617243850). Build, v3 CRC/source/binding tests, Lua connector mocks, spell icon atlas checks and Windows startup smoke passed. Prior CI failures were real and documented: obsolete codec tests, missing legacy diagnostics types after deletion, crash report and overlay references to deleted types. All repaired before final successful run.
+
+**Standalone addon CI PASS:** [Actions 44709553568](https://github.com/Vi22Rus/LazyG/actions/runs/44709553568), v3 connector addon artifact [14616238200](https://github.com/Vi22Rus/LazyG/actions/runs/44709553568/artifacts/14616238200). Contains only `LazyGConnector` files; no embedded third-party rotation or old LazyGCore. These builds are a compatible source-tagged v3 protocol pair. No WoW user test yet. **Do not call it a release or claim that real in-game casts were validated.**
+
+**Delivered to user:** Windows + addon URLs as above, installation notes and PowerShell EXE command; game-tested status pending. PowerShell from repository root:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+**Next:** user checks JustAC and Hekili separately, `/lgconnector justac` or `/lgconnector hekili`, starts Windows Connector, exports ZIP. Explicit checks: correct source ID + SpellID + bound key + actual WoW behavior. In-game integration remains **UNVERIFIED**. Latest documentation commit is not the tested EXE code SHA, and only modifies docs. Previous usable experimental source rollback SHA `cb90031789046d7fbce89446244a782471d485c2`. Main never modified.
+
+---
+
 ## 2026-11-20 09:00–09:33 UTC — Architecture pivot to external JustAC/Hekili Connector (DEV)
 
 **USER DECISION / REQUIREMENTS (2026-11-20, time from user message not independently verified):** Stop all in-house XML rotations, LazyGCore/Sonah-derived fork and all own aura/GCD/target/priority calculations. Build only lightweight Lua connector which reads the already-computed **first recommendation of working JustAC or Hekili**, sends SpellID + action bar binding via RGB, and Windows forwards that binding to Logitech G HUB. Retain the existing Avalonia UI shell, class/specialization icon browser, spell names/icons, overlay and window minimize/maximize/close. Remove obsolete code; keep rollback; no changes to main.
