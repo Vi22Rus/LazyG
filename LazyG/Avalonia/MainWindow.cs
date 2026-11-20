@@ -47,7 +47,7 @@ public sealed class MainWindow : Window
     private byte? lastNativeInputSequence;
     private DateTimeOffset lastNativeInputAt;
     private DateTimeOffset lastCoreComparisonAt;
-    private LazyGCoreRgbPacket? lazyGCorePacket;
+    private LazyGConnectorRgbPacket? lazyGCorePacket;
     private byte? lastLazyGCoreSequence;
     private DateTimeOffset lastLazyGCoreSequenceAt;
     private bool lazyGCoreSequenceEstablished;
@@ -573,12 +573,8 @@ public sealed class MainWindow : Window
            !lazyGCoreSequenceEstablished || now-lastLazyGCoreSequenceAt>
                TimeSpan.FromMilliseconds(900))reason="NATIVE RGB STALE / INVALID";
         else if(!packet.NativeInputReady)reason=
-            "NATIVE UNVERIFIED: binding="+packet.HasNativeBinding+
-            " selfBuff="+packet.NativeSelfBuff+
-            " target="+packet.NativeTargetReady+
-            " gcd="+packet.NativeGcdReady+" spell="+packet.NativeSpellReady+
-            " range="+packet.NativeRangeReady+
-            " usable="+packet.NativeUsableReady;
+            "CONNECTOR NO DIRECT KEY: provider="+packet.SourceName+
+            " binding="+packet.HasNativeBinding;
         else if(lastNativeInputSequence==packet.Sequence)reason="NATIVE DUPLICATE FRAME";
         else if(lastNativeInputAt!=default && now-lastNativeInputAt<
                 TimeSpan.FromMilliseconds(1500))reason="NATIVE INPUT PACING";
