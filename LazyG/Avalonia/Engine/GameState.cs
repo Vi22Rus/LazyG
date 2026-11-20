@@ -50,6 +50,10 @@ internal sealed record GameState(
     public Observed<bool> GcdActive { get; init; } = Observed<bool>.Missing();
     // Required for target-specific aura evidence; target changes invalidate old effects.
     public Observed<int> TargetEpoch { get; init; } = Observed<int>.Missing();
+    // Event-derived estimates are NOT observed debuffs: keyed by base AuraID.
+    // Never put a successful HID tap here: only WoW player SPELLCAST_SUCCEEDED.
+    public IReadOnlyDictionary<int,Observed<bool>> TargetDebuffCastHints { get; init; } =
+        new Dictionary<int,Observed<bool>>();
 
     public static GameState Empty(DateTimeOffset now) => new(
         "forever",now,Knowledge.Unknown,
@@ -72,6 +76,7 @@ internal sealed record GameState(
         PlayerHealthPercent=PlayerHealthPercent.At(now,maxAge),
         TargetHealthPercent=TargetHealthPercent.At(now,maxAge),
         PowerPercent=PowerPercent.At(now,maxAge),PowerBand=PowerBand.At(now,maxAge),GcdActive=GcdActive.At(now,maxAge),TargetEpoch=TargetEpoch.At(now,maxAge),
+        TargetDebuffCastHints=TargetDebuffCastHints.ToDictionary(k=>k.Key,v=>v.Value.At(now,maxAge)),
         Moving=Moving.At(now,maxAge),
         Casting=Casting.At(now,maxAge),GcdRemainingMilliseconds=GcdRemainingMilliseconds.At(now,maxAge),
         Spells=AgeSpells(Spells,now,maxAge), Auras=AgeAuras(Auras,now,maxAge)
