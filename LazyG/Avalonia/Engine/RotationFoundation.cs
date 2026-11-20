@@ -361,7 +361,7 @@ internal static class RotationXmlV2
                         // absent/present list wins over inferred effects.
                         // This is advisory for selecting the next XML rule,
                         // never proof of a debuff hit or an HID authorization.
-                        if(absent==Truth.Unknown && ids.Length>0 &&
+                        if(absent==Truth.Unknown && ids.Count>0 &&
                            fresh.TargetDebuffCastHints.TryGetValue(ids[0],out var hint) &&
                            hint.Is(x=>x)==Truth.True)
                         {
