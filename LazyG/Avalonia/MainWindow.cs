@@ -62,6 +62,7 @@ public sealed class MainWindow : Window
     private bool ghubArmed;
     // Isolated experiment: direct LazyGCore-native recommendations.
     private bool lazyGCoreMode;
+    private bool connectorRunning;
     // Isolated fork: never sample the legacy RGB transport in this build.
     private const bool NativeOnlyExperiment = true;
     private bool coreComparisonRecording;
@@ -288,6 +289,9 @@ public sealed class MainWindow : Window
     {
         view="classes"; selectedClass=null; selectedSpec=null;
         var wrap=Stack(spacing:19);
+        wrap.Children.Add(Action(connectorRunning?"Stop Connector":"Start Connector",
+            ToggleConnector,true));
+        wrap.Children.Add(Text("External recommendations only: JustAC / Hekili (choose source with /lgconnector). No LazyG XML engine.",12,"#A3CADA"));
         var selection = client.Classes.FirstOrDefault(c=>c.Id==session.LastClass);
         var lastSpec = selection?.Specs.FirstOrDefault(s=>s.Id==session.LastSpec);
         if(selection is not null && lastSpec is not null)
@@ -296,10 +300,10 @@ public sealed class MainWindow : Window
             last.Children.Add(SpellIcon(lastSpec.Icon,59));
             var labels=Stack(spacing:3);labels.Children.Add(Text("LAST USED",11,"#52E3F4",FontWeight.Bold));
             labels.Children.Add(Text(lastSpec.Name+"  ·  "+selection.Name,20,"#FFFFFF",FontWeight.SemiBold));
-            labels.Children.Add(Text("Your previous specialization · Start requires an installed XML rotation",12,"#A3BCCC"));
+            labels.Children.Add(Text("Class and spell catalogue (recommendations come from installed addon)",12,"#A3BCCC"));
             Grid.SetColumn(labels,1);last.Children.Add(labels);
-            var b=Action(rotationPreview.Running?"Stop":"Start",
-                ()=>RequestStart(selection,lastSpec),true);b.VerticalAlignment=VerticalAlignment.Center;
+            var b=Action(connectorRunning?"Stop":"Start Connector",
+                ToggleConnector,true);b.VerticalAlignment=VerticalAlignment.Center;
 
             Grid.SetColumn(b,2);last.Children.Add(b);
             wrap.Children.Add(Pane(last,"#102B41"));
@@ -388,205 +392,10 @@ public sealed class MainWindow : Window
         identity.Children.Add(Text(spec.Name,25,"#FFFFFF",FontWeight.Bold));
         identity.Children.Add(Text(cls.Name+" · Forever · Internal XML (DEV; live input only for supported profiles)",12,cls.Accent));
         top.Children.Add(identity);body.Children.Add(Pane(top));
-        var modeTabs=Stack(Orientation.Horizontal,8);
-        modeTabs.Children.Add(Action(mode=="PvE"?"PvE ✓":"PvE",
-            ()=>ShowSpec(cls,spec,"PvE","Essentials"),mode=="PvE"));
-        modeTabs.Children.Add(Action(mode=="PvP"?"PvP ✓":"PvP",
-            ()=>ShowSpec(cls,spec,"PvP","Essentials"),mode=="PvP"));
-        body.Children.Add(modeTabs);
-        var source=sourceManager.Snapshot(DateTimeOffset.UtcNow);
-        bool externalActive=source.Confirmed is RotationSourceId.Hekili or RotationSourceId.JustAC;
-        body.Children.Add(Text(externalActive
-            ?"External source confirmed: built-in settings locked; values preserved."
-            :"Source RGB not installed. Settings may be edited offline; no automatic input is enabled.",
-            12,externalActive?"#E9B26D":"#94CDE4"));
-        RotationProfileV2? profile;
-        try { profile=RotationProfileCatalog.Load(cls.Id,spec.Id,mode); }
-        catch(Exception ex)
-        {
-            RuntimeDiagnostics.Add("XML2","Profile load rejected: "+ex.GetType().Name);
-            body.Children.Add(Text("Invalid embedded XML; rotation blocked.",14,"#EAA3A3"));
-            Go(Page(spec.Name.ToUpperInvariant(),"Rotation settings",body,cls.Name,()=>ShowClass(cls)));
-            return;
-        }
-        if(profile is null)
-        {
-            body.Children.Add(Pane(Text("No validated XML profile for this specialization and mode. Settings are unavailable; no placeholder controls are shown.",14,"#E8C4A6")));
-            Go(Page(spec.Name.ToUpperInvariant(),"Rotation settings",body,cls.Name,()=>ShowClass(cls)));
-            return;
-        }
-        body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
-        if(cls.Id=="hunter" && spec.Id=="beast-mastery" && mode=="PvE")
-        {
-            body.Children.Add(Action(rotationPreview.Running && lazyGCoreMode?"Stop LazyGCore":"Start LazyGCore (DEV)",
-                ()=>{RequestStart(cls,spec,true);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
-            body.Children.Add(Text("NATIVE RGB v2: reads only LazyGCore's 8 cells. Logitech sends only for fresh confirmed target, GCD, spell, range and native bar binding. Missing evidence blocks a press. XML comparison is read-only.",11,"#E5C694"));
-            body.Children.Add(Text("Start connects Logitech G HUB; Lua automatically reads the WoW action bar bindings through RGB v3. Only a fresh exact SpellID match can send a key. In-game validation required.",11,"#B7A88E"));
-            body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
-            body.Children.Add(Text("Для теста: Start включает XML-аудит; Support сохраняет полный диагностический ZIP. Успешное нажатие Logitech не доказывает каст WoW.",11,"#B7A88E"));
-        }
-        string settingsFile=Path.Combine(Environment.GetFolderPath(
-            Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
-            "forever-"+cls.Id+"-"+spec.Id+"-"+mode.ToLowerInvariant()+".json");
-        System.Collections.Generic.Dictionary<string,int> overrides;
-        try {overrides=new System.Collections.Generic.Dictionary<string,int>(
-            RotationSettingsStore.Load(settingsFile,profile));}
-        catch(Exception ex)
-        {
-            RuntimeDiagnostics.Add("XML2","Override load rejected: "+ex.GetType().Name);
-            body.Children.Add(Text("Saved settings invalid. Defaults are displayed; saving is disabled until the file is repaired.",12,"#EAA3A3"));
-            Go(Page(spec.Name.ToUpperInvariant(),"Rotation settings",body,cls.Name,()=>ShowClass(cls)));
-            return;
-        }
-        int changes=overrides.Count(kv=>profile.Settings.TryGetValue(kv.Key,out var d) && d.Default!=kv.Value);
-        const string amber="#F9B72E", ivory="#FAEDE0", muted="#C0A999";
-        var settingsSurface=Stack(spacing:12);
-        var toolbar=Stack(Orientation.Horizontal,11);
-        Button tab(string name,bool active,Action click)
-        {
-            var button=Action(name,click,active);
-            button.Padding=new Thickness(17,8);
-            button.Background=Palette.Brush(active?"#DA8E15":"#291D19");
-            button.Foreground=Palette.Brush(active?"#21120D":"#E9D4BF");
-            button.BorderBrush=Palette.Brush(active?"#FFCE5B":"#62442A");
-            return button;
-        }
-        toolbar.Children.Add(tab("Essentials",tier=="Essentials",
-            ()=>ShowSpec(cls,spec,mode,"Essentials",changedOnly)));
-        toolbar.Children.Add(tab("Advanced",tier=="Advanced",
-            ()=>ShowSpec(cls,spec,mode,"Advanced",changedOnly)));
-        toolbar.Children.Add(tab(mode,mode=="PvE",
-            ()=>ShowSpec(cls,spec,mode=="PvE"?"PvP":"PvE","Essentials")));
-        toolbar.Children.Add(tab(changedOnly?"Changed only ✓ "+changes:"Changed only · "+changes,
-            changedOnly,()=>ShowSpec(cls,spec,mode,tier,!changedOnly)));
-        var reset=tab("Reset to defaults",false,()=>{
-            if(!externalActive)
-                ShowRotationResetConfirmation(cls,spec,profile,settingsFile,mode,tier);
-        });
-        reset.IsEnabled=!externalActive;
-        toolbar.Children.Add(reset);
-        settingsSurface.Children.Add(toolbar);
-        var finder=new TextBox { Watermark="Filter settings…",Width=340,
-            HorizontalAlignment=HAlign.Left,Background=Palette.Brush("#241A17"),
-            Foreground=Palette.Brush(ivory),BorderBrush=Palette.Brush("#664933"),
-            BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(12),
-            Padding=new Thickness(13,8) };
-        settingsSurface.Children.Add(finder);
-        settingsSurface.Children.Add(Text("PvE and PvP profiles store separate settings. Only the current XML profile is displayed.",
-            11,muted));
-        var renderedRows=new System.Collections.Generic.List<(Border Row,string SearchText)>();
-        var orderedGroups=new[]{"Utility","Defensives","Cooldowns","Rotation","AoE","Resource"};
-        var visibleSettings=profile.Settings.Values.Where(x=>x.Tier==tier &&
-            (!changedOnly || (overrides.TryGetValue(x.Id,out var value) &&
-                              value!=x.Default)))
-            .OrderBy(x=>Array.IndexOf(orderedGroups,x.Group)<0?99:Array.IndexOf(orderedGroups,x.Group))
-            .ThenBy(x=>x.Parent is null?0:1).ThenBy(x=>x.Id).ToArray();
-        string[] sectionGroups=visibleSettings.Select(x=>x.Group).Distinct().ToArray();
-        foreach(string group in sectionGroups)
-        {
-            settingsSurface.Children.Add(Text(group.ToUpperInvariant(),11,amber,FontWeight.Bold));
-            foreach(var setting in visibleSettings.Where(x=>x.Group==group))
-            {
-                var current=overrides.TryGetValue(setting.Id,out var saved)?saved:setting.Default;
-                var row=new Grid { ColumnDefinitions=new ColumnDefinitions("Auto,*,Auto"),
-                    ColumnSpacing=13,Margin=new Thickness(setting.Parent is null?0:24,0,0,0),
-                    MinHeight=58 };
-                var icon=HunterSettingIcon(cls.Id,setting.IconSpellId,setting.LabelEn,setting.Parent is null?34:30);
-                Grid.SetColumn(icon,0);row.Children.Add(icon);
-                var labels=Stack(spacing:3);
-                labels.Children.Add(Text(setting.LabelEn+" · "+setting.LabelRu,
-                    13,ivory,FontWeight.SemiBold));
-                string description=string.IsNullOrWhiteSpace(setting.DescriptionRu)
-                    ? setting.DescriptionEn:setting.DescriptionRu;
-                if(description.Length>0)
-                    labels.Children.Add(Text(description,11,muted));
-                if(setting.ExclusiveGroup is not null)
-                    labels.Children.Add(Text("Общий кулдаун · "+setting.ExclusiveGroup+
-                        " · включение отключит остальные способности группы",10,"#E0AE65"));
-                if(setting.Type==RotationSettingType.Integer && setting.Unit=="percent")
-                    labels.Children.Add(Text("Ресурс WoW Forever: только проверенные интервалы по 5%.",10,muted));
-                Grid.SetColumn(labels,1);row.Children.Add(labels);
-                void SaveSetting(int newValue)
-                {
-                    if(externalActive)return;
-                    try
-                    {
-                        var updated=RotationSettingsExclusivity.Apply(
-                            profile,overrides,setting.Id,newValue);
-                        RotationSettingsStore.Save(settingsFile,profile,updated);
-                        if(rotationPreview.Running)
-                        {
-                            StopGhub("SETTINGS CHANGED");
-                            rotationPreview.Stop("SETTINGS CHANGED · RESTART PREVIEW");
-                            overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
-                        }
-                        overrides=new System.Collections.Generic.Dictionary<string,int>(updated);
-                        RuntimeDiagnostics.Add("XML2","Setting saved: "+setting.Id+
-                            (setting.ExclusiveGroup is null?"":" (exclusive "+setting.ExclusiveGroup+")"));
-                        if(setting.Type==RotationSettingType.Boolean)
-                            ShowSpec(cls,spec,mode,tier,changedOnly);
-                    }
-                    catch(Exception ex)
-                    {
-                        RuntimeDiagnostics.Add("XML2","Settings update rejected: "+ex.GetType().Name);
-                        ShowSpec(cls,spec,mode,tier,changedOnly);
-                    }
-                }
-                Control control;
-                if(setting.Type==RotationSettingType.Boolean)
-                {
-                    var toggle=new ToggleSwitch {
-                        IsChecked=current==1,IsEnabled=!externalActive,
-                        OnContent="",OffContent="",Width=74,Height=36,
-                        HorizontalAlignment=HAlign.Right };
-                    toggle.IsCheckedChanged+=(_,_)=>SaveSetting(toggle.IsChecked==true?1:0);
-                    control=toggle;
-                }
-                else
-                {
-                    var controlRow=Stack(Orientation.Horizontal,12);
-                    var slider=new Slider {
-                        Minimum=setting.Min,Maximum=setting.Max,
-                        TickFrequency=setting.Step,IsSnapToTickEnabled=true,
-                        Value=current,Width=155,
-                        IsEnabled=!externalActive,
-                        VerticalAlignment=VerticalAlignment.Center
-                    };
-                    var value=Text(current+(setting.Unit=="percent"?" %":" "+setting.Unit),13,amber,FontWeight.Bold);
-                    value.Width=65;
-                    value.TextAlignment=TextAlignment.Right;
-                    slider.ValueChanged+=(_,_)=>{
-                        int proposed=(int)Math.Round(slider.Value);
-                        value.Text=proposed+(setting.Unit=="percent"?" %":" "+setting.Unit);
-                        if(proposed!= (overrides.TryGetValue(setting.Id,out var previous)
-                            ? previous:setting.Default))
-                            SaveSetting(proposed);
-                    };
-                    controlRow.Children.Add(slider);controlRow.Children.Add(value);
-                    control=controlRow;
-                }
-                Grid.SetColumn(control,2);row.Children.Add(control);
-                var container=new Border {Child=row,Padding=new Thickness(10,9),
-                    Background=Palette.Brush("#271A18"),CornerRadius=new CornerRadius(8),
-                    BorderBrush=Palette.Brush("#483025"),
-                    BorderThickness=new Thickness(0,0,0,1)};
-                settingsSurface.Children.Add(container);
-                renderedRows.Add((container,setting.LabelEn+" "+setting.LabelRu+" "+description+" "+setting.Group));
-            }
-        }
-        finder.TextChanged+=(_,_)=>{
-            string filter=finder.Text?.Trim()??"";
-            foreach(var item in renderedRows)
-                item.Row.IsVisible=filter.Length==0 ||
-                    item.SearchText.Contains(filter,StringComparison.OrdinalIgnoreCase);
-        };
-        if(renderedRows.Count==0)
-            settingsSurface.Children.Add(Text(changedOnly
-                ?"No changed settings in this category.":"No XML settings in this category.",
-                13,muted));
-        body.Children.Add(Pane(settingsSurface,"#1D1514",14,"#64432F",new Thickness(19)));
-        Go(Page(spec.Name.ToUpperInvariant(),mode+" · XML-driven settings · experimental",body,
-            cls.Name,()=>ShowClass(cls)));
+        body.Children.Add(Text("Ротации рассчитывают только JustAC или Hekili. Встроенные XML/приоритеты LazyG отключены.",13,"#A3CADA"));
+        body.Children.Add(Action(connectorRunning?"Stop Connector":"Start Connector",ToggleConnector,true));
+        body.Children.Add(Action("Support — RGB / G HUB журнал",ShowSupport));
+        Go(Page(spec.Name.ToUpperInvariant(),"External addon connector",body,cls.Name,()=>ShowClass(cls)));
     }
     private static Border HunterSettingIcon(string classSlug,int spellId,string fallback,int size)
     {
