@@ -263,6 +263,24 @@ crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
 nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
 Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
     v2 is not null && !v2.NativeInputReady,"prototype never sends without positive range");
+// Self buff (Aspect of the Hawk) is cast without hostile target or range:
+nativeV2[5]=1;nativeV2[6]=0;nativeV2[7]=55;nativeV2[8]=239; // 14319
+nativeV2[9]=0;nativeV2[11]=0;nativeV2[12]=30;
+nativeV2[13]=97; // binding + usable + SELF_BUFF, no hostile-target/range
+crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
+    v2 is not null && v2.NativeSelfBuff && v2.NativeInputReady &&
+    !v2.NativeTargetReady && !v2.NativeRangeReady,
+    "native aspect input authorized without enemy in a safe foreground session");
+nativeV2[13]=33; // same binding/usable but no self-buff classification
+crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
+    v2 is not null && !v2.NativeInputReady,
+    "non-buff input remains blocked without hostile target and range");
+// Restore an attacking recommendation for malformed-binding coverage.
+nativeV2[6]=0x13;nativeV2[7]=0xbc;nativeV2[8]=0x79;
 nativeV2[13]=63;nativeV2[12]=0;
 crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
 nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
