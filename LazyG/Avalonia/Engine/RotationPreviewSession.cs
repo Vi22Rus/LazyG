@@ -14,6 +14,8 @@ internal sealed class RotationPreviewSession
     public RotationRecommendation? Current { get; private set; }
     public string Status { get; private set; } = "STOPPED";
     public string? RuleId => Current?.RuleId;
+    public int? SettingValue(string key) =>
+        overrides is not null && overrides.TryGetValue(key,out int value) ? value : null;
     public bool IsSettingEnabled(string key) => profile is not null &&
         overrides is not null && overrides.TryGetValue(key,out int value) && value==1;
     public void Start(RotationProfileV2 next,IReadOnlyDictionary<string,int> settings)
@@ -23,7 +25,9 @@ internal sealed class RotationPreviewSession
             throw new InvalidOperationException("Only Hunter BM PvE read-only preview is supported");
         if(next.Rules.Count==0)throw new InvalidOperationException("Empty XML rotation");
         RotationXmlV2.Resolve(next,settings);
-        overrides=new Dictionary<string,int>(settings,StringComparer.Ordinal);
+        // Load resolved values, not only JSON overrides. Otherwise all XML
+        // default-on settings appear disabled in diagnostic comparisons.
+        overrides=RotationXmlV2.Resolve(next,settings);
         profile=next;
         Current=null;
         Status="AWAITING GAME DATA · XML ROTATION";
