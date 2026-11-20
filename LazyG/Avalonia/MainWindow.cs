@@ -25,7 +25,7 @@ public sealed class MainWindow : Window
 {
     private readonly UserSession session = UserSession.Load();
     private readonly Border rootBody = new();
-    private readonly TextBlock statusText = Text("GAME NOT CONNECTED",12,"#93CBE5");
+    private readonly TextBlock statusText = Text("CORE —",12,"#93CBE5");
     private readonly TextBlock clientText = Text("WOW FOREVER",12,"#6CE7FA");
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(400) };
     private readonly GameClient client = ClientCatalog.Forever;
@@ -182,7 +182,8 @@ public sealed class MainWindow : Window
         game.VerticalAlignment=VerticalAlignment.Center;
         game.HorizontalAlignment=HAlign.Right;
         game.Margin=new Thickness(8);
-        game.Children.Add(clientText);game.Children.Add(Text("●",12,"#40E8A2"));game.Children.Add(statusText);
+        statusText.MaxWidth=68;
+        game.Children.Add(clientText);game.Children.Add(statusText);
         Grid.SetColumn(game,3);header.Children.Add(game);
         overlayButton=Action("Overlay OFF",ToggleOverlay);
         overlayButton.Margin=new Thickness(5,0,5,0);
@@ -1037,7 +1038,7 @@ public sealed class MainWindow : Window
             " range="+(packet.HasRangeEvidence && !packet.OutOfRange);
         else if(lastNativeInputSequence==packet.Sequence)reason="NATIVE DUPLICATE FRAME";
         else if(lastNativeInputAt!=default && now-lastNativeInputAt<
-                TimeSpan.FromMilliseconds(900))reason="NATIVE INPUT PACING";
+                TimeSpan.FromMilliseconds(1500))reason="NATIVE INPUT PACING";
         else if(!GHubDriver.IsWowForeground())reason="WOW NOT FOREGROUND";
         else if(!ghub.Connected)reason="LOGITECH NOT CONNECTED";
         if(reason is not null)
@@ -1050,7 +1051,10 @@ public sealed class MainWindow : Window
             return;
         }
         lastInputGateReason="";
-        lastNativeInputSequence=packet!.Sequence;
+        if(!packet!.NativeGcdReady || !packet.NativeSpellReady)
+            executionTrace.Add(now,"NATIVE_COOLDOWN_UNVERIFIED",rec.SpellId,
+                "Prototype: WoW cooldown APIs unknown; 1500ms minimum input pacing; target/range/usable confirmed");
+        lastNativeInputSequence=packet.Sequence;
         lastNativeInputAt=now;
         var mod=packet.HidModifier;
         var usage=packet.HidUsage;
@@ -1333,7 +1337,9 @@ public sealed class MainWindow : Window
                     " questing="+((lazyGCorePacket.HunterMarkDiagnostics&16)!=0)+
                     " sequence="+lazyGCorePacket.Sequence+
                     " stream="+(lazyGCoreSequenceEstablished?"LIVE":"BASELINE");
-                statusText.Text=nativeStatus;
+                // Never place long native diagnostics into the main window titlebar:
+                // they pushed out Maximize and Close buttons on narrow windows.
+                statusText.Text=native.ok?"CORE ●":"CORE —";
                 if(nativeStatus!=lastLazyGCoreDiagnostic)
                 {
                     RuntimeDiagnostics.Add("LAZYGCORE",nativeStatus);
