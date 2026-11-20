@@ -916,11 +916,23 @@ public sealed class MainWindow : Window
                 var shadowState=GameState.Empty(at);
                 var shadowRec=rotationPreview.Update(shadowState,at);
                 var xmlCandidate=shadowRec?.SpellId.ToString()??"NONE";
+                string markEvidence="UNKNOWN";
+                if(c?.Version==2)
+                {
+                    byte flags=c.HunterMarkDiagnostics;
+                    bool opt=(flags&1)!=0, all=(flags&2)!=0,
+                        missing=(flags&4)!=0, learned=(flags&8)!=0;
+                    markEvidence="enabled="+opt+" everyMob="+all+
+                        " missing="+missing+" learned="+learned+
+                        " target="+c.NativeTargetReady+
+                        " note=Lua evidence only, not independent XML state";
+                }
                 var detail="CORE="+(nativeRec?.SpellId.ToString()??"NONE")+
                     " (status="+(c?.Status.ToString()??"NO_PACKET")+")"+
-                    "; XML=UNKNOWN (missing target, auras, GCD, bindings, cooldown state)"+
+                    "; XML=UNKNOWN (missing independent auras, exact target state and spell map)"+
                     "; UNVERIFIED_XML_CANDIDATE="+xmlCandidate+
-                    "; oldRGB=DISABLED; HID=DISABLED";
+                    "; MARK_RULE_EVIDENCE="+markEvidence+
+                    "; oldRGB=DISABLED; HID="+(ghubArmed?"NATIVE_GATED":"OFF");
                 executionTrace.Add(at,"CORE_XML_COMPARE",nativeRec?.SpellId,detail);
                 RuntimeDiagnostics.Add("CORE_XML_COMPARE",detail);
                 lastCoreComparisonAt=at;
