@@ -58,6 +58,13 @@ local function cooldownReady(spell)
   local now=readPlain(function()return GetTime()end)
   return type(now)=="number" and start+duration<=now
 end
+local function inRange(spell)
+  if C_Spell and type(C_Spell.IsSpellInRange)=="function" then
+    return readPlain(function()return C_Spell.IsSpellInRange(spell,"target")end)==true
+  end
+  -- No guessing based on the engine's default outOfRange=false.
+  return false
+end
 local function targetReady()
   local exists=readPlain(function()return UnitExists("target")end)
   local hostile=readPlain(function()return UnitCanAttack("player","target")end)
@@ -120,6 +127,7 @@ function R.Encode(rec,sequence)
        (math.floor(flags/8)%2==1) and
        (math.floor(flags/16)%2==1) and
        (math.floor(flags/32)%2==1) then gate=gate+8 end
+    if inRange(id) then gate=gate+16 end
   end
   local b={76,71,67,2,sequence,status,floor(id/65536)%256,floor(id/256)%256,id%256,flags,0}
   for i=12,21 do b[i]=0 end
