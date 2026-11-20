@@ -188,6 +188,17 @@ local defensive = {
 local exposePrey = C.talent("Expose Prey")
 -- "Mark every mob" (off by default): the player wants the Mark on everything, sim or not
 local markAll = OptOn("markEveryMob", false)
+-- In Forever the aura can be hidden. A recent Mark cast on ANOTHER mob
+-- must never suppress Mark on this new mob. The generic lastCast timestamp
+-- is global, so use Auras' existing target-epoch/nameplate identity instead.
+local function MarkMissingOnCurrentTarget()
+    local remaining = S.Atoms.Auras.DebuffRemaining("target", sp.HuntersMark)
+    if remaining ~= nil then return remaining <= 0 end
+    local thisTarget = S.Atoms.Auras.CastOnCurrentTarget(sp.HuntersMark)
+    if thisTarget ~= true then return true end
+    local since = S.Atoms.Spells.SinceCast(sp.HuntersMark)
+    return since == nil or since >= (sp.HuntersMark.duration or 120)
+end
 -- Trace the live class toggle and why Hunter's Mark can be rejected.
 -- Observations are diagnostic only; no change to priority / WoW casts.
 S.LazyGCoreHunterMarkDiagnostic = function()
@@ -201,7 +212,7 @@ S.LazyGCoreHunterMarkDiagnostic = function()
     end
     bit(known(function() return S.Engine.Opt("useHuntersMark") end), 1)
     bit(known(function() return S.Engine.Opt("markEveryMob", false) end), 2)
-    bit(known(function() return C.debuffMissing(sp.HuntersMark)() end), 4)
+    bit(known(function() return MarkMissingOnCurrentTarget() end), 4)
     bit(known(function() return S.Atoms.Spells.Known(sp.HuntersMark) end), 8)
     bit(known(function() return C.questing() end), 16)
     bit(known(function() return C.targetElite() end), 32)
@@ -213,7 +224,7 @@ local function MarkRule(melee)
     local worth = melee and C.any(markAll, C.targetElite, C.groupContent, vsPlayer, C.all(C.inCombat, atRange, C.standing, C.targetAbove(60)),
             C.all(exposePrey, C.targetAbove(60)))
         or C.any(markAll, C.targetElite, C.targetAbove(60), C.groupContent, vsPlayer)
-    return { sp.HuntersMark, when = { OptOn("useHuntersMark"), C.debuffMissing(sp.HuntersMark), worth }, text = "Hunter's Mark", reason = "More ranged attack power on this target." }
+    return { sp.HuntersMark, when = { OptOn("useHuntersMark"), MarkMissingOnCurrentTarget, worth }, text = "Hunter's Mark", reason = "More ranged attack power on this target." }
 end
 
 -- A copy of a rule with one more condition (playstyle / content gates; shared rules stay untouched)
@@ -304,7 +315,7 @@ local singleTarget = C.any(C.no(aoeOn), C.no(C.enemies(2)))
 local levelingPriority = {
     -- No pet before 10: the mob reaches you after two shots - Mark only elites, dungeons / raids and players
     -- (sim, build 70450: solo kills 12-14% faster at 6-8 without the Mark on normal mobs)
-    { sp.HuntersMark, when = { OptOn("useHuntersMark"), C.debuffMissing(sp.HuntersMark), C.any(markAll, C.targetElite, C.groupContent, vsPlayer) }, text = "Hunter's Mark", reason = "More ranged attack power on this target." },
+    { sp.HuntersMark, when = { OptOn("useHuntersMark"), MarkMissingOnCurrentTarget, C.any(markAll, C.targetElite, C.groupContent, vsPlayer) }, text = "Hunter's Mark", reason = "More ranged attack power on this target." },
     { sp.ArcaneShot, when = { ManaOK(30) }, strictRange = true, text = "Arcane Shot", reason = "Instant damage between Auto Shots." },
     SerpentRule(30, "Keep it ticking on anything that lives 10s+."),
     -- Levels 8-9 (no pet until 10): daze the mob so it takes longer to reach you (C.solo on purpose:
