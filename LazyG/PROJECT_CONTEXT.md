@@ -1,3 +1,19 @@
+## 2026-11-20 — NATIVE LazyGCore v2 RGB HID AUTO-BINDINGS [0.1.1-dev / CI-VERIFYING / GAME-UNTESTED]
+
+User explicitly requested: native-only experiment must discover existing WoW keybinds and send via Logitech G HUB, never fallback to old RGB. Only experiment/lazygcore; main untouched.
+
+Lua: Core/Atoms/NativeBindings.lua discovers direct spell action-slot keys and supported third-party bars. Conditional macros and conflicting bindings are excluded. Version 2 preserves 8 RGB cells and adds modifier byte, HID usage byte, and gate byte to formerly reserved area, protected by CRC16. Gate bits: 1 unique key known, 2 hostile living target known, 4 GCD ready based on non-secret GetSpellCooldown(61304) or C_Spell API, 8 exact spell cooldown ready. Range, waiting and noPower quality still required. Unknown/secret = no input. The .toc, standalone templates, and regeneration script are updated.
+
+Windows: v1 native RGB remains display-only, v2 requires full native gates, fresh changed sequence within 900ms, exact spell, supported HID usage, WoW foreground, connected G HUB; 900ms minimum between attempts, no repeat same frame. NativeOnlyExperiment uses only TryReadLazyGCore, never legacy RGB. Native vs XML logger remains read-only, XML=UNKNOWN without independently observed GameState. Driver success does not establish real game cast. No game verification yet, and no changes to Hunter Mark/Hawk priority.
+
+Tests: C# v2 decoder positive/negative fixtures, native Lua 5.1 syntax in Windows CI, and regenerated fork checks. Caveats: native cooldown API may return protected/unknown values; then safe gate blocks. Target gate excludes self buffs in this strict test. Full fork upstream license issue still outstanding. Rollback to dabf41732761b3de0e9901ee5f266e5924b276e8.
+
+Single-file EXE:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
 ## 2026-11-20 — ISOLATED NATIVE CORE RGB + CORE/XML COMPARISON RECORDER [DEV / CI-PASSED / GAME-UNTESTED]
 
 Requested change: experiment/lazygcore must read ONLY 8 native LazyGCore RGB cells. No legacy v2/v3/LGC frame may influence this experiment, directly or as a concealed HID gate. In MainWindow.PollBridgeAsync experimental NativeOnlyExperiment=true returns after WowRgbBridge.TryReadLazyGCore; TryReadCombined is not invoked. latestGameState stays GameState.Empty; autoBindings are cleared; no Logitech key is sent. This is intentional fail-closed behavior, NOT proof that automated execution works. Neither old Lua telemetry addon nor old XML execution is required to observe native recommendations.
