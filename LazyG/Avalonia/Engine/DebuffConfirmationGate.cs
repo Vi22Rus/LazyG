@@ -10,7 +10,7 @@ namespace LazyG.Desktop.Engine;
 // This tracker never manufactures aura presence or GCD readiness.
 internal enum DebuffConfirmationState
 {
-    Idle, AwaitingEvidence, StillAbsent, Confirmed, TargetChanged
+    Idle, AwaitingEvidence, StillAbsent, Estimated, Confirmed, TargetChanged
 }
 internal sealed record DebuffConfirmationResult(
     DebuffConfirmationState State,string Detail,int? PendingSpellId=null);
@@ -98,6 +98,17 @@ internal sealed class DebuffConfirmationGate
             return new(DebuffConfirmationState.Confirmed,
                 "Aura observed present on same target (not inferred from keypress)");
         }
+        // A player UNIT_SPELLCAST_SUCCEEDED event is not an aura observation.
+        // Follow Sonah's cast-history fallback ONLY while aura is Unknown;
+        // a complete, explicit API absence remains authoritative.
+        if(!evidence.Complete &&
+           fresh.TargetDebuffCastHints.TryGetValue(p.BaseSpellId,out var hint) &&
+           hint.Is(x=>x)==Truth.True)
+        {
+            Reset();
+            return new(DebuffConfirmationState.Estimated,
+                "WoW SPELLCAST_SUCCEEDED on target: temporary aura estimate (not hit proof)");
+        }
         current=evidence.Complete?
             DebuffConfirmationState.StillAbsent:
             DebuffConfirmationState.AwaitingEvidence;
@@ -114,7 +125,7 @@ internal sealed class DebuffConfirmationGate
         if(pending is not Pending p)return true;
         var observation=Observe(state,at);
         if(observation.State is DebuffConfirmationState.Confirmed or
-            DebuffConfirmationState.TargetChanged)return true;
+            DebuffConfirmationState.Estimated or DebuffConfirmationState.TargetChanged)return true;
         if(observation.State!=DebuffConfirmationState.StillAbsent)
         {
             reason="DEBUFF UNCONFIRMED: "+p.RuleId+" / "+observation.Detail;
