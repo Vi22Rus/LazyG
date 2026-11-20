@@ -98,6 +98,9 @@ jobs:
                   assert (root/line.strip().replace('\\','/')).is_file(),line
           print("Full fork load order and branded-names regression: PASS")
           PY
+      - name: Verify Hunter Mark target-scoped fallback
+        run: lua5.1 LazyG/Tests/lazygcore_hunter_mark_test.lua
+
       - name: Stage addon with one installable LazyGCore root folder
         run: |
           mkdir -p release-addon/LazyGCore
