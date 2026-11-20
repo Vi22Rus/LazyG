@@ -1,0 +1,38 @@
+name: Build LazyGConnector external addon (DEV)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - experiment/lazygcore
+    paths:
+      - 'LazyG/Experiments/LazyGConnector/**'
+      - '.github/workflows/build-lazygconnector.yml'
+permissions:
+  contents: read
+jobs:
+  build-connector:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - name: Validate Lua and external recommendation adapter
+        run: |
+          set -euo pipefail
+          luac5.1 -p LazyG/Experiments/LazyGConnector/LazyGConnector/Connector.lua
+          luac5.1 -p LazyG/Experiments/LazyGConnector/LazyGConnector/NativeBindings.lua
+          lua5.1 LazyG/Experiments/LazyGConnector/tests/provider_smoke.lua
+      - name: Package standalone Lua addon only
+        run: |
+          mkdir -p artifact/LazyGConnector
+          cp -a LazyG/Experiments/LazyGConnector/LazyGConnector/. artifact/LazyGConnector/
+          test -f artifact/LazyGConnector/LazyGConnector.toc
+          test -f artifact/LazyGConnector/Connector.lua
+          test -f artifact/LazyGConnector/NativeBindings.lua
+      - name: Upload installable addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: LazyGConnector-Forever-0.1.0-dev
+          path: artifact/
+          retention-days: 30
+          if-no-files-found: error
