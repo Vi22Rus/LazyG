@@ -227,9 +227,29 @@ Check.That(!LazyGCoreRgbCodec.TryDecode(native,out _),
     "native item status cannot authorize a spell key");
 Check.That(LazyGCoreRgbCodec.IsCandidateVersionCell(1,1) &&
     LazyGCoreRgbCodec.IsCandidateVersionCell(2,1) &&
-    !LazyGCoreRgbCodec.IsCandidateVersionCell(3,1) &&
-    !LazyGCoreRgbCodec.IsCandidateVersionCell(2,4),
-    "native bitmap synchronization accepts v2 and rejects invalid status");
+    LazyGCoreRgbCodec.IsCandidateVersionCell(3,1) &&
+    !LazyGCoreRgbCodec.IsCandidateVersionCell(4,1) &&
+    !LazyGCoreRgbCodec.IsCandidateVersionCell(3,4),
+    "native bitmap synchronization accepts connector v3, rejects unknown version/status");
+// External connector v3: provider identity and binding only; no GCD/aura/range math.
+var connector3=new byte[24] {76,71,67,3,8,1,0,55,243,0,1,0,33,1,0,0,0,0,0,0,0,0,0,8};
+ushort cc=RgbV3Codec.Crc16(connector3.AsSpan(0,21));
+connector3[21]=(byte)(cc>>8);connector3[22]=(byte)cc;
+Check.That(LazyGCoreRgbCodec.TryDecode(connector3,out var ext) &&
+    ext is not null && ext.Version==3 && ext.ProviderId==1 &&
+    ext.SpellId==14323 && ext.HasNativeBinding && ext.NativeInputReady,
+    "JustAC external connector packet");
+connector3[10]=2; // Hekili source
+cc=RgbV3Codec.Crc16(connector3.AsSpan(0,21));
+connector3[21]=(byte)(cc>>8);connector3[22]=(byte)cc;
+Check.That(LazyGCoreRgbCodec.TryDecode(connector3,out ext) &&
+    ext is not null && ext.ProviderId==2 && ext.NativeInputReady,
+    "Hekili external connector packet");
+connector3[10]=0; // no source identity must fail
+cc=RgbV3Codec.Crc16(connector3.AsSpan(0,21));
+connector3[21]=(byte)(cc>>8);connector3[22]=(byte)cc;
+Check.That(!LazyGCoreRgbCodec.TryDecode(connector3,out _),
+    "connector packet must name a real provider");
 // Native v2: binding, target, GCD and spell authorization are separate.
 var nativeV2=new byte[24] {76,71,67,2,10,1,0x13,0xbc,0x79,56,0,2,30,63,0,0,0,0,0,0,0,0,0,8};
 ushort crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
