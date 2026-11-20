@@ -16,20 +16,8 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="../AddonTemplate/RgbV3Encoder.lua" LogicalName="LazyG.RgbV3Encoder.lua" />
-    <EmbeddedResource Include="../Rotations/Forever/Experimental/hunter-beast-mastery-pve.xml" LogicalName="LazyG.Forever.HunterBmPvEExperimental" />
-    <EmbeddedResource Include="../Rotations/Forever/Experimental/paladin-retribution-pvp.xml" LogicalName="LazyG.Forever.RetributionPvPExperimental" />
-    <EmbeddedResource Include="../Rotations/Forever/Experimental/warrior-arms-pve.xml" LogicalName="LazyG.Forever.ArmsPvEExperimental" />
-    <EmbeddedResource Include="../Rotations/Forever/Examples/synthetic-v2.xml" LogicalName="LazyG.ForeverXmlV2SyntheticExample" />
-    <EmbeddedResource Include="../Rotations/Forever/Examples/diagnostic-hunter.xml" LogicalName="LazyG.ForeverXmlDiagnosticExample" />
-    <EmbeddedResource Include="../AddonTemplate/HunterCompactManifest.lua" LogicalName="LazyG.HunterCompactManifest.lua" />
-    <EmbeddedResource Include="../AddonTemplate/HunterCompactProfileEncoder.lua" LogicalName="LazyG.HunterCompactProfileEncoder.lua" />
-    <EmbeddedResource Include="../AddonTemplate/HunterCompactCollector.lua" LogicalName="LazyG.HunterCompactCollector.lua" />
-    <EmbeddedResource Include="../AddonTemplate/AutoBindings.lua" LogicalName="LazyG.AutoBindings.lua" />
-    <EmbeddedResource Include="../AddonTemplate/RgbV3Panel.lua" LogicalName="LazyG.RgbV3Panel.lua" />
-    <EmbeddedResource Include="../AddonTemplate/RgbV3Thresholds.lua" LogicalName="LazyG.RgbV3Thresholds.lua" />
-    <EmbeddedResource Include="../AddonTemplate/Panel.lua" LogicalName="LazyG.Panel.lua" />
-    <EmbeddedResource Include="../AddonTemplate/HunterProfile.lua" LogicalName="LazyG.HunterProfile.lua" />
+    <EmbeddedResource Include="../Experiments/LazyGConnector/LazyGConnector/NativeBindings.lua" LogicalName="LazyG.Connector.NativeBindings.lua" />
+    <EmbeddedResource Include="../Experiments/LazyGConnector/LazyGConnector/Connector.lua" LogicalName="LazyG.Connector.Connector.lua" />
     <EmbeddedResource Include="Assets/icon-pack.txt" LogicalName="LazyG.IconPack" />
     <EmbeddedResource Include="Assets/class-icons.txt" LogicalName="LazyG.ClassIcons" />
     <EmbeddedResource Include="Assets/midnight-backdrop.txt" LogicalName="LazyG.MidnightBackdrop" />
