@@ -119,6 +119,18 @@ Check(HunterDebuffAdvice.SuggestMark(pendingState,now,true)?.SpellId==1130,
     "unknown aura keeps Hunter Mark visible as display-only advice");
 Check(HunterDebuffAdvice.SuggestMark(TargetAuraAt(now,5,false),now,true)?
     .RuleId=="markMissing","known-absent Mark still advised");
+Check(HunterDebuffAdvice.SuggestMark(pendingState with {
+    TargetDebuffCastHints=new Dictionary<int,Observed<bool>> {
+        [1130]=Observed<bool>.Known(true,now)
+    }
+},now,true) is null,
+    "player successful Mark cast suppresses unknown-aura advisory temporarily");
+Check(HunterDebuffAdvice.SuggestMark(TargetAuraAt(now,5,false) with {
+    TargetDebuffCastHints=new Dictionary<int,Observed<bool>> {
+        [1130]=Observed<bool>.Known(true,now)
+    }
+},now,true) is not null,
+    "known-absent Mark stays recommended despite cast estimate");
 Check(HunterDebuffAdvice.SuggestMark(TargetAuraAt(now,5,true),now,true)
     is null,"positively observed Mark suppresses advice");
 Check(HunterDebuffAdvice.SuggestMark(pendingState,now,false) is null,
