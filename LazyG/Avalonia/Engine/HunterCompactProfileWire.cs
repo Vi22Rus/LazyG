@@ -12,11 +12,12 @@ internal sealed record HunterCompactProfile(
     uint LayoutHash, int SpecIndex, int TargetEpoch, Observed<bool> GcdActive,
     Observed<int> TargetEpochObservation,
     IReadOnlyDictionary<int,SpellState> Spells,
-    IReadOnlyDictionary<AuraKey,AuraState> Auras);
+    IReadOnlyDictionary<AuraKey,AuraState> Auras,
+    IReadOnlyDictionary<int,Observed<bool>> TargetDebuffCastHints);
 
 internal static class HunterCompactProfileWire
 {
-    public const byte Version=1;
+    public const byte Version=2;
     public const int HeaderBytes=18;
     private static int CountRanks(ProfileDataManifest m)=>m.SpellFamilies.Sum(x=>x.RankSpellIds.Count);
     private static int CountAuras(ProfileDataManifest m)=>m.AuraFamilies.Sum(x=>x.RankSpellIds.Count);
@@ -36,7 +37,8 @@ internal static class HunterCompactProfileWire
     };
     private static bool DecodeHeader(byte[] bytes,ProfileDataManifest m)
     {
-        if(bytes[0]!=0x4c || bytes[1]!=0x48 || bytes[2]!=Version)
+        if(bytes[0]!=0x4c || bytes[1]!=0x48 ||
+           (bytes[2]!=1 && bytes[2]!=Version))
             return false;
         uint hash=((uint)bytes[3]<<24)|((uint)bytes[4]<<16)|
             ((uint)bytes[5]<<8)|bytes[6];
@@ -46,7 +48,9 @@ internal static class HunterCompactProfileWire
             bytes[14]==m.SpellFamilies.Count &&
             bytes[15]==CountAuras(m) &&
             bytes[16]==CountRanks(m) &&
-            bytes[17]==0 &&
+            (bytes[2]==1?bytes[17]==0:
+                m.AuraFamilies.Count<=8 &&
+                (bytes[17]>>m.AuraFamilies.Count)==0) &&
             (bytes[12]==1 || (bytes[10]==0 && bytes[11]==0));
     }
     public static bool TryDecode(RgbV3Packet? frame,ProfileDataManifest manifest,
@@ -129,8 +133,21 @@ internal static class HunterCompactProfileWire
         }
         uint hash=((uint)bytes[3]<<24)|((uint)bytes[4]<<16)|
             ((uint)bytes[5]<<8)|bytes[6];
+        // Bit flags in v2 are estimates, NOT observed aura quality.
+        // The collector only sets them after player SENT/SUCCEEDED, on the
+        // same target epoch, for a bounded duration. Older v1 has none.
+        var hints=new Dictionary<int,Observed<bool>>();
+        if(bytes[2]==Version && observedEpoch.Quality==Knowledge.Known)
+        {
+            for(int i=0;i<manifest.AuraFamilies.Count;i++)
+            {
+                var family=manifest.AuraFamilies[i];
+                if((bytes[17]&(1<<i))!=0)
+                    hints[family.RankSpellIds[0]]=Observed<bool>.Known(true,capturedAt);
+            }
+        }
         result=new(hash,manifest.SpecIndex,epoch,ReadFlag(bytes[13],capturedAt),
-            observedEpoch,spells,auras);
+            observedEpoch,spells,auras,hints);
         return true;
     }
     // Transport diagnostics only. Distinguish a CRC-valid binding-only row
@@ -158,7 +175,8 @@ internal static class HunterCompactProfileWire
             " usableFlags="+verifiedUsable+
             " auraFlags="+knownDebuffs+
             " gcd="+decoded.GcdActive.Quality+
-            " epoch="+decoded.TargetEpochObservation.Quality;
+            " epoch="+decoded.TargetEpochObservation.Quality+
+            " castHints="+string.Join(",",decoded.TargetDebuffCastHints.Keys.OrderBy(x=>x));
     }
     // This is a synthetic bridge for diagnostics/simulation only. The caller
     // must separately validate a FRESH frame, verified identity, transport and
@@ -172,7 +190,8 @@ internal static class HunterCompactProfileWire
         return baseline with {
             GcdActive=result.GcdActive,
             TargetEpoch=result.TargetEpochObservation,
-            Spells=result.Spells,Auras=result.Auras
+            Spells=result.Spells,Auras=result.Auras,
+            TargetDebuffCastHints=result.TargetDebuffCastHints
         };
     }
 }
