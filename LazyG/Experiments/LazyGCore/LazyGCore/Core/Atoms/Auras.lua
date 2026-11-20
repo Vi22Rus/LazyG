@@ -720,6 +720,18 @@ function Auras.BuffRemaining(unit, def)
     return r.remaining
 end
 
+-- True: the last observed successful cast of this aura was on the current
+-- target identity (epoch/GUID/nameplate). False: on a different target.
+-- Nil: no cast history, not proof of either state.
+-- Caller must still check independently observed auras first.
+function Auras.CastOnCurrentTarget(def)
+    local n = Spells.Name(def) or DefName(def)
+    if type(n) ~= "string" then return nil end
+    local st = castStamp[lower(n)]
+    if not st then return nil end
+    return OnThisTarget(st)
+end
+
 function Auras.DebuffRemaining(unit, def)
     local r = Auras.Debuff(unit, def)
     if r == nil then return nil end
