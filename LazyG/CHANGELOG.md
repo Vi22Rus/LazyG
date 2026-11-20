@@ -1,3 +1,17 @@
+## 2026-11-20 — G HUB prerequisite check FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
+
+**[CI SUCCESS]** [GitHub Actions 44670088782](https://github.com/Vi22Rus/LazyG/actions/runs/44670088782), tested code commit `38298898b5dced3e58f768886326dd9ab1070f1a`. Windows build, .NET 8 tests (including process name guidance), Windows startup smoke, win-x64 single EXE publish, and Lua 5.1 regressions passed. Windows artifact **LazyG-Windows-x64 14599323917**; optional Forever Probe addon **14600090141**. Subsequent documentation-only commits do not affect source tested.
+
+**Behavior:** on every user Start press (unless the rotation is already running, in which case Start toggles Stop), Windows checks running process `lghub.exe` before connecting the virtual bus, starting XML, arming HID, or creating the diagnostic session. If the G HUB desktop process is absent, English modal **LazyG · Logitech G HUB required** says `Please launch Logitech G HUB before starting the rotation. LazyG requires Logitech G HUB to be running to send key presses. Start G HUB, then click Start again.` with **OK**; reattempt repeats check. `lghub_agent` alone does not count. Running app does NOT guarantee virtual bus acceptance; normal `Connect()` safety remains. Runtime process shutdown monitoring was not requested/added.
+
+**Test on Windows:** with G HUB closed, press Start: modal shown, no XML rotation armed; close OK, repeat, same modal. Open Logitech G HUB, press Start: proceed to normal bus-connect and XML checks. No physical G HUB verification available in CI; game-untested. Prior rollback [Actions 44669128851](https://github.com/Vi22Rus/LazyG/actions/runs/44669128851).
+
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-20 — Require Logitech G HUB desktop process before Start [0.4.0-dev / GAME-UNTESTED]
 
 **User-confirmed issue:** during an earlier Hunter BM test the user forgot to start Logitech G HUB. The virtual bus device may still be installed/accessible, so previous `ghub.Connect()` alone did not sufficiently confirm the desktop app was running. User requested an English modal on **each Start attempt** when G HUB has not been launched, with one OK button; do not activate rotation.
