@@ -10,14 +10,20 @@ import shutil
 import zipfile
 
 SOURCE_SHA256="4bc89bf98c95c8559845b8e4abb009db0740285f514d7e9c0e15d2e7cb63341c"
+SOURCE_CONTENT_SHA256="c718361127b37f584654d2d1d3ba4be192f650f5c1636859289984d0dd14362a"
 ICON=r"Interface\\Icons\\INV_Misc_Gear_01"
 RENAMES=(("SONAH","LAZYGCORE"),("Sonah","LazyGCore"),("sonah","lazygcore"))
 
 def main(source,dest):
     source,dest=Path(source),Path(dest)
     actual=hashlib.sha256(source.read_bytes()).hexdigest()
-    if actual!=SOURCE_SHA256:
-        raise RuntimeError("SOURCE_SHA256_MISMATCH: "+actual)
+    with zipfile.ZipFile(source) as z:
+        names=sorted(n for n in z.namelist() if not n.endswith("/"))
+        h=hashlib.sha256()
+        for name in names:
+            h.update(name.encode()+b"\0"+hashlib.sha256(z.read(name)).digest())
+        if h.hexdigest()!=SOURCE_CONTENT_SHA256:
+            raise RuntimeError("SOURCE_FILE_FINGERPRINT_MISMATCH: "+h.hexdigest())
     if dest.exists():shutil.rmtree(dest)
     dest.mkdir(parents=True)
     count=0
