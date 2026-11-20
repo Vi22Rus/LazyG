@@ -1274,8 +1274,9 @@ public sealed class MainWindow : Window
                 // Critical isolation: never call TryReadCombined, including diagnostics,
                 // because it would silently restore the old addon as a data source.
                 var native=await Task.Run(() => {
-                    bool ok=WowRgbBridge.TryReadLazyGCore(out var packet);
-                    return (ok,packet,at:DateTimeOffset.UtcNow);
+                    bool ok=WowRgbBridge.TryReadLazyGCore(out var packet,
+                        out var nativeDetail);
+                    return (ok,packet,nativeDetail,at:DateTimeOffset.UtcNow);
                 });
                 if(finished)return;
                 if(native.ok && native.packet is not null)
@@ -1300,7 +1301,8 @@ public sealed class MainWindow : Window
                 }
                 latestGameState=GameState.Empty(native.at);
                 autoBindings.Reset();
-                string nativeStatus=lazyGCorePacket is null?"CORE RGB NOT FOUND":
+                string nativeStatus=lazyGCorePacket is null?
+                    "CORE RGB NOT FOUND: "+native.nativeDetail:
                     "CORE RGB CRC OK spell="+lazyGCorePacket.SpellId+
                     " status="+lazyGCorePacket.Status+
                     " version="+lazyGCorePacket.Version+
