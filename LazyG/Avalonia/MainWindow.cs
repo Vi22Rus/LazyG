@@ -928,10 +928,38 @@ public sealed class MainWindow : Window
                         " target="+c.NativeTargetReady+
                         " note=Lua evidence only, not independent XML state";
                 }
+                // Compare a real embedded XML rule with the native Hunter evidence.
+                // This is a RULE-POLICY comparison, not a fabricated executable XML
+                // recommendation. A full independent XML result needs additional
+                // target/auras/spell-family state from the native addon.
+                string xmlMarkRule="UNKNOWN";
+                string markAgreement="NOT_COMPARABLE";
+                if(c?.Version==2)
+                {
+                    byte m=c.HunterMarkDiagnostics;
+                    bool xmlAllows=rotationPreview.IsSettingEnabled("useHuntersMark");
+                    bool luaAllows=(m&1)!=0 && (m&2)!=0;
+                    bool markMissing=(m&4)!=0, markLearned=(m&8)!=0;
+                    bool target=c.NativeTargetReady;
+                    bool eligible=xmlAllows && markMissing && markLearned && target;
+                    xmlMarkRule="rule=markMissing priority=10 xmlEnabled="+xmlAllows+
+                        " markAbsentByLua="+markMissing+" learnedByLua="+markLearned+
+                        " hostileTarget="+target+
+                        " POLICY_ELIGIBLE="+eligible+" (cooldown/rank independent XML UNKNOWN)";
+                    // XML targets the Mark rank family 1130,14323,14324,14325.
+                    bool coreMark=nativeRec is not null && 
+                        (nativeRec.SpellId==1130 || nativeRec.SpellId==14323 ||
+                         nativeRec.SpellId==14324 || nativeRec.SpellId==14325);
+                    if(eligible)markAgreement=coreMark?"MARK_POLICY_MATCH":"MARK_POLICY_MISMATCH";
+                    else if(!xmlAllows)markAgreement="XML_MARK_DISABLED";
+                    else if(!luaAllows)markAgreement="LUA_MARK_DISABLED_OR_NOT_ALL";
+                }
                 var detail="CORE="+(nativeRec?.SpellId.ToString()??"NONE")+
                     " (status="+(c?.Status.ToString()??"NO_PACKET")+")"+
                     "; XML=UNKNOWN (missing independent auras, exact target state and spell map)"+
                     "; UNVERIFIED_XML_CANDIDATE="+xmlCandidate+
+                    "; XML_MARK_RULE="+xmlMarkRule+
+                    "; XML_VS_CORE_MARK="+markAgreement+
                     "; MARK_RULE_EVIDENCE="+markEvidence+
                     "; oldRGB=DISABLED; HID="+(ghubArmed?"NATIVE_GATED":"OFF");
                 executionTrace.Add(at,"CORE_XML_COMPARE",nativeRec?.SpellId,detail);
