@@ -225,6 +225,11 @@ nativeCrc=RgbV3Codec.Crc16(native.AsSpan(0,21));
 native[21]=(byte)(nativeCrc>>8);native[22]=(byte)nativeCrc;
 Check.That(!LazyGCoreRgbCodec.TryDecode(native,out _),
     "native item status cannot authorize a spell key");
+Check.That(LazyGCoreRgbCodec.IsCandidateVersionCell(1,1) &&
+    LazyGCoreRgbCodec.IsCandidateVersionCell(2,1) &&
+    !LazyGCoreRgbCodec.IsCandidateVersionCell(3,1) &&
+    !LazyGCoreRgbCodec.IsCandidateVersionCell(2,4),
+    "native bitmap synchronization accepts v2 and rejects invalid status");
 // Native v2: binding, target, GCD and spell authorization are separate.
 var nativeV2=new byte[24] {76,71,67,2,10,1,0x13,0xbc,0x79,56,0,2,30,63,0,0,0,0,0,0,0,0,0,8};
 ushort crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
