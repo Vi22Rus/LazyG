@@ -4,6 +4,8 @@ LazyGHunterCompactProfileEncoder=dofile("LazyG/AddonTemplate/HunterCompactProfil
 LazyGHunter={specIndex=1}
 SlashCmdList={}
 local frame
+local clock=100
+GetTime=function()return clock end
 CreateFrame=function()
   frame={RegisterEvent=function()end,SetScript=function(self,_,cb)self.callback=cb end}
   return frame
@@ -64,14 +66,35 @@ C_UnitAuras.GetUnitAuras=nil
 C_UnitAuras.GetAuraDataBySpellName=nil
 local cells,bytes,length=c.Build()
 assert(type(cells)=="table" and #cells>8 and #cells<96,"compact cells only")
-assert(bytes[1]==0x4c and bytes[2]==0x48 and bytes[3]==1,
+assert(bytes[1]==0x4c and bytes[2]==0x48 and bytes[3]==2,
     "compact marker/version")
 assert(bytes[13]==1 and bytes[14]==2,"known target epoch and active GCD")
 assert(length>24,"actual BM extension contains every profile family")
 local first=bytes[19] -- first sorted family: Auto Shot ID 75
 assert(first==2 and bytes[20]==1,
     "highest learned Auto Shot rank has usable true and CD false")
-frame.callback()
+-- A SENT event ALONE cannot create an inferred aura, nor can a cast
+-- reported for a different epoch. A matching SUCCEEDED creates only a
+-- temporary hint in the reserved v2 byte; observed aura flags stay separate.
+local function event(name,...)frame.callback(frame,name,...)end
+event("UNIT_SPELLCAST_SENT","player","Target","cast-1",13551)
+local _,beforeSuccess=c.Build()
+assert(beforeSuccess[18]==0,"no cast estimate from SENT only")
+event("UNIT_SPELLCAST_SUCCEEDED","player","cast-1",13551)
+local _,afterSuccess=c.Build()
+assert(afterSuccess[18]==2,"Serpent Sting successful cast hint, family bit1")
+clock=clock+16
+local _,expired=c.Build()
+assert(expired[18]==0,"15-second Serpent Sting estimate expires")
+event("UNIT_SPELLCAST_SENT","player","Target","cast-2",14323)
+event("PLAYER_TARGET_CHANGED")
+event("UNIT_SPELLCAST_SUCCEEDED","player","cast-2",14323)
+local _,wrongTarget=c.Build()
+assert(wrongTarget[18]==0,"target change rejects old successful cast")
+event("UNIT_SPELLCAST_SENT","player","Target","cast-3",14323)
+event("UNIT_SPELLCAST_SUCCEEDED","player","cast-3",14323)
+local _,markEstimated=c.Build()
+assert(markEstimated[18]==1,"Hunter Mark cast estimate has separate family bit0")
 local _,later=c.Build()
 assert(later[12]~=bytes[12],"target epoch advances on target changed")
 SlashCmdList.LAZYG_COMPACT("off")
