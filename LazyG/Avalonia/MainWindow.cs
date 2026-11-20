@@ -65,6 +65,8 @@ public sealed class MainWindow : Window
     // Isolated fork: never sample the legacy RGB transport in this build.
     private const bool NativeOnlyExperiment = true;
     private bool coreComparisonRecording;
+    private byte? lastNativeInputSequence;
+    private DateTimeOffset lastNativeInputAt;
     private DateTimeOffset lastCoreComparisonAt;
     private LazyGCoreRgbPacket? lazyGCorePacket;
     private byte? lastLazyGCoreSequence;
@@ -416,7 +418,7 @@ public sealed class MainWindow : Window
         {
             body.Children.Add(Action(rotationPreview.Running && lazyGCoreMode?"Stop LazyGCore":"Start LazyGCore (DEV)",
                 ()=>{RequestStart(cls,spec,true);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
-            body.Children.Add(Text("ISOLATED DEV: reads ONLY LazyGCore's 8 RGB cells. Legacy RGB is not sampled. XML comparison is read-only and UNKNOWN when game-state evidence is missing; Logitech input remains disabled.",11,"#E5C694"));
+            body.Children.Add(Text("NATIVE RGB v2: reads only LazyGCore's 8 cells. Logitech sends only for fresh confirmed target, GCD, spell, range and native bar binding. Missing evidence blocks a press. XML comparison is read-only.",11,"#E5C694"));
             body.Children.Add(Text("Start connects Logitech G HUB; Lua automatically reads the WoW action bar bindings through RGB v3. Only a fresh exact SpellID match can send a key. In-game validation required.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
             body.Children.Add(Text("Для теста: Start включает XML-аудит; Support сохраняет полный диагностический ZIP. Успешное нажатие Logitech не доказывает каст WoW.",11,"#B7A88E"));
@@ -797,7 +799,7 @@ public sealed class MainWindow : Window
         {
             // A tray-only Logitech G HUB session is valid. A virtual bus
             // or lghub_agent/updater without the app/tray is not enough.
-            if(!useLazyGCore && !GHubRuntime.IsRunning())
+            if(!GHubRuntime.IsRunning())
             {
                 ghubMissingOnStart=true;
                 RuntimeDiagnostics.Add("GHUB","Start blocked: no G HUB app/tray process. Detected: "+
@@ -817,22 +819,24 @@ public sealed class MainWindow : Window
             var settings=RotationSettingsStore.Load(file,profile);
             // Bindings arrive automatically from the Forever Lua RGB tail.
             // Start may precede collection; without a matching key no input.
-            if(!useLazyGCore)ghub.Connect();
+            ghub.Connect();
             try { rotationPreview.Start(profile,settings); }
-            catch {if(!useLazyGCore)ghub.Disconnect();throw;}
+            catch {ghub.Disconnect();throw;}
             activeBindings=new System.Collections.Generic.Dictionary<int,string>();
             commandGate.Reset();
             debuffConfirmation.Reset();
             lastDebuffState=DebuffConfirmationState.Idle;
             ghubGeneration++;
-            ghubArmed=false; // Native eight-cell payload lacks verified GCD, bindings and target evidence.
+            ghubArmed=true; // Only native v2 gates authorize actual input.
             lazyGCoreMode=useLazyGCore;
             // Never inherit an old core recommendation when arming the driver.
             lazyGCorePacket=null;
             lastLazyGCoreSequence=null;
             lastLazyGCoreSequenceAt=default;
             lazyGCoreSequenceEstablished=false;
-            LastGhubStatus="CORE RGB READ-ONLY / NO HID";
+            lastNativeInputSequence=null;
+            lastNativeInputAt=default;
+            LastGhubStatus="CORE RGB v2 / G HUB ARMED";
             executionTrace.Start(DateTimeOffset.UtcNow,
                 "forever/"+cls.Id+"/"+spec.Id+"/PvE");
             try {StartRotationAudit();}
@@ -841,12 +845,12 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("HUNTERAUDIT","Audit unavailable: "+auditEx.GetType().Name);
             }
             executionTrace.Add(DateTimeOffset.UtcNow,"NATIVE_ONLY",null,
-                "8-cell LazyGCore RGB only; legacy RGB disabled; HID disabled until trusted state is supplied");
+                "8-cell LazyGCore v2 RGB only; native key + target/GCD/spell gates; old RGB not sampled");
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(true,null,rotationPreview.Status);
             RuntimeDiagnostics.Add("ROTATION",lazyGCoreMode?
-                "Started isolated LazyGCore native-only observation; no legacy RGB reads; HID disabled":"XML mode unavailable in this experiment");
+                "Started isolated native-only LazyGCore input, G HUB requires all v2 execution gates":"XML mode unavailable in this experiment");
             if(view=="classes")ShowClasses();
         }
         catch(Exception ex)
@@ -921,6 +925,8 @@ public sealed class MainWindow : Window
                 RuntimeDiagnostics.Add("CORE_XML_COMPARE",detail);
                 lastCoreComparisonAt=at;
             }
+            if(ghubArmed && nativeRec is not null)
+                QueueNativeLogitechCommand(nativeRec,at);
             return;
         }
         var rec=rotationPreview.Update(latestGameState,at);
@@ -989,6 +995,8 @@ public sealed class MainWindow : Window
         lazyGCoreMode=false;
         lazyGCorePacket=null;
         lazyGCoreSequenceEstablished=false;
+        lastNativeInputSequence=null;
+        lastNativeInputAt=default;
         ghubGeneration++;
         activeBindings=new System.Collections.Generic.Dictionary<int,string>();
         commandGate.Reset();
@@ -999,6 +1007,79 @@ public sealed class MainWindow : Window
         // No new report may start after generation invalidation.
         if(!ghubBusy)ghub.Disconnect();
         RuntimeDiagnostics.Add("GHUB",reason);
+    }
+    private void QueueNativeLogitechCommand(RotationRecommendation rec,DateTimeOffset frameAt)
+    {
+        if(!lazyGCoreMode || !ghubArmed || ghubBusy)return;
+        var now=DateTimeOffset.UtcNow;
+        var packet=lazyGCorePacket;
+        string? reason=null;
+        if(packet is null || packet.Version!=2 || packet.Status!=1 ||
+           packet.SpellId!=rec.SpellId ||
+           !lazyGCoreSequenceEstablished || now-lastLazyGCoreSequenceAt>
+               TimeSpan.FromMilliseconds(900))reason="NATIVE RGB STALE / INVALID";
+        else if(!packet.NativeInputReady)reason=
+            "NATIVE UNVERIFIED: binding="+packet.HasNativeBinding+
+            " target="+packet.NativeTargetReady+
+            " gcd="+packet.NativeGcdReady+" spell="+packet.NativeSpellReady+
+            " range="+(packet.HasRangeEvidence && !packet.OutOfRange);
+        else if(lastNativeInputSequence==packet.Sequence)reason="NATIVE DUPLICATE FRAME";
+        else if(lastNativeInputAt!=default && now-lastNativeInputAt<
+                TimeSpan.FromMilliseconds(900))reason="NATIVE INPUT PACING";
+        else if(!GHubDriver.IsWowForeground())reason="WOW NOT FOREGROUND";
+        else if(!ghub.Connected)reason="LOGITECH NOT CONNECTED";
+        if(reason is not null)
+        {
+            if(reason!=lastInputGateReason)
+            {
+                executionTrace.Add(now,"INPUT_BLOCKED",rec.SpellId,reason);
+                lastInputGateReason=reason;
+            }
+            return;
+        }
+        lastInputGateReason="";
+        lastNativeInputSequence=packet!.Sequence;
+        lastNativeInputAt=now;
+        var mod=packet.HidModifier;
+        var usage=packet.HidUsage;
+        long attempt=executionTrace.Attempt(now,rec.SpellId,"lazygcore-native");
+        executionTrace.Add(now,"NATIVE_HID_BINDING",rec.SpellId,
+            "modifier="+mod+" usage="+usage+" sequence="+packet.Sequence,attempt,
+            "lazygcore-native");
+        ghubBusy=true;
+        long generation=ghubGeneration;
+        _=Task.Run(()=>{
+            try
+            {
+                if(generation==System.Threading.Interlocked.Read(ref ghubGeneration) &&
+                   ghubArmed && ghub.Connected)
+                {
+                    ghub.TapKey(mod,usage);
+                    executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
+                        attempt,true,"Native v2 HID press/release returned; not proof of WoW cast");
+                }
+                else executionTrace.Add(DateTimeOffset.UtcNow,"HID_SKIPPED",
+                    rec.SpellId,"Stop/disconnect before native key",attempt,"lazygcore-native");
+            }
+            catch(Exception ex)
+            {
+                executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
+                    attempt,false,ex.GetType().Name);
+                Dispatcher.UIThread.Post(()=>{
+                    if(generation!=ghubGeneration)return;
+                    StopGhub("NATIVE LOGITECH ERROR: "+ex.GetType().Name);
+                    rotationPreview.Stop("LOGITECH DISCONNECTED");
+                    overlay?.SetReadOnlyRecommendation(false,null,rotationPreview.Status);
+                });
+            }
+            finally
+            {
+                Dispatcher.UIThread.Post(()=>{
+                    ghubBusy=false;
+                    if(!ghubArmed)ghub.Disconnect();
+                });
+            }
+        });
     }
     private void QueueLogitechCommand(RotationRecommendation? rec,DateTimeOffset frameAt)
     {
@@ -1222,6 +1303,11 @@ public sealed class MainWindow : Window
                 string nativeStatus=lazyGCorePacket is null?"CORE RGB NOT FOUND":
                     "CORE RGB CRC OK spell="+lazyGCorePacket.SpellId+
                     " status="+lazyGCorePacket.Status+
+                    " version="+lazyGCorePacket.Version+
+                    " bind="+lazyGCorePacket.HasNativeBinding+
+                    " target="+lazyGCorePacket.NativeTargetReady+
+                    " gcd="+lazyGCorePacket.NativeGcdReady+
+                    " ready="+lazyGCorePacket.NativeSpellReady+
                     " sequence="+lazyGCorePacket.Sequence+
                     " stream="+(lazyGCoreSequenceEstablished?"LIVE":"BASELINE");
                 statusText.Text=nativeStatus;
