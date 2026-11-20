@@ -1308,6 +1308,12 @@ public sealed class MainWindow : Window
                     " target="+lazyGCorePacket.NativeTargetReady+
                     " gcd="+lazyGCorePacket.NativeGcdReady+
                     " ready="+lazyGCorePacket.NativeSpellReady+
+                    " markDiag="+lazyGCorePacket.HunterMarkDiagnostics+
+                    " markEnabled="+((lazyGCorePacket.HunterMarkDiagnostics&1)!=0)+
+                    " markEveryMob="+((lazyGCorePacket.HunterMarkDiagnostics&2)!=0)+
+                    " markMissing="+((lazyGCorePacket.HunterMarkDiagnostics&4)!=0)+
+                    " markLearned="+((lazyGCorePacket.HunterMarkDiagnostics&8)!=0)+
+                    " questing="+((lazyGCorePacket.HunterMarkDiagnostics&16)!=0)+
                     " sequence="+lazyGCorePacket.Sequence+
                     " stream="+(lazyGCoreSequenceEstablished?"LIVE":"BASELINE");
                 statusText.Text=nativeStatus;
