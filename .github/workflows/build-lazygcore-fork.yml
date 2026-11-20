@@ -46,9 +46,9 @@ jobs:
                       h.update(name.encode()+b"\0"+hashlib.sha256(z.read(name)).digest())
                   for name in ("Sonah/Core/Init.lua","Sonah/Core/Organisms/Engine.lua","Sonah/Sonah.toc","Sonah/LICENSE.txt"):
                       if name in names: print("CORE SHA",name,hashlib.sha256(z.read(name)).hexdigest())
-              ok=(len(names)==89 and
-                  hashlib.sha256(z.read("Sonah/Core/Init.lua")).hexdigest()=="03119cf7e261ac218ba85a863c34b1cf7d5766ba8b00787e6fc7e8c81ee70841" and
-                  hashlib.sha256(z.read("Sonah/Core/Organisms/Engine.lua")).hexdigest()=="934beb69842c4abdccc7e2a85019eff9f82e99402e11785d58c7d7afb326aa30")
+                  ok=(len(names)==89 and
+                      hashlib.sha256(z.read("Sonah/Core/Init.lua")).hexdigest()=="03119cf7e261ac218ba85a863c34b1cf7d5766ba8b00787e6fc7e8c81ee70841" and
+                      hashlib.sha256(z.read("Sonah/Core/Organisms/Engine.lua")).hexdigest()=="934beb69842c4abdccc7e2a85019eff9f82e99402e11785d58c7d7afb326aa30")
               print("Verified engine/init bytes and archive entry count:",ok,"file_count=",len(names),"fingerprint=",h.hexdigest())
               sys.exit(0 if ok else 1)
           except Exception as e:
