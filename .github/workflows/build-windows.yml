@@ -133,6 +133,9 @@ jobs:
       - name: Verify opt-in Forever LGE player-cast event protocol
         run: lua5.1 LazyG/Tests/forever_cast_event_rgb_test.lua
 
+      - name: Verify Hunter Mark per-target hidden aura decision (Lua 5.1)
+        run: lua5.1 LazyG/Tests/lazygcore_hunter_mark_test.lua
+
       - name: Verify Lua RGB v3 wire vectors
         run: lua5.1 LazyG/Tests/rgb_v3_encoder_test.lua
 
