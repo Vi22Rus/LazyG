@@ -5,15 +5,18 @@ using System.Linq;
 using LazyG.Desktop.Engine;
 using LazyGPrototype;
 static void Check(bool value,string message) {if(!value)throw new Exception("Foundation regression: "+message);}
-// A loaded virtual bus / lghub_agent does NOT prove desktop G HUB is running.
+// A tray-only Logitech G HUB session counts; an agent or updater alone does not.
 Check(GHubRuntime.IsDesktopProcess("lghub") &&
-    GHubRuntime.IsDesktopProcess("LGHUB.EXE"),
-    "Logitech G HUB executable name recognized");
+    GHubRuntime.IsDesktopProcess("LGHUB.EXE") &&
+    GHubRuntime.IsDesktopProcess("lghub_system_tray") &&
+    GHubRuntime.IsDesktopProcess("LGHUB_SYSTEM_TRAY.EXE"),
+    "Logitech G HUB app and system tray process names recognized");
 Check(!GHubRuntime.IsDesktopProcess("lghub_agent") &&
     !GHubRuntime.IsDesktopProcess("lghub_updater") &&
     !GHubRuntime.IsDesktopProcess("Wow") &&
-    !GHubRuntime.IsDesktopProcess(null),
-    "background agent, updater and WoW are not G HUB desktop");
+    !GHubRuntime.IsDesktopProcess(null) &&
+    !GHubRuntime.IsDesktopProcess("lghub_system_tray_helper"),
+    "background agent, updater and unrelated processes are not G HUB UI/tray");
 Check(GHubRuntime.NotRunningMessage.Contains("Please launch Logitech G HUB") &&
     GHubRuntime.NotRunningMessage.Contains("click Start again"),
     "clear English guidance for blocked Start");
