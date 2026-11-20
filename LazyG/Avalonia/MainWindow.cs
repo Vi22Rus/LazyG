@@ -40,33 +40,10 @@ public sealed class MainWindow : Window
     private Button? commonTab;
     private Button? supportTab;
     private TextBox? diagnosticsOutput;
-    private string lastBridgeState = "";
-    private string lastProbeState = "";
-    private string lastGameStateDiagnostic = "";
-    private bool spellDiagnosticEnabled;
-    private bool cooldownDiagnosticEnabled;
-    private string lastCooldownDiagnostic="";
-    private readonly ForeverCooldownObserver cooldownObserver=new();
-    private readonly RgbTransportMonitor rgbMonitor=new();
-    private readonly RotationSourceManager sourceManager=new();
-    private readonly HunterRotationAudit hunterAudit=new();
-    private readonly RotationPreviewSession rotationPreview=new();
     private readonly GHubDriver ghub=new();
-    private readonly RotationCommandGate commandGate=new();
-    private readonly DebuffConfirmationGate debuffConfirmation=new();
-    private DebuffConfirmationState lastDebuffState=DebuffConfirmationState.Idle;
     private readonly RotationExecutionTrace executionTrace=new();
-    private readonly AutoBindingRegistry autoBindings=new();
-    private System.Collections.Generic.IReadOnlyDictionary<int,string> activeBindings=
-        new System.Collections.Generic.Dictionary<int,string>();
     private bool ghubArmed;
-    // Isolated experiment: direct LazyGCore-native recommendations.
-    private bool lazyGCoreMode;
     private bool connectorRunning;
-    // Isolated fork: never sample the legacy RGB transport in this build.
-    private const bool NativeOnlyExperiment = true;
-    private bool coreComparisonRecording;
-    private RotationProfileV2? nativeXmlProfile;
     private byte? lastNativeInputSequence;
     private DateTimeOffset lastNativeInputAt;
     private DateTimeOffset lastCoreComparisonAt;
@@ -81,30 +58,6 @@ public sealed class MainWindow : Window
     private string lastPreviewStatus="";
     private int? lastPreviewSpell;
     private string lastInputGateReason="";
-    private int lastAutoBindingCount=-1;
-    private readonly ProfileDataManifest? hunterCompactManifest;
-    private byte? lastCompactFrame;
-    private DateTimeOffset lastCompactFrameAt;
-    private bool compactSequenceEstablished;
-    private string lastCompactDiagnostic="";
-    private TextBlock? hunterAuditSummaryText;
-    private bool hunterAuditRecording;
-    private DateTimeOffset lastHunterAuditSample;
-    private byte? lastCastEventSequence;
-    private int lastCastEventSpellId;
-    private RotationProfileV2? hunterAuditProfile;
-    private System.Collections.Generic.IReadOnlyDictionary<string,int>? hunterAuditSettings;
-    private TextBlock? rgbHealthText;
-    private string lastRgbHealthSignature="";
-    private bool fullRgbDiagnosticMode;
-    private bool xmlPreviewEnabled;
-    private XmlRotationProfile? xmlPreviewProfile;
-    private string lastXmlPreview = "";
-    private string lastSpellDiagnostic = "";
-    private byte? lastSpellSequence;
-    private DateTimeOffset lastSpellPacketAt;
-    private SpellProbe? lastSpellPacket;
-    private LazyG.Desktop.Engine.GameState latestGameState = LazyG.Desktop.Engine.GameState.Empty(DateTimeOffset.UtcNow);
     private bool finished;
     public MainWindow()
     {
@@ -400,9 +353,9 @@ public sealed class MainWindow : Window
         var mapping=Stack(spacing:9);
         mapping.Children.Add(Text("AUTOMATIC WOW KEYBINDS · RGB V3",15,"#45E5F7",FontWeight.Bold));
         mapping.Children.Add(Text("Bindings are read from the actual WoW action bars (Ctrl/Alt/Shift combinations included) and sent through the existing RGB v3 row. No manual SpellID mapping required. Logitech G HUB is the only input driver.",12,"#CDB29C"));
-        mapping.Children.Add(Text("Verified RGB bindings currently received: "+
-            0+
-            ". No matching key = no input. Macros and ambiguous matches are blocked pending separate validation.",12,"#E5B778"));
+        mapping.Children.Add(Text("Current external recommendation binding: "+
+            (lazyGCorePacket?.HasNativeBinding==true?"FOUND":"WAITING")+
+            ". No matching direct key = no input. Ambiguous macros are blocked.",12,"#E5B778"));
         all.Children.Add(Pane(mapping));
         foreach(var group in new [] { ("RACIAL ABILITIES",new[]{"Offensive racials","Defensive racials","Racial interrupts","Racial utility"}),
                           ("CONSUMABLES",new[]{"Healing potions","Mana potions","Battle potions","Healthstone"}),
@@ -519,7 +472,7 @@ public sealed class MainWindow : Window
             ghubGeneration++;
             ghubArmed=true;
             connectorRunning=true;
-            lazyGCoreMode=true; // Native frame sender, never legacy/XML
+            // Native frame sender, never legacy/XML
             lazyGCorePacket=null;
             lastLazyGCoreSequence=null;
             lastLazyGCoreSequenceAt=default;
@@ -598,7 +551,6 @@ public sealed class MainWindow : Window
             }
         }
         ghubArmed=false;
-        lazyGCoreMode=false;
         connectorRunning=false;
         lazyGCorePacket=null;
         lazyGCoreSequenceEstablished=false;
@@ -614,7 +566,7 @@ public sealed class MainWindow : Window
     }
     private void QueueNativeLogitechCommand(RotationRecommendation rec,DateTimeOffset frameAt)
     {
-        if(!lazyGCoreMode || !ghubArmed || ghubBusy)return;
+        if(!connectorRunning || !ghubArmed || ghubBusy)return;
         var now=DateTimeOffset.UtcNow;
         var packet=lazyGCorePacket;
         string? reason=null;
