@@ -1,3 +1,15 @@
+## 2026-11-20 — LATEST TESTING HANDOFF (ACTIVE / DEV / GAME-UNTESTED)
+
+Source of truth: experiment/lazygcore. Do not touch main code or reintroduce legacy RGB. User ZIP LazyG-Diagnostic-20261120-070558-222.zip confirms native RGB v2 decodes and direct HID key mapping arrives, but G HUB never sent keys because Forever GCD/cooldown probes returned false. User reports that the long native RGB status in the top titlebar displaced Maximize/Close. Separately, the in-game Lua addon visually showed Hawks while native Core RGB sometimes reported Mark; do not conflate UI, RGB, XML and actual casts.
+
+FIXED IN EXPERIMENT: 1500ms paced prototype Logitech input now requires CRC-valid fresh native recommendation, WoW foreground, known direct HID key, living hostile target, positive range and positive ability usability. GCD/cooldown unknown is logged as NATIVE_COOLDOWN_UNVERIFIED, not asserted as READY. This is a strictly experimental compromise, not verified cooldown correctness. Top header displays only CORE ● or CORE —, with maximize/close/minimize unchanged. Diagnostic ZIP now distinguishes CORE_RECOMMENDED from XML_RECOMMENDED and includes coreXmlComparison rows. Same 8-cell native Lua packet carries quality-tagged Mark aura, Serpent aura and mana; Windows compares evidence with actual Hunter BM XML enabled-rule priorities and labels results XML_PRIORITY_CANDIDATE/UNRESOLVED. It does not claim a verified complete XML rotation because additional independent state and ranks/cooldowns are missing.
+
+See newest CHANGELOG entry dated 2026-11-20 07:15–07:24 UTC for exact bugs, UTC SHA timeline, changes, confirmed/failed CI and next steps. Essential source: Avalonia/MainWindow.cs, Avalonia/Engine/RotationExecutionTrace.cs, Avalonia/Engine/RotationPreviewSession.cs, Windows/LazyGCoreRgbCodec.cs, Experiments/LazyGCore/RgbWire.lua, generated Lua Core/Atoms/RgbWire.lua and Tests/Program.cs. Verify actual branch HEAD and CI before sharing artifacts. Main code untouched; license restrictions on original upstream full fork remain unresolved.
+
+HANDOFF: Next user operation is testing matched new Windows+Lua builds, button visibility, Logitech key attempts and source-correct XML comparison in ZIP. Success of CI does not prove that WoW cast the spell.
+
+---
+
 ## CURRENT STATE / START HERE — 2026-11-20 (as verified in GitHub)
 
 **Whole project:** main is the protected Windows/XML development line; current active user test is **experiment/lazygcore**. Do not merge branches, copy stale source from another chat or claim a release. The original full-core upstream licence says All Rights Reserved and restricts redistribution/modification without consent. Preserve rollback and keep this experiment isolated.
