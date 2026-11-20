@@ -9,9 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <Compile Include="../Windows/RgbV3Codec.cs" Link="RgbV3Codec.cs" />
-    <Compile Include="../Windows/LazyGCoreRgbCodec.cs" Link="LazyGCoreRgbCodec.cs" />
-    <Compile Include="../Windows/RgbV3PanelDetector.cs" Link="RgbV3PanelDetector.cs" />
-    <Compile Include="../Windows/RgbV3ThresholdDetector.cs" Link="RgbV3ThresholdDetector.cs" />
+    <Compile Include="../Windows/LazyGConnectorRgbCodec.cs" Link="LazyGConnectorRgbCodec.cs" />
   </ItemGroup>
 </Project>
