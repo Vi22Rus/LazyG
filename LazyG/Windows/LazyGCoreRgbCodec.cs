@@ -12,7 +12,8 @@ internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
     public bool NativeTargetReady => Version==2 && (Gate&2)!=0;
     public bool NativeGcdReady => Version==2 && (Gate&4)!=0;
     public bool NativeSpellReady => Version==2 && (Gate&8)!=0;
-    public bool NativeInputReady => HasNativeBinding && NativeTargetReady &&
+    public bool NativeRangeReady => Version==2 && (Gate&16)!=0;
+    public bool NativeInputReady => NativeRangeReady && HasNativeBinding && NativeTargetReady &&
         NativeGcdReady && NativeSpellReady && HasRangeEvidence &&
         !OutOfRange && HasWaitingEvidence && !Waiting &&
         HasPowerEvidence && !NoPower;
@@ -55,7 +56,7 @@ internal static class LazyGCoreRgbCodec
         {
             for(int i=14;i<=20;i++)
                 if(bytes[i]!=0)return false;
-            if((bytes[13]&~15)!=0 || bytes[11]>15 ||
+            if((bytes[13]&~31)!=0 || bytes[11]>15 ||
                ((bytes[13]&1)!=0 && (bytes[12]<4 || bytes[12]>115)) ||
                ((bytes[13]&1)==0 && (bytes[11]!=0 || bytes[12]!=0)))
                 return false;
