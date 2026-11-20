@@ -232,6 +232,12 @@ nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
 Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out var v2) &&
     v2 is not null && v2.HasNativeBinding && v2.NativeInputReady &&
     v2.HidModifier==2 && v2.HidUsage==30, "v2 native key and gates");
+nativeV2[14]=15; // Hunter Mark: enabled + all mobs + missing + learned
+crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
+    v2 is not null && v2.NativeInputReady && v2.HunterMarkDiagnostics==15,
+    "native Mark diagnostics survive CRC without altering HID gates");
 nativeV2[13]=55; // missing spell ready
 crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
 nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
