@@ -65,6 +65,7 @@ public sealed class MainWindow : Window
     // Isolated fork: never sample the legacy RGB transport in this build.
     private const bool NativeOnlyExperiment = true;
     private bool coreComparisonRecording;
+    private RotationProfileV2? nativeXmlProfile;
     private byte? lastNativeInputSequence;
     private DateTimeOffset lastNativeInputAt;
     private DateTimeOffset lastCoreComparisonAt;
@@ -818,6 +819,7 @@ public sealed class MainWindow : Window
                 Environment.SpecialFolder.LocalApplicationData),"LazyG","rotations",
                 "forever-"+cls.Id+"-"+spec.Id+"-pve.json");
             var settings=RotationSettingsStore.Load(file,profile);
+            nativeXmlProfile=profile;
             // Bindings arrive automatically from the Forever Lua RGB tail.
             // Start may precede collection; without a matching key no input.
             ghub.Connect();
@@ -875,6 +877,77 @@ public sealed class MainWindow : Window
             content.Children.Add(Action("OK",notice.Close,true));
             notice.Content=content;notice.ShowDialog(this);
         }
+    }
+    // Evaluate embedded XML rules in their actual priority order against
+    // quality-tagged observations received from the *native* Lua RGB frame.
+    // Rule eligibility is useful for diagnosing divergences, but does NOT
+    // assert that a spell is ready, on range or successfully cast in game.
+    private string CompareNativeXmlRulePolicy(LazyGCoreRgbPacket? packet,int? coreSpell)
+    {
+        if(packet?.Version!=2 || nativeXmlProfile is null)
+            return "XML_RULE=UNKNOWN (no native-v2 sample or XML profile)";
+        foreach(var rule in nativeXmlProfile.Rules)
+        {
+            if(rule.EnabledBy is not null && !rotationPreview.IsSettingEnabled(rule.EnabledBy))
+                continue;
+            bool? conditions=true;
+            string evidence="native-aura/protocol";
+            switch(rule.Id)
+            {
+                case "markMissing":
+                    conditions=packet.MarkAura==1?true:packet.MarkAura==2?false:null;
+                    if(conditions is null && (packet.HunterMarkDiagnostics&4)!=0)
+                    {
+                        conditions=true;
+                        evidence="inferred-by-Lua (not direct aura)";
+                    }
+                    if((packet.HunterMarkDiagnostics&8)==0)
+                        conditions=null; // rank proof is missing
+                    break;
+                case "stingMissing":
+                    conditions=packet.SerpentAura==1?true:
+                        packet.SerpentAura==2?false:null;
+                    if(conditions==true)
+                    {
+                        int? min=rotationPreview.SettingValue("serpentManaMin");
+                        conditions=packet.ManaPercent==255 || min is null?
+                            null:packet.ManaPercent>=min;
+                    }
+                    break;
+                case "arcaneShot":
+                    {
+                        int? min=rotationPreview.SettingValue("arcaneManaMin");
+                        conditions=packet.ManaPercent==255 || min is null?
+                            null:packet.ManaPercent>=min;
+                    }
+                    break;
+                // All other XML rules have no conditions in the current
+                // Hunter BM experimental profile. Their SPELL-READINESS
+                // remains UNKNOWN even when policy allows the rule.
+            }
+            if(conditions==false)continue;
+            if(conditions is null)
+                return "XML_RULE=UNRESOLVED priority="+rule.Priority+
+                    " rule="+rule.Id+" (required aura/power/rank unknown)";
+            if(!packet.NativeTargetReady)
+                return "XML_RULE=UNRESOLVED (native hostile target not confirmed)";
+            bool familyMatch=rule.Id switch
+            {
+                "markMissing" => coreSpell is 1130 or 14323 or 14324 or 14325,
+                "stingMissing" => coreSpell is 1978 or 13549 or 13550 or 13551
+                    or 13552 or 13553 or 13554 or 13555 or 25295,
+                "arcaneShot" => coreSpell is 3044 or 14281 or 14282 or 14283
+                    or 14284 or 14285 or 14286 or 14287,
+                _ => coreSpell==rule.SpellId
+            };
+            return "XML_PRIORITY_CANDIDATE="+rule.Id+
+                " priority="+rule.Priority+
+                " xmlBaseSpell="+rule.SpellId+
+                " matchLuaFamily="+familyMatch+
+                " quality="+evidence+
+                " (XML cooldown/known-rank not independently verified)";
+        }
+        return "XML_PRIORITY_CANDIDATE=NONE (no enabled eligible rule)";
     }
     private void UpdateRotationPreview(DateTimeOffset at)
     {
@@ -958,6 +1031,7 @@ public sealed class MainWindow : Window
                     " (status="+(c?.Status.ToString()??"NO_PACKET")+")"+
                     "; XML=UNKNOWN (missing independent auras, exact target state and spell map)"+
                     "; UNVERIFIED_XML_CANDIDATE="+xmlCandidate+
+                    "; XML_PRIORITY="+CompareNativeXmlRulePolicy(c,nativeRec?.SpellId)+
                     "; XML_MARK_RULE="+xmlMarkRule+
                     "; XML_VS_CORE_MARK="+markAgreement+
                     "; MARK_RULE_EVIDENCE="+markEvidence+
