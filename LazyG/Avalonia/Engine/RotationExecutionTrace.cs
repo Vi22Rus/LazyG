@@ -62,9 +62,8 @@ internal sealed class RotationExecutionTrace
             return recording?Append(at,kind,spellId,detail,attempt,rule):0;
     }
     public long Recommend(DateTimeOffset at,int spellId,string rule) =>
-        rule=="lazygcore" ?
-            Add(at,"CORE_RECOMMENDED",spellId,"Native Lua RGB recommendation, not XML",null,rule):
-            Add(at,"XML_RECOMMENDED",spellId,"XML evaluation only",null,rule);
+        Add(at,"EXTERNAL_RECOMMENDED",spellId,
+            "Externally computed JustAC/Hekili RGB recommendation",null,rule);
     public long Attempt(DateTimeOffset at,int spellId,string rule) =>
         Add(at,"HID_ATTEMPT",spellId,"Command authorized; no driver acknowledgement",null,rule);
     public void DriverResult(DateTimeOffset at,int spellId,long attempt,bool success,
@@ -92,8 +91,7 @@ internal sealed class RotationExecutionTrace
         lock(sync)
         {
             int Count(string name)=>rows.Count(e=>e.Kind==name);
-            return (recording?"RECORDING":"STOPPED")+" · CORE="+Count("CORE_RECOMMENDED")+
-                " · XML="+Count("XML_RECOMMENDED")+
+            return (recording?"RECORDING":"STOPPED")+" · External="+Count("EXTERNAL_RECOMMENDED")+
                 " · input attempts="+Count("HID_ATTEMPT")+
                 " · driver IO="+Count("HID_IO_COMPLETED")+
                 " · IO failures="+Count("HID_IO_FAILED")+
@@ -125,7 +123,7 @@ internal sealed class RotationExecutionTrace
                 var casts=rows.Where(e=>e.AttemptId==a.Id &&
                     e.Kind=="PLAYER_CAST_EVENT").ToArray();
                 return new {
-                    at=a.At,xmlSpellId=a.SpellId,rule=a.RuleId,
+                    at=a.At,externalSpellId=a.SpellId,rule=a.RuleId,
                     hidIo=io?.Kind??"NO_DRIVER_RESULT",
                     observedPlayerCast=casts.Select(c=>c.SpellId).ToArray(),
                     comparison=io is null?"NOT_SENT_OR_UNKNOWN":
@@ -137,13 +135,12 @@ internal sealed class RotationExecutionTrace
                 };
             }).ToArray();
             return JsonSerializer.Serialize(new {
-                schema=2,session,recording,at=DateTimeOffset.UtcNow,
-                nativeRecommendations=Total("CORE_RECOMMENDED"),
-                xmlRecommendations=Total("XML_RECOMMENDED"),
-                coreXmlComparisonSamples=Total("CORE_XML_COMPARE"),
-                coreXmlComparison=rows.Where(r=>r.Kind=="CORE_XML_COMPARE").Select(r=>new {
-                    at=r.At,nativeSpellId=r.SpellId,comparison=r.Detail
-                }).ToArray(),
+                schema=3,session,recording,at=DateTimeOffset.UtcNow,
+                externalRecommendations=Total("EXTERNAL_RECOMMENDED"),
+                byProvider=rows.Where(r=>r.Kind=="EXTERNAL_RECOMMENDED")
+                    .GroupBy(r=>r.Detail.Contains("JustAC")?"JustAC":
+                        r.Detail.Contains("Hekili")?"Hekili":"Unknown")
+                    .ToDictionary(g=>g.Key,g=>g.Count()),
                 hidAttempts=attempts.Length,
                 driverCompleted=Total("HID_IO_COMPLETED"),
                 driverFailed=Total("HID_IO_FAILED"),
@@ -171,7 +168,8 @@ internal sealed class RotationExecutionTrace
         AddText(zip,"rotation-comparison.json",ExportSummaryJson());
         AddText(zip,"rgb-health.json",rgbJson);
         AddText(zip,"events.txt",runtimeLog);
-        if(xmlAuditJson is not null)AddText(zip,"xml-hunter-audit.json",xmlAuditJson);
+        // Legacy XML audit has been retired from the connector.
+
         return output;
     }
 }
