@@ -15,6 +15,16 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
   </ItemGroup>
+  <!-- Only connector/HID and diagnostic trace from the former Engine tree
+       are compiled. All XML, GCD, rotation, aura and Hunter evaluators are excluded. -->
+  <ItemGroup>
+    <Compile Remove="Engine/**/*.cs" />
+    <Compile Remove="Diagnostics/**/*.cs" />
+    <Compile Remove="ForeverGameStateBridge.cs" />
+    <Compile Include="Engine/GHubDriver.cs" />
+    <Compile Include="Engine/RotationExecutionTrace.cs" />
+    <Compile Include="Diagnostics/CrashReportService.cs" />
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="../Experiments/LazyGConnector/LazyGConnector/NativeBindings.lua" LogicalName="LazyG.Connector.NativeBindings.lua" />
     <EmbeddedResource Include="../Experiments/LazyGConnector/LazyGConnector/Connector.lua" LogicalName="LazyG.Connector.Connector.lua" />
