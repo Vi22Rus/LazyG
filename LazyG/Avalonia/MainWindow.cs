@@ -589,6 +589,80 @@ public sealed class MainWindow : Window
         if(diagnosticsOutput.Text!=snapshot)
             diagnosticsOutput.Text=snapshot;
     }
+    private void ToggleConnector()
+    {
+        if(connectorRunning)
+        {
+            StopGhub("CONNECTOR STOPPED BY USER");
+            overlay?.SetReadOnlyRecommendation(false,null,"STOPPED");
+            ShowClasses();
+            return;
+        }
+        try
+        {
+            if(!GHubRuntime.IsRunning())
+                throw new InvalidOperationException("Logitech G HUB is not running");
+            ghub.Connect();
+            ghubGeneration++;
+            ghubArmed=true;
+            connectorRunning=true;
+            lazyGCoreMode=true; // Native frame sender, never legacy/XML
+            lazyGCorePacket=null;
+            lastLazyGCoreSequence=null;
+            lastLazyGCoreSequenceAt=default;
+            lazyGCoreSequenceEstablished=false;
+            lastNativeInputSequence=null;
+            lastNativeInputAt=default;
+            lastPreviewStatus="";
+            lastPreviewSpell=null;
+            lastInputGateReason="";
+            LastGhubStatus="EXTERNAL CONNECTOR v3 / G HUB ARMED";
+            executionTrace.Start(DateTimeOffset.UtcNow,"Forever JustAC/Hekili connector (RGB v3)");
+            RuntimeDiagnostics.Add("CONNECTOR","Started: source selected inside WoW with /lgconnector; no XML, class rotations or game-state calculations");
+            overlay?.SetReadOnlyRecommendation(true,null,"CONNECTOR WAITING RGB v3");
+            ShowClasses();
+        }
+        catch(Exception ex)
+        {
+            StopGhub("CONNECTOR START FAILED");
+            RuntimeDiagnostics.Add("CONNECTOR","Start failed: "+ex.Message);
+            ShowClasses();
+        }
+    }
+
+    private void UpdateConnectorPreview(DateTimeOffset at)
+    {
+        if(!connectorRunning)return;
+        var p=lazyGCorePacket;
+        bool fresh=lazyGCoreSequenceEstablished &&
+            p is { Version:3 } && lastLazyGCoreSequenceAt!=default &&
+            at-lastLazyGCoreSequenceAt<=TimeSpan.FromMilliseconds(900);
+        string provider=p?.ProviderId switch
+        {
+            1=>"JustAC",2=>"Hekili",_=>"NONE"
+        };
+        int? spell=fresh && p?.Status==1?p.SpellId:null;
+        string status=!fresh?"CONNECTOR RGB v3 WAITING":
+            p?.Status==1 ? provider+" SPELL "+p.SpellId :
+            provider+" NO RECOMMENDATION ("+(p?.Status.ToString()??"NONE")+")";
+        if(status!=lastPreviewStatus || spell!=lastPreviewSpell)
+        {
+            RuntimeDiagnostics.Add("CONNECTOR",status);
+            if(spell is int id)
+                executionTrace.Add(at,"EXTERNAL_RECOMMENDED",id,
+                    "Source="+provider+"; exactly published addon first pick, not XML");
+            lastPreviewStatus=status;
+            lastPreviewSpell=spell;
+        }
+        overlay?.SetReadOnlyRecommendation(true,spell,status);
+        if(spell is int selected && p is not null && ghubArmed)
+        {
+            var src=p.ProviderId==1?RotationSourceId.JustAC:RotationSourceId.Hekili;
+            QueueNativeLogitechCommand(new RotationRecommendation(src,selected,0,
+                "connector-"+provider,at),at);
+        }
+    }
+
     private void RequestStart(GameClass cls, Specialization spec,bool useLazyGCore=false)
     {
         if(rotationPreview.Running)
@@ -917,6 +991,7 @@ public sealed class MainWindow : Window
         }
         ghubArmed=false;
         lazyGCoreMode=false;
+        connectorRunning=false;
         lazyGCorePacket=null;
         lazyGCoreSequenceEstablished=false;
         lastNativeInputSequence=null;
@@ -938,7 +1013,7 @@ public sealed class MainWindow : Window
         var now=DateTimeOffset.UtcNow;
         var packet=lazyGCorePacket;
         string? reason=null;
-        if(packet is null || packet.Version!=2 || packet.Status!=1 ||
+        if(packet is null || packet.Version!=3 || packet.Status!=1 ||
            packet.SpellId!=rec.SpellId ||
            !lazyGCoreSequenceEstablished || now-lastLazyGCoreSequenceAt>
                TimeSpan.FromMilliseconds(900))reason="NATIVE RGB STALE / INVALID";
@@ -964,20 +1039,18 @@ public sealed class MainWindow : Window
             return;
         }
         lastInputGateReason="";
-        if(!packet!.NativeGcdReady || !packet.NativeSpellReady)
-            executionTrace.Add(now,"NATIVE_COOLDOWN_UNVERIFIED",rec.SpellId,
-                "Prototype: WoW cooldown APIs unknown; 1500ms minimum input pacing; "+
-                (packet.NativeSelfBuff?"self-buff: no hostile target/range required":
-                    "attack: hostile target/range/usable confirmed"));
+        // Provider has already chosen its spell. Connector does not calculate
+        // cooldowns, target, auras, class rotation or GCD.
+
         lastNativeInputSequence=packet.Sequence;
         lastNativeInputAt=now;
         var mod=packet.HidModifier;
         var usage=packet.HidUsage;
-        long attempt=executionTrace.Attempt(now,rec.SpellId,"lazygcore-native");
+        long attempt=executionTrace.Attempt(now,rec.SpellId,rec.RuleId);
         executionTrace.Add(now,"NATIVE_HID_BINDING",rec.SpellId,
             "modifier="+mod+" usage="+usage+" sequence="+packet.Sequence+
-            " category="+(packet.NativeSelfBuff?"SELF_BUFF":"HOSTILE_ACTION"),attempt,
-            "lazygcore-native");
+            " provider="+(packet.ProviderId==1?"JustAC":"Hekili"),attempt,
+            rec.RuleId);
         ghubBusy=true;
         long generation=ghubGeneration;
         _=Task.Run(()=>{
@@ -988,7 +1061,7 @@ public sealed class MainWindow : Window
                 {
                     ghub.TapKey(mod,usage);
                     executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
-                        attempt,true,"Native v2 HID press/release returned; not proof of WoW cast");
+                        attempt,true,"External RGB v3 HID press/release returned; not proof of WoW cast");
                 }
                 else executionTrace.Add(DateTimeOffset.UtcNow,"HID_SKIPPED",
                     rec.SpellId,"Stop/disconnect before native key",attempt,"lazygcore-native");
