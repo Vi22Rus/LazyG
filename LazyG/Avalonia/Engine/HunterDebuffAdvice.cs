@@ -34,6 +34,13 @@ internal static class HunterDebuffAdvice
             }
             if(aura.Present.Value==true)return null;
         }
+        // A WoW player-successful cast may temporarily stand in for a
+        // hidden aura, as Sonah's SinceCast fallback does. This only affects
+        // the advisory icon, never proves a debuff landed or authorizes HID.
+        if(!complete &&
+           state.TargetDebuffCastHints.TryGetValue(1130,out var castHint) &&
+           castHint.Is(v=>v)==Truth.True)
+            return null;
         var rank=HunterSpellFamilies.Find(state,1130,at);
         if(rank.SelectedRank is not int selected)return null;
         return new HunterDisplayAdvice(selected,"markMissing",
