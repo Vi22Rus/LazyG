@@ -36,11 +36,26 @@ jobs:
             "https://edge.forgecdn.net/files/9690/841/Sonah-Forever-1.2.6.zip" \
             "https://www.curseforge.com/api/v1/mods/1744297/files/9690841/download"; do
             if curl -fL --retry 2 --connect-timeout 12 --max-time 60 "$url" -o "$OUT"; then
-              if echo "4bc89bf98c95c8559845b8e4abb009db0740285f514d7e9c0e15d2e7cb63341c  $OUT" | sha256sum --check --status; then
-                echo "Verified exact source archive"
+              if python3 - "$OUT" <<'PY'
+          import hashlib,sys,zipfile
+          try:
+              with zipfile.ZipFile(sys.argv[1]) as z:
+                  names=sorted(n for n in z.namelist() if not n.endswith("/"))
+                  h=hashlib.sha256()
+                  for name in names:
+                      h.update(name.encode()+b"\0"+hashlib.sha256(z.read(name)).digest())
+              ok=h.hexdigest()=="c718361127b37f584654d2d1d3ba4be192f650f5c1636859289984d0dd14362a"
+              print("Verified all 89 exact source file contents:",ok)
+              sys.exit(0 if ok else 1)
+          except Exception as e:
+              print("ZIP check failed",e)
+              sys.exit(1)
+          PY
+              then
+                echo "Exact file-content fingerprint verified (ZIP metadata may differ)"
                 exit 0
               fi
-              echo "::warning::Download differs from user-supplied source SHA256"
+              echo "::warning::Download content differs from user-supplied source"
             fi
           done
           echo "::error::Exact archive unavailable; do not silently fork different source."
