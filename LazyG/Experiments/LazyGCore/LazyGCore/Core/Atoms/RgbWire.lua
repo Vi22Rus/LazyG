@@ -143,6 +143,14 @@ function R.Encode(rec,sequence)
   local b={76,71,67,2,sequence,status,floor(id/65536)%256,floor(id/256)%256,id%256,flags,0}
   for i=12,21 do b[i]=0 end
   b[12]=mod;b[13]=key;b[14]=gate
+  -- Reserved v2 byte 15: Hunter Mark decision trace. Independent of
+  -- native input gates, ignored if no Hunter diagnostic provider.
+  if type(S.LazyGCoreHunterMarkDiagnostic)=="function" then
+    local ok,v=pcall(S.LazyGCoreHunterMarkDiagnostic)
+    if ok and type(v)=="number" and v>=0 and v<=255 and v==floor(v) then
+      b[15]=v
+    end
+  end
   local c=crc(b,21)
   b[22]=floor(c/256);b[23]=c%256;b[24]=8
   return b
