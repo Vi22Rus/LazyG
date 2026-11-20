@@ -523,9 +523,7 @@ public sealed class MainWindow : Window
         overlay?.SetReadOnlyRecommendation(true,spell,status);
         if(spell is int selected && p is not null && ghubArmed)
         {
-            var src=p.ProviderId==1?RotationSourceId.JustAC:RotationSourceId.Hekili;
-            QueueNativeLogitechCommand(new RotationRecommendation(src,selected,0,
-                "connector-"+provider,at),at);
+            QueueNativeLogitechCommand(selected,provider,at);
         }
     }
 
@@ -564,14 +562,14 @@ public sealed class MainWindow : Window
         if(!ghubBusy)ghub.Disconnect();
         RuntimeDiagnostics.Add("GHUB",reason);
     }
-    private void QueueNativeLogitechCommand(RotationRecommendation rec,DateTimeOffset frameAt)
+    private void QueueNativeLogitechCommand(int spellId,string provider,DateTimeOffset frameAt)
     {
         if(!connectorRunning || !ghubArmed || ghubBusy)return;
         var now=DateTimeOffset.UtcNow;
         var packet=lazyGCorePacket;
         string? reason=null;
         if(packet is null || packet.Version!=3 || packet.Status!=1 ||
-           packet.SpellId!=rec.SpellId ||
+           packet.SpellId!=spellId ||
            !lazyGCoreSequenceEstablished || now-lastLazyGCoreSequenceAt>
                TimeSpan.FromMilliseconds(900))reason="NATIVE RGB STALE / INVALID";
         else if(!packet.NativeInputReady)reason=
@@ -590,7 +588,7 @@ public sealed class MainWindow : Window
         {
             if(reason!=lastInputGateReason)
             {
-                executionTrace.Add(now,"INPUT_BLOCKED",rec.SpellId,reason);
+                executionTrace.Add(now,"INPUT_BLOCKED",spellId,reason);
                 lastInputGateReason=reason;
             }
             return;
@@ -603,11 +601,11 @@ public sealed class MainWindow : Window
         lastNativeInputAt=now;
         var mod=packet.HidModifier;
         var usage=packet.HidUsage;
-        long attempt=executionTrace.Attempt(now,rec.SpellId,rec.RuleId);
-        executionTrace.Add(now,"NATIVE_HID_BINDING",rec.SpellId,
+        long attempt=executionTrace.Attempt(now,spellId,"connector-"+provider);
+        executionTrace.Add(now,"NATIVE_HID_BINDING",spellId,
             "modifier="+mod+" usage="+usage+" sequence="+packet.Sequence+
             " provider="+(packet.ProviderId==1?"JustAC":"Hekili"),attempt,
-            rec.RuleId);
+            "connector-"+provider);
         ghubBusy=true;
         long generation=ghubGeneration;
         _=Task.Run(()=>{
@@ -617,15 +615,15 @@ public sealed class MainWindow : Window
                    ghubArmed && ghub.Connected)
                 {
                     ghub.TapKey(mod,usage);
-                    executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
+                    executionTrace.DriverResult(DateTimeOffset.UtcNow,spellId,
                         attempt,true,"External RGB v3 HID press/release returned; not proof of WoW cast");
                 }
                 else executionTrace.Add(DateTimeOffset.UtcNow,"HID_SKIPPED",
-                    rec.SpellId,"Stop/disconnect before native key",attempt,"lazygcore-native");
+                    spellId,"Stop/disconnect before native key",attempt,"lazygcore-native");
             }
             catch(Exception ex)
             {
-                executionTrace.DriverResult(DateTimeOffset.UtcNow,rec.SpellId,
+                executionTrace.DriverResult(DateTimeOffset.UtcNow,spellId,
                     attempt,false,ex.GetType().Name);
                 Dispatcher.UIThread.Post(()=>{
                     if(generation!=ghubGeneration)return;
