@@ -75,6 +75,28 @@ local function inRange(spell)
   -- No guessing based on the engine's default outOfRange=false.
   return false
 end
+-- Self-buffs/aspects have no hostile target or enemy range requirement.
+-- Prefer exact observed spell rank in the class registry; do not infer
+-- self-cast from an unrelated recommendation with no matching spell.
+local function selfBuffSpell(id, rec)
+  if field(rec,"unit")=="player" then return true end
+  if not (S.Registry and type(S.Registry.Class)=="function") then return false end
+  local class=S.Registry.Class()
+  local spells=class and class.spells
+  if type(spells)~="table" then return false end
+  for name,def in pairs(spells) do
+    if type(def)=="table" and
+       (def.selfBuff==true or def.toggle==true or name=="TrueshotAura") then
+      local ids=def.ids
+      if type(ids)=="table" then
+        for _,candidate in ipairs(ids) do
+          if candidate==id then return true end
+        end
+      end
+    end
+  end
+  return false
+end
 local function targetReady()
   local exists=readPlain(function()return UnitExists("target")end)
   local hostile=readPlain(function()return UnitCanAttack("player","target")end)
@@ -120,6 +142,7 @@ function R.Encode(rec,sequence)
       end
     end
   end
+  local selfBuff=status==1 and selfBuffSpell(id,rec)
   if status==1 then
     local binder=LazyGCoreNativeBindings
     local m,k
@@ -129,7 +152,11 @@ function R.Encode(rec,sequence)
       mod,key=m,k
       gate=gate+1 -- binding known, plain, not a macro or ambiguous
     end
-    if targetReady() then gate=gate+2 end
+    if selfBuff then
+      gate=gate+64 -- positive self/party buff classification
+    elseif targetReady() then
+      gate=gate+2
+    end
     if cooldownReady(61304) then gate=gate+4 end
     if cooldownReady(id) and
        (flags%2==0) and (math.floor(flags/2)%2==0) and
