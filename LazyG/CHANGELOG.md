@@ -1,3 +1,18 @@
+## 2026-11-20 — Require Logitech G HUB desktop process before Start [0.4.0-dev / GAME-UNTESTED]
+
+**User-confirmed issue:** during an earlier Hunter BM test the user forgot to start Logitech G HUB. The virtual bus device may still be installed/accessible, so previous `ghub.Connect()` alone did not sufficiently confirm the desktop app was running. User requested an English modal on **each Start attempt** when G HUB has not been launched, with one OK button; do not activate rotation.
+
+**Implementation:** `Avalonia/Engine/GHubDriver.cs` adds `GHubRuntime.IsRunning()`, which on Windows detects the actual Logitech G HUB desktop `lghub.exe` process, excluding unrelated `lghub_agent` and `lghub_updater` services. No background process launch or admin rights requested. `MainWindow.RequestStart` checks this before selecting an XML profile, connecting the Logitech virtual bus, arming HID, or starting trace; on failure the existing modal shows title `LazyG · Logitech G HUB required`, text `Please launch Logitech G HUB before starting the rotation. LazyG requires Logitech G HUB to be running to send key presses. Start G HUB, then click Start again.` and `OK`. Clicking OK only dismisses the dialog, and a later click of Start reevaluates the process state. Even if G HUB process exists, the existing virtual-bus `Connect()` can still reject driver failures. Existing Stop behavior remains functional independent of G HUB process.
+
+**Regression:** `Tests/RotationFoundationTests.cs` checks canonical process names, exclusion of service-only processes, and English prompt; broader Windows build/tests, Lua 5.1 and EXE publish must pass GitHub Actions. This is a start-time readiness check, not runtime process monitoring. No fixed GCD or XML/rotation modification; no claim of tested physical G HUB behavior until user's Windows test.
+
+**Rollback:** prior dev [Actions 44669128851](https://github.com/Vi22Rus/LazyG/actions/runs/44669128851). PowerShell publish:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-20 — Hunter Mark persistent Sonah-style advice FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
 
 **[CI SUCCESS]** [Actions 44669128851](https://github.com/Vi22Rus/LazyG/actions/runs/44669128851), tested implementation code SHA `df6a092ea934acc15df1233c3ab3338ddb2a1e7a`. Windows C# tests, self-contained single-EXE publish and Windows startup smoke, and Lua 5.1 diagnostics passed. Windows artifact **LazyG-Windows-x64 14598234682**, optional probe addon **LazyGForeverProbe-0.4.0-dev 14598443871**. Later documentation-only commits do not alter tested program.
