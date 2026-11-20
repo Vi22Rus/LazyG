@@ -187,7 +187,7 @@ internal sealed class OverlayWindow : Window
         {
             ClearSpell();
             spellTitle.Text="NO ACTIVE ROTATION";
-            spellCaption.Text="No verified XML recommendation for "+className;
+            spellCaption.Text="No external recommendation for "+className;
         }
         RuntimeDiagnostics.Add("OVERLAY","Class changed: "+className);
     }
@@ -208,32 +208,26 @@ internal sealed class OverlayWindow : Window
         readonlySession=running;
         previewButton.IsEnabled=!running;
         spellContext.Text=running?(advisory?"PENDING / ADVISORY · "+recommendationClass:
-            "XML RECOMMENDATION · "+recommendationClass):
-            "XML IDLE · "+recommendationClass;
-        rotationLabel.Text=running?"XML PREVIEW ON":"ROTATION IDLE";
-        pauseReason.Text=running?status:"No active XML rotation";
+            "EXTERNAL ADDON RECOMMENDATION · "+recommendationClass):
+            "CONNECTOR IDLE · "+recommendationClass;
+        rotationLabel.Text=running?"CONNECTOR ON":"ROTATION IDLE";
+        pauseReason.Text=running?status:"Connector stopped";
         if(!running)
         {
             if(demoActive)demoClock.Stop();
             ClearSpell();
-            spellCaption.Text="No active XML recommendation for "+recommendationClass;
+            spellCaption.Text="No external recommendation for "+recommendationClass;
             return;
         }
         if(spellId is not int id || id<=0)
         {
             ClearSpell();
             spellTitle.Text="NO RECOMMENDATION";
-            spellCaption.Text="No verified XML recommendation for "+recommendationClass+" · no ability selected";
+            spellCaption.Text="No external recommendation for "+recommendationClass+" · no ability selected";
             return;
         }
         var spell=ForeverSpellCatalog.Find(recommendationClass,id);
-        if(spell is null)
-        {
-            var family=recommendationClass.Equals("Hunter",StringComparison.OrdinalIgnoreCase)?
-                HunterSpellFamilies.BaseId(id):null;
-            if(family is int baseId)
-                spell=ForeverSpellCatalog.Find(recommendationClass,baseId);
-        }
+        // Spell atlas remains available; never call retired Hunter rank evaluator.
         if(spell is null)
         {
             ClearSpell();
@@ -243,7 +237,7 @@ internal sealed class OverlayWindow : Window
         }
         DisplaySpell(spell,"en",false);
         spellCaption.Text=(advisory?"PENDING / ADVICE (NOT AN INPUT COMMAND)":
-            "XML RECOMMENDATION")+" · SpellID "+id+
+            "EXTERNAL ADDON RECOMMENDATION")+" · SpellID "+id+
             (spell.SpellId==id?"":" · family icon");
         gcdLabel.Text="GCD: remaining time unobservable";
     }
