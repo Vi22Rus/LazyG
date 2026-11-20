@@ -51,7 +51,13 @@ internal static class WowRgbBridge
         TryReadLazyGCore(out packet,out _);
 
     public static bool TryReadLazyGCore(out LazyGCoreRgbPacket? packet,
-        out string detail)
+        out string detail) => TryReadNativeEightCells(out packet,out detail,false);
+
+    public static bool TryReadLazyGConnector(out LazyGCoreRgbPacket? packet,
+        out string detail) => TryReadNativeEightCells(out packet,out detail,true);
+
+    private static bool TryReadNativeEightCells(out LazyGCoreRgbPacket? packet,
+        out string detail,bool connectorOnly)
     {
         packet=null;
         detail="NATIVE RGB UNKNOWN";
@@ -91,7 +97,7 @@ internal static class WowRgbBridge
                     // Native v2 adds trusted HID/gate information while keeping
                     // the same eight cells. Do not reject v2 before CRC validation.
                     if(!LazyGCoreRgbCodec.IsCandidateVersionCell(
-                        second.R,second.B))continue;
+                        second.R,second.B) || (connectorOnly && second.R!=3))continue;
                     versionCount++;
                     Span<byte> frame=stackalloc byte[24];
                     for(int i=0;i<8;i++)
@@ -101,7 +107,8 @@ internal static class WowRgbBridge
                         frame[i*3+1]=color.G;
                         frame[i*3+2]=color.B;
                     }
-                    if(LazyGCoreRgbCodec.TryDecode(frame,out packet))
+                    if(LazyGCoreRgbCodec.TryDecode(frame,out packet) &&
+                       (!connectorOnly || packet?.Version==3))
                     {
                         detail="NATIVE CRC OK v"+packet!.Version+
                             " pitch="+pitch+" x="+x+" y="+y;
