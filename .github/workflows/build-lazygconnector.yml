@@ -22,6 +22,7 @@ jobs:
           luac5.1 -p LazyG/Experiments/LazyGConnector/LazyGConnector/Connector.lua
           luac5.1 -p LazyG/Experiments/LazyGConnector/LazyGConnector/NativeBindings.lua
           lua5.1 LazyG/Experiments/LazyGConnector/tests/provider_smoke.lua
+          lua5.1 LazyG/Experiments/LazyGConnector/tests/hekili_rank_binding.lua
       - name: Package standalone Lua addon only
         run: |
           mkdir -p artifact/LazyGConnector
