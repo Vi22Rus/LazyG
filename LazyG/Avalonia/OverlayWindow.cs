@@ -203,11 +203,12 @@ internal sealed class OverlayWindow : Window
     // The live preview contains ONLY the current XML recommendation. No
     // recommendation means no icon: never substitute a demo or stale spell.
     // This function never sends any input, even after Start.
-    public void SetReadOnlyRecommendation(bool running,int? spellId,string status)
+    public void SetReadOnlyRecommendation(bool running,int? spellId,string status, bool advisory=false)
     {
         readonlySession=running;
         previewButton.IsEnabled=!running;
-        spellContext.Text=running?"XML RECOMMENDATION · "+recommendationClass:
+        spellContext.Text=running?(advisory?"PENDING / ADVISORY · "+recommendationClass:
+            "XML RECOMMENDATION · "+recommendationClass):
             "XML IDLE · "+recommendationClass;
         rotationLabel.Text=running?"XML PREVIEW ON":"ROTATION IDLE";
         pauseReason.Text=running?status:"No active XML rotation";
@@ -241,7 +242,8 @@ internal sealed class OverlayWindow : Window
             return;
         }
         DisplaySpell(spell,"en",false);
-        spellCaption.Text="XML RECOMMENDATION · SpellID "+id+
+        spellCaption.Text=(advisory?"PENDING / ADVICE (NOT AN INPUT COMMAND)":
+            "XML RECOMMENDATION")+" · SpellID "+id+
             (spell.SpellId==id?"":" · family icon");
         gcdLabel.Text="GCD: remaining time unobservable";
     }
