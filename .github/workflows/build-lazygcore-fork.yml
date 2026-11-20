@@ -45,7 +45,9 @@ jobs:
                   for name in names:
                       h.update(name.encode()+b"\0"+hashlib.sha256(z.read(name)).digest())
               ok=h.hexdigest()=="c718361127b37f584654d2d1d3ba4be192f650f5c1636859289984d0dd14362a"
-              print("Verified all 89 exact source file contents:",ok)
+              print("Verified all 89 exact source file contents:",ok,"file_count=",len(names),"fingerprint=",h.hexdigest())
+              for name in ("Sonah/Core/Init.lua","Sonah/Core/Organisms/Engine.lua","Sonah/Sonah.toc","Sonah/LICENSE.txt"):
+                  if name in names: print(name,hashlib.sha256(z.read(name)).hexdigest())
               sys.exit(0 if ok else 1)
           except Exception as e:
               print("ZIP check failed",e)
