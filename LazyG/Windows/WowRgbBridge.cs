@@ -59,16 +59,48 @@ internal static class WowRgbBridge
         if(!ClientToScreen(game.MainWindowHandle,ref topLeft))return false;
         try
         {
-            using var bitmap=new Bitmap(42,62);
+            // UI scale changes physical y position and pixel pitch. Search
+            // only the small upper-left client rectangle for the exact
+            // L,G,C sync cells; accept only CRC-valid 8-cell frames.
+            int width=Math.Min(135,client.Right-client.Left);
+            int height=Math.Min(120,client.Bottom-client.Top);
+            using var bitmap=new Bitmap(width,height);
             using(var graphics=Graphics.FromImage(bitmap))
-                graphics.CopyFromScreen(topLeft.X,topLeft.Y,0,0,new Size(42,62));
-            Span<byte> frame=stackalloc byte[24];
-            for(int i=0;i<8;i++)
+                graphics.CopyFromScreen(topLeft.X,topLeft.Y,0,0,new Size(width,height));
+            for(int y=0;y<height;y++)
+            for(int x=0;x<Math.Min(32,width);x++)
             {
-                var color=bitmap.GetPixel(2+5*i,56);
-                frame[i*3]=color.R;frame[i*3+1]=color.G;frame[i*3+2]=color.B;
+                var sync=bitmap.GetPixel(x,y);
+                if(Math.Abs(sync.R-76)>3 || Math.Abs(sync.G-71)>3 ||
+                   Math.Abs(sync.B-67)>3)continue;
+                for(int pitch=3;pitch<=12;pitch++)
+                {
+                    if(x+pitch*7>=width)break;
+                    var second=bitmap.GetPixel(x+pitch,y);
+                    var third=bitmap.GetPixel(x+2*pitch,y);
+                    if(Math.Abs(second.R-1)>3 || Math.Abs(second.G-0)>3 ||
+                       Math.Abs(second.B-0)>3 ||
+                       Math.Abs(third.R-0)>3 || Math.Abs(third.G-0)>3 ||
+                       Math.Abs(third.B-0)>3)
+                    {
+                        // Cell 1 = LGC, cell 2 = version, sequence, status,
+                        // cell 3 = SpellID. Version sequence are variable.
+                        // Only validate stable version channel here.
+                        if(second.R!=1)continue;
+                    }
+                    Span<byte> frame=stackalloc byte[24];
+                    for(int i=0;i<8;i++)
+                    {
+                        var color=bitmap.GetPixel(x+pitch*i,y);
+                        frame[i*3]=color.R;
+                        frame[i*3+1]=color.G;
+                        frame[i*3+2]=color.B;
+                    }
+                    if(LazyGCoreRgbCodec.TryDecode(frame,out packet))
+                        return true;
+                }
             }
-            return LazyGCoreRgbCodec.TryDecode(frame,out packet);
+            return false;
         }
         catch(Exception) {return false;}
     }
