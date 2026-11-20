@@ -322,7 +322,7 @@ local levelingPriority = {
     -- with a friend there is someone else to hold it)
     { sp.ConcussiveShot, when = { C.solo, C.noPet, C.inCombat, atRange, C.debuffMissing(sp.ConcussiveShot) }, strictRange = true, text = "Concussive Shot", reason = "No pet to hold it: daze it and keep shooting." },
     { sp.AimedShot, when = { C.standing, singleTarget }, strictRange = true, text = "Aimed Shot", reason = "Single target: your hardest-hitting shot." },
-    { sp.MultiShot, when = { aoeOn }, strictRange = true, text = "Multi-Shot", reason = "Shares Aimed Shot's 6s cooldown (instant)." },
+    { sp.MultiShot, when = { aoeOn, C.enemies(2) }, strictRange = true, text = "Multi-Shot", reason = "AoE only when at least two nearby enemies are verified." },
 }
 AppendTail(levelingPriority)
 
@@ -354,7 +354,7 @@ local bmPriority = {
     -- 0.15 AP since Nov 2) the GCD and mana go to Arcane Shot / Hawks (sim 1.1.9, Nov 10 model, seconds per kill:
     -- questing solo +1.5% at 40, +8.4% at 50, +4.2% at 60, with a partner +3.2% at 40; no change below 40,
     -- on dummies or in raids)
-    { sp.MultiShot, when = { aoeOn, C.any(C.all(C.questing, C.levelBelow(40)), C.inPvP, C.enemies(2)) }, strictRange = true, text = "Multi-Shot", reason = "Shares Aimed Shot's cooldown: instant, cheaper, near-equal damage. Mind trapped adds." },
+    { sp.MultiShot, when = { aoeOn, C.enemies(2) }, strictRange = true, text = "Multi-Shot", reason = "Only with at least two observed enemies; shares Aimed Shot cooldown." },
     -- Dungeons and raids, one target: Aimed Shot takes the shared cooldown (launch Aimed Shot, sim 1.1.3:
     -- +2.7% max-gear raid boss, +2.3% pre-raid, no loss elsewhere; in 5-mans it also can't break crowd control)
     { sp.AimedShot, when = { C.any(C.dungeonContent, C.raidContent, C.no(aoeOn)), C.standing, singleTarget }, strictRange = true, text = "Aimed Shot", reason = "Single target: your hardest-hitting shot." },
