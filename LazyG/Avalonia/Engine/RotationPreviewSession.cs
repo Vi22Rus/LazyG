@@ -14,6 +14,8 @@ internal sealed class RotationPreviewSession
     public RotationRecommendation? Current { get; private set; }
     public string Status { get; private set; } = "STOPPED";
     public string? RuleId => Current?.RuleId;
+    public bool IsSettingEnabled(string key) => profile is not null &&
+        overrides is not null && overrides.TryGetValue(key,out int value) && value==1;
     public void Start(RotationProfileV2 next,IReadOnlyDictionary<string,int> settings)
     {
         if(next.Client!="forever" || next.ClassId!=3 || next.SpecIndex!=1 ||
