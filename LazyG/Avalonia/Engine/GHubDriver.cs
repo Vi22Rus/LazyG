@@ -12,6 +12,39 @@ namespace LazyG.Desktop.Engine;
 // Adapted from the user's DEV_LaZY_Forever/Core/GHubDriver.cs.
 // Direct Logitech G HUB virtual bus only; no SendInput or alternative driver.
 // Logitech's IOCTL is undocumented; the installed driver may be incompatible.
+// The virtual-bus device can be present even when G HUB's desktop app
+// has not been launched. Do not confuse an installed driver or background
+// agent with a running G HUB application.
+internal static class GHubRuntime
+{
+    internal const string NotRunningMessage =
+        "Please launch Logitech G HUB before starting the rotation. " +
+        "LazyG requires Logitech G HUB to be running to send key presses. " +
+        "Start G HUB, then click Start again.";
+
+    internal static bool IsDesktopProcess(string? processName) =>
+        string.Equals(processName,"lghub",StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(processName,"lghub.exe",StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsRunning()
+    {
+        if(!OperatingSystem.IsWindows())return false;
+        try
+        {
+            // Process.GetProcessesByName returns names without .exe on Windows.
+            var processes=System.Diagnostics.Process.GetProcessesByName("lghub");
+            bool found=processes.Length>0;
+            foreach(var process in processes)process.Dispose();
+            return found;
+        }
+        catch
+        {
+            // A failed process check must not be treated as a successful check.
+            return false;
+        }
+    }
+}
+
 internal sealed class GHubDriver : IDisposable
 {
     private const uint GenericRead=0x80000000;
