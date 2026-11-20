@@ -88,6 +88,25 @@ def main(source,dest):
         raise RuntimeError("Hunter Mark priority source changed; patch needs review")
     hunter_text=hunter_text.replace(mark_anchor,mark_anchor+"\n"+"-- In Forever the aura can be hidden. A recent Mark cast on ANOTHER mob\n-- must never suppress Mark on this new mob. The generic lastCast timestamp\n-- is global, so use Auras' existing target-epoch/nameplate identity instead.\nlocal function MarkMissingOnCurrentTarget()\n    local remaining = S.Atoms.Auras.DebuffRemaining(\"target\", sp.HuntersMark)\n    if remaining ~= nil then return remaining <= 0 end\n    local thisTarget = S.Atoms.Auras.CastOnCurrentTarget(sp.HuntersMark)\n    if thisTarget ~= true then return true end\n    local since = S.Atoms.Spells.SinceCast(sp.HuntersMark)\n    return since == nil or since >= (sp.HuntersMark.duration or 120)\nend\n-- Trace the live class toggle and why Hunter's Mark can be rejected.\n-- Observations are diagnostic only; no change to priority / WoW casts.\nS.LazyGCoreHunterMarkDiagnostic = function()\n    local flags = 0\n    local function bit(ok, value)\n        if ok and value then flags = flags + value end\n    end\n    local function known(fn)\n        local ok, value = pcall(fn)\n        return ok and value == true\n    end\n    bit(known(function() return S.Engine.Opt(\"useHuntersMark\") end), 1)\n    bit(known(function() return S.Engine.Opt(\"markEveryMob\", false) end), 2)\n    bit(known(function() return MarkMissingOnCurrentTarget() end), 4)\n    bit(known(function() return S.Atoms.Spells.Known(sp.HuntersMark) end), 8)\n    bit(known(function() return C.questing() end), 16)\n    bit(known(function() return C.targetElite() end), 32)\n    bit(known(function() return C.targetAbove(60)() end), 64)\n    bit(known(function() return S.Settings:Get(\"enabled\") end), 128)\n    return flags\nend\r\n",1)
     hunter_text=hunter_text.replace("C.debuffMissing(sp.HuntersMark)","MarkMissingOnCurrentTarget")
+    # The user's AoE setting means 2+ mobs, not implicit single-target
+    # Multi-Shot for leveling/questing. Enforce across ALL priority lists.
+    hunter_lines=hunter_text.splitlines(keepends=True)
+    multi_rules=0
+    patched=0
+    for i,line in enumerate(hunter_lines):
+        if "{ sp.MultiShot," not in line:
+            continue
+        multi_rules+=1
+        if "C.enemies(2)" in line:
+            continue
+        patched+=1
+        if "when = {" in line:
+            hunter_lines[i]=line.replace("when = {","when = { C.enemies(2),",1)
+        else:
+            hunter_lines[i]=line.replace("sp.MultiShot,","sp.MultiShot, when = { aoeOn, C.enemies(2) },",1)
+    if multi_rules<9 or patched<9:
+        raise RuntimeError("Multi-Shot rules changed; explicit two-target patch needs review")
+    hunter_text="".join(hunter_lines)
     hunter_path.write_text(hunter_text,encoding="utf-8")
     assert "function Auras.CastOnCurrentTarget" in auras_text
     assert "S.LazyGCoreHunterMarkDiagnostic" in hunter_text
