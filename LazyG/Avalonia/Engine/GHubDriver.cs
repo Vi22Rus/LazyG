@@ -12,36 +12,63 @@ namespace LazyG.Desktop.Engine;
 // Adapted from the user's DEV_LaZY_Forever/Core/GHubDriver.cs.
 // Direct Logitech G HUB virtual bus only; no SendInput or alternative driver.
 // Logitech's IOCTL is undocumented; the installed driver may be incompatible.
-// The virtual-bus device can be present even when G HUB's desktop app
-// has not been launched. Do not confuse an installed driver or background
-// agent with a running G HUB application.
+// G HUB's app may be minimized to the system tray. Recent installations
+// use lghub_system_tray.exe instead of keeping the desktop UI process alive.
+// An installed virtual bus, agent or updater alone is NOT an app session.
 internal static class GHubRuntime
 {
     internal const string NotRunningMessage =
         "Please launch Logitech G HUB before starting the rotation. " +
-        "LazyG requires Logitech G HUB to be running to send key presses. " +
+        "LazyG requires Logitech G HUB to be running, including in the system tray. " +
         "Start G HUB, then click Start again.";
 
-    internal static bool IsDesktopProcess(string? processName) =>
-        string.Equals(processName,"lghub",StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(processName,"lghub.exe",StringComparison.OrdinalIgnoreCase);
+    internal static bool IsDesktopProcess(string? processName)
+    {
+        if(string.IsNullOrWhiteSpace(processName))return false;
+        string name=processName.EndsWith(".exe",StringComparison.OrdinalIgnoreCase)
+            ?processName[..^4]:processName;
+        return name.Equals("lghub",StringComparison.OrdinalIgnoreCase) ||
+            name.Equals("lghub_system_tray",StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Diagnostic names only, not identities or proof of successful IOCTL.
+    public static string DescribeRunningProcesses()
+    {
+        if(!OperatingSystem.IsWindows())return "NON_WINDOWS";
+        try
+        {
+            // Read process names, not window titles: minimized G HUB has no window.
+            var processes=System.Diagnostics.Process.GetProcesses();
+            try
+            {
+                var matches=processes.Select(p=>{
+                    try{return p.ProcessName;}catch{return "";}
+                }).Where(name=>name.StartsWith("lghub",StringComparison.OrdinalIgnoreCase))
+                  .Distinct(StringComparer.OrdinalIgnoreCase)
+                  .OrderBy(name=>name,StringComparer.OrdinalIgnoreCase);
+                return string.Join(",",matches);
+            }
+            finally {foreach(var item in processes)item.Dispose();}
+        }
+        catch {return "PROCESS_ENUMERATION_UNAVAILABLE";}
+    }
 
     public static bool IsRunning()
     {
         if(!OperatingSystem.IsWindows())return false;
         try
         {
-            // Process.GetProcessesByName returns names without .exe on Windows.
-            var processes=System.Diagnostics.Process.GetProcessesByName("lghub");
-            bool found=processes.Length>0;
-            foreach(var process in processes)process.Dispose();
-            return found;
+            var processes=System.Diagnostics.Process.GetProcesses();
+            try
+            {
+                return processes.Any(p=>{
+                    try{return IsDesktopProcess(p.ProcessName);}
+                    catch{return false;}
+                });
+            }
+            finally {foreach(var p in processes)p.Dispose();}
         }
-        catch
-        {
-            // A failed process check must not be treated as a successful check.
-            return false;
-        }
+        catch {return false;}
     }
 }
 
