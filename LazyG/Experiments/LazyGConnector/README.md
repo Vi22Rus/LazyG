@@ -13,7 +13,7 @@ Standalone Lua connector. Does **not** contain its own rotations, XML logic, coo
 ## Provider APIs verified in uploaded archives
 
 - **JustAC 6.0.0.1** (`JustAC.zip`): `LibStub("JustAC-SpellQueue",true).GetCurrentSpellQueue()[1]` is the primary numerical SpellID. `-999999999` is WAIT; it must never be sent as a spell.
-- **Hekili Forever v0.8.6** (`Hekili_Forever.zip`): `Hekili.Engine.Output.Primary.recs[1].actionID` is the published first SpellID. `Primary.count` and `recs[1].time` tell whether the current published first action is ready (`time <= 0.05`). This uses **Hekili's own output**, not a LazyG cooldown check.
+- **Hekili Forever** (`Hekili_Forever.zip`): the engine's `Hekili.Engine.Output.Primary.recs[1]` is *not necessarily the rendered icon*. The connector reads `Hekili.DisplayPool.Primary.Buttons[1].Ability.actionID` for Classic, or `Hekili.DisplayPool.Primary.styleFrames.timeline.cells[press].Ability.actionID` for Timeline. If Primary is not visible, it checks the visible AOE display. It waits for the drawn button's `ExactTime <= GetTime()+0.05`; hidden, paused, stale and future buttons do not authorize input. `/lgconnector hekili-primary` and `/lgconnector hekili-aoe` explicitly choose a visible display if needed. Hekili base-rank SpellIDs may be bound to a different action-bar rank by a **unique verified same-name direct spell binding**; ambiguous mappings block input. This behavior is Hekili-only: JustAC direct SpellID mapping is unchanged.
 - The connector does not change, redistribute or embed JustAC/Hekili sources; it works only when installed addons expose these APIs. Compatibility outside the exact supplied archives is unverified.
 
 ## RGB wire v3, same 8-cell width
