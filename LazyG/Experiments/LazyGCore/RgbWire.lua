@@ -1,7 +1,7 @@
 -- LazyGCore native RGB protocol attached directly to engine Publish.
--- DISPLAY ONLY. Recommendation is not permission to cast or a GCD assertion.
+-- v2 contains confirmed key binding and fail-closed execution gates alongside recommendation.
 -- CRC16-CCITT, 8 cells, LGC marker (76,71,67), version 1, sequence,
--- status, 24-bit SpellID, flags, GCD quality=unknown(0), CRC, length.
+-- status, 24-bit SpellID, flags, binding modifier/usage plus known-safe gates, CRC, length.
 local S=LazyGCore
 if not S then return end
 local floor=math.floor
@@ -35,6 +35,35 @@ local function field(rec,key)
   if ok and safe(v) then return v end
   return nil
 end
+local function readPlain(fn)
+  local ok,a,b,c=pcall(fn)
+  if not ok or not safe(a) or not safe(b) or not safe(c) then return nil end
+  return a,b,c
+end
+local function cooldownReady(spell)
+  local api=C_Spell and C_Spell.GetSpellCooldown
+  local start,duration,enabled
+  if type(api)=="function" then
+    local r=readPlain(function()return api(spell)end)
+    if type(r)=="table" and safe(r) then
+      start,duration,enabled=r.startTime,r.duration,r.isEnabled
+      if not safe(start) or not safe(duration) or not safe(enabled) then return false end
+    end
+  elseif type(GetSpellCooldown)=="function" then
+    start,duration,enabled=readPlain(function()return GetSpellCooldown(spell)end)
+  end
+  if type(start)~="number" or type(duration)~="number" then return false end
+  if enabled==0 or enabled==false then return false end
+  if duration<=0 then return true end
+  local now=readPlain(function()return GetTime()end)
+  return type(now)=="number" and start+duration<=now
+end
+local function targetReady()
+  local exists=readPlain(function()return UnitExists("target")end)
+  local hostile=readPlain(function()return UnitCanAttack("player","target")end)
+  local dead=readPlain(function()return UnitIsDead("target")end)
+  return exists==true and hostile==true and dead==false
+end
 local function bxor(a,b)
   local n,p=0,1
   for _=1,16 do
@@ -56,6 +85,7 @@ local function crc(bytes,n)
 end
 function R.Encode(rec,sequence)
   local id,status,flags=0,0,0
+  local mod,key,gate=0,0,0
   if rec then
     local item=field(rec,"item")
     local spell=field(rec,"id")
@@ -73,8 +103,27 @@ function R.Encode(rec,sequence)
       end
     end
   end
-  local b={76,71,67,1,sequence,status,floor(id/65536)%256,floor(id/256)%256,id%256,flags,0}
+  if status==1 then
+    local binder=LazyGCoreNativeBindings
+    local m,k
+    if binder then m,k=binder.Find(id) end
+    if type(m)=="number" and m>=0 and m<=15 and
+       type(k)=="number" and k>=4 and k<=115 then
+      mod,key=m,k
+      gate=gate+1 -- binding known, plain, not a macro or ambiguous
+    end
+    if targetReady() then gate=gate+2 end
+    if cooldownReady(61304) then gate=gate+4 end
+    if cooldownReady(id) and
+       (flags%2==0) and (math.floor(flags/2)%2==0) and
+       (math.floor(flags/4)%2==0) and
+       (math.floor(flags/8)%2==1) and
+       (math.floor(flags/16)%2==1) and
+       (math.floor(flags/32)%2==1) then gate=gate+8 end
+  end
+  local b={76,71,67,2,sequence,status,floor(id/65536)%256,floor(id/256)%256,id%256,flags,0}
   for i=12,21 do b[i]=0 end
+  b[12]=mod;b[13]=key;b[14]=gate
   local c=crc(b,21)
   b[22]=floor(c/256);b[23]=c%256;b[24]=8
   return b
