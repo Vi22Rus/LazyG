@@ -62,7 +62,9 @@ internal sealed class RotationExecutionTrace
             return recording?Append(at,kind,spellId,detail,attempt,rule):0;
     }
     public long Recommend(DateTimeOffset at,int spellId,string rule) =>
-        Add(at,"XML_RECOMMENDED",spellId,"XML evaluation only",null,rule);
+        rule=="lazygcore" ?
+            Add(at,"CORE_RECOMMENDED",spellId,"Native Lua RGB recommendation, not XML",null,rule):
+            Add(at,"XML_RECOMMENDED",spellId,"XML evaluation only",null,rule);
     public long Attempt(DateTimeOffset at,int spellId,string rule) =>
         Add(at,"HID_ATTEMPT",spellId,"Command authorized; no driver acknowledgement",null,rule);
     public void DriverResult(DateTimeOffset at,int spellId,long attempt,bool success,
@@ -90,7 +92,8 @@ internal sealed class RotationExecutionTrace
         lock(sync)
         {
             int Count(string name)=>rows.Count(e=>e.Kind==name);
-            return (recording?"RECORDING":"STOPPED")+" · XML="+Count("XML_RECOMMENDED")+
+            return (recording?"RECORDING":"STOPPED")+" · CORE="+Count("CORE_RECOMMENDED")+
+                " · XML="+Count("XML_RECOMMENDED")+
                 " · input attempts="+Count("HID_ATTEMPT")+
                 " · driver IO="+Count("HID_IO_COMPLETED")+
                 " · IO failures="+Count("HID_IO_FAILED")+
@@ -134,8 +137,13 @@ internal sealed class RotationExecutionTrace
                 };
             }).ToArray();
             return JsonSerializer.Serialize(new {
-                schema=1,session,recording,at=DateTimeOffset.UtcNow,
+                schema=2,session,recording,at=DateTimeOffset.UtcNow,
+                nativeRecommendations=Total("CORE_RECOMMENDED"),
                 xmlRecommendations=Total("XML_RECOMMENDED"),
+                coreXmlComparisonSamples=Total("CORE_XML_COMPARE"),
+                coreXmlComparison=rows.Where(r=>r.Kind=="CORE_XML_COMPARE").Select(r=>new {
+                    at=r.At,nativeSpellId=r.SpellId,comparison=r.Detail
+                }).ToArray(),
                 hidAttempts=attempts.Length,
                 driverCompleted=Total("HID_IO_COMPLETED"),
                 driverFailed=Total("HID_IO_FAILED"),
