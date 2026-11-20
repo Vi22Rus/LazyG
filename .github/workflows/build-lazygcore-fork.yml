@@ -75,6 +75,7 @@ jobs:
           set -euo pipefail
           ROOT="LazyG/Experiments/LazyGCore/LazyGCore"
           test -f "$ROOT/LazyGCore.toc"
+          test -f "$ROOT/Core/Atoms/NativeBindings.lua"
           test -f "$ROOT/Classes/Hunter.lua"
           test -f "$ROOT/Classes/Paladin.lua"
           test -f "$ROOT/Classes/Warrior.lua"
