@@ -135,7 +135,7 @@ internal sealed class SetupDialog : Window
             Directory.CreateDirectory(target);
             try
             {
-                var toc="## Interface: 16001\\n## Title: LazyG Connector (JustAC / Hekili)\\n## Notes: No internal rotation\\n## Version: 0.1.0-dev\\n## SavedVariables: LazyGConnectorDB\\n## OptionalDeps: JustAC, Hekili\\n\\nNativeBindings.lua\\nConnector.lua\\n";
+                var toc="## Interface: 16001\n## Title: LazyG Connector (JustAC / Hekili)\n## Notes: No internal rotation\n## Version: 0.1.0-dev\n## SavedVariables: LazyGConnectorDB\n## OptionalDeps: JustAC, Hekili\n\nNativeBindings.lua\nConnector.lua\n";
                 File.WriteAllText(Path.Combine(target,"LazyGConnector.toc"),toc,new UTF8Encoding(false));
                 foreach(var addonFile in new[]{"NativeBindings.lua","Connector.lua"})
                 {
@@ -173,7 +173,7 @@ internal sealed class SetupDialog : Window
                 status.Foreground=Palette.Brush("#53E7B1");
                 status.Text="RGB v3 PASS · "+provider+
                     " · status="+pkt.Status+" · SpellID="+pkt.SpellId+
-                    "\\nSource selection: /lgconnector justac or /lgconnector hekili";
+                    "\nSource selection: /lgconnector justac or /lgconnector hekili";
                 finish.IsEnabled=true;
             }
             else Failure("Connector RGB v3 not confirmed: "+result.detail+
