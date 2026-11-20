@@ -225,6 +225,22 @@ nativeCrc=RgbV3Codec.Crc16(native.AsSpan(0,21));
 native[21]=(byte)(nativeCrc>>8);native[22]=(byte)nativeCrc;
 Check.That(!LazyGCoreRgbCodec.TryDecode(native,out _),
     "native item status cannot authorize a spell key");
+// Native v2: binding, target, GCD and spell authorization are separate.
+var nativeV2=new byte[24] {76,71,67,2,10,1,0x13,0xbc,0x79,56,0,2,30,15,0,0,0,0,0,0,0,0,0,8};
+ushort crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out var v2) &&
+    v2 is not null && v2.HasNativeBinding && v2.NativeInputReady &&
+    v2.HidModifier==2 && v2.HidUsage==30, "v2 native key and gates");
+nativeV2[13]=7; // missing spell ready
+crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
+    v2 is not null && !v2.NativeInputReady,"v2 missing evidence cannot send key");
+nativeV2[13]=15;nativeV2[12]=0;
+crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(!LazyGCoreRgbCodec.TryDecode(nativeV2,out _),"v2 invalid HID usage rejected");
 Console.WriteLine("LazyGCore native RGB CRC / range evidence regression: PASS");
 Console.WriteLine("Hunter compact v3 pixel detector regression: PASS");
 Console.WriteLine("RGB v3 codec regression: PASS (CRC, direct8, stepped4, markers, profile and corruption)");
