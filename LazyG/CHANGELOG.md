@@ -1,3 +1,13 @@
+## 2026-11-20 — GLOBAL CONTEXT-PRESERVATION RULE + EXPERIMENT HANDOFF [DOCS ONLY / MAIN CODE UNCHANGED]
+
+**User request:** make every project change and live test traceable across chats, with absolute timestamps, problem → evidence → cause → change → CI → user delivery → user retest → next action → rollback. Main PROJECT_CONTEXT.md now contains the mandatory standard and a CURRENT STATE / START HERE reference to experiment/lazygcore. No application, XML, or Lua code changed in main; no main release promoted.
+
+**Experiment pointer, not a main change:** experiment/lazygcore contains fixed native RGB v2 detection (old decoder search mistakenly accepted only v1), a new Hunter Mark per-target hidden-aura fallback and native option/condition telemetry. Windows experimental CI [44690300627](https://github.com/Vi22Rus/LazyG/actions/runs/44690300627), source 1c02529d3ede5ace550cbc383876107d01e0758b, and Lua fork CI [44690112838](https://github.com/Vi22Rus/LazyG/actions/runs/44690112838) both succeeded. Gameplay still UNTESTED. The two user diagnostic ZIPs dated 2026-11-20 062530 and 062532 demonstrate the previous native packet detection failure, not success of the fix. Detailed operation times and source SHAs are in experimental CHANGELOG.md. Next: obtain user retest and log result in a new timestamped entry; do not rewrite history.
+
+**HANDOFF:** start with main PROJECT_CONTEXT.md, then experiment branch PROJECT_CONTEXT.md and CHANGELOG.md, verify current commit and Actions, and inspect the actual code. No old RGB fallback in experiment. Legal licence restrictions remain unresolved.
+
+---
+
 ## 2026-11-20 — Sonah cast-event aura estimate → Compact RGB v2 → XML and DEEP FOREVER API AUDIT [0.4.0-dev / CI-PASSED / GAME-UNTESTED]
 
 **User request:** reproduce Sonah's missing piece (successful spellcast fallback under protected target auras), and conduct a deep source review of every relevant Blizzard API mechanism for future client-universal LazyG. **Actual source directly inspected:** attached `Sonah.zip`, `Sonah.toc` v1.2.5 Interface 16001; modules `Core/Atoms/Secret.lua`, `Auras.lua`, `Spells.lua`, `Casts.lua`, `Units.lua`, `Curves.lua`, `Items.lua`, `Talents.lua`, `ActionSlots.lua`, `Core/Molecules/Conditions.lua`, `Core/Organisms/Engine.lua`, other organisms and `Classes/Hunter.lua`. **Full audit** under [docs/SONAH_FOREVER_API_AUDIT.md](docs/SONAH_FOREVER_API_AUDIT.md) (18 detailed sections), and user's standalone expanded 25-part report `SONAH_FOREVER_API_DEEP_AUDIT.md` (42 KB) supplied in chat. The audit clearly distinguishes SOURCE FACTS from planned and implemented LazyG capabilities. No client 3.3.5 API mixed.
