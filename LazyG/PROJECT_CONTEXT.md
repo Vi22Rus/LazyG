@@ -1,3 +1,11 @@
+## LATEST VERIFIED GAMEPLAY — USER REPORT, 2026-11-20
+
+**JustAC = USER-CONFIRMED WORKING.** The user personally observed LazyGConnector + Windows + G HUB automatically executing JustAC abilities and killing mobs in WoW without any manual presses. Preserve this functional pipeline and do not alter its connector adapter, input handling, overlay/window or direct bindings when diagnosing Hekili. User also observed JustAC possibly changing recommendations multiple times per second during GCD; this is not yet a proven root cause of the previously counted repeated HID calls.
+
+**Hekili = NOT WORKING / DISPLAY MISMATCH.** User states visible primary icon in the Hekili addon showed a snake-related shot (likely Serpent Sting, unverified exact SpellID) while LazyG overlay showed Hunter's Mark; they did not observe Hekili-driven casts, and mobs appeared killed by autoattack. The connector currently reads `Hekili.Engine.Output.Primary.recs[1].actionID`, which has **not been verified to match the actually displayed first Hekili icon**; do not claim otherwise. Existing Hekili ZIP contained Mark rank 1130 without direct binding and two driver IO reports for 3045; neither establishes an in-game cast. NEXT: inspect current Hekili_Forever source for actual UI display output/priority filtering and rank mapping, and fix the Hekili adapter only with explicit authorization. Preserve JustAC, do not reintroduce internal XML/GCD. Latest CHANGELOG starts with full user-test clarification.
+
+---
+
 ## FIRST USER IN-GAME TEST — 2026-11-20 09:54–10:03 UTC (READ FIRST)
 
 **Diagnostic sources:** `LazyG-Diagnostic-JustAC.zip`, `LazyG-Diagnostic-Hekilli.zip` (2026-11-20 user uploads). Exact count, SpellIDs and UTC event times preserved in top CHANGELOG entry for these two archives. Confirmed **CRC-valid RGB v3 and Logitech successful driver I/O** on BOTH JustAC and Hekili; NO confirmed actual WoW casts or visible addon icon equivalence.
