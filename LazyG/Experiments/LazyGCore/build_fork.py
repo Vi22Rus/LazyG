@@ -72,6 +72,25 @@ def main(source,dest):
     rgb_path.write_bytes(rgb)
     binding=Path(__file__).with_name("NativeBindings.lua").read_bytes()
     (dest/"Core/Atoms/NativeBindings.lua").write_bytes(binding)
+    # Apply version-controlled minimal Forever-specific bugfixes after exact
+    # upstream reconstruction. Never discard these when CI builds the ZIP.
+    auras_path=dest/"Core/Atoms/Auras.lua"
+    auras_text=auras_path.read_text(encoding="utf-8")
+    aura_anchor="function Auras.DebuffRemaining(unit, def)"
+    if auras_text.count(aura_anchor)!=1:
+        raise RuntimeError("Hunter Mark aura source changed; do not ship stale patch")
+    auras_text=auras_text.replace(aura_anchor,"-- True: the last observed successful cast of this aura was on the current\n-- target identity (epoch/GUID/nameplate). False: on a different target.\n-- Nil: no cast history, not proof of either state.\n-- Caller must still check independently observed auras first.\nfunction Auras.CastOnCurrentTarget(def)\n    local n = Spells.Name(def) or DefName(def)\n    if type(n) ~= \"string\" then return nil end\n    local st = castStamp[lower(n)]\n    if not st then return nil end\n    return OnThisTarget(st)\nend\n\n"+aura_anchor,1)
+    auras_path.write_text(auras_text,encoding="utf-8")
+    hunter_path=dest/"Classes/Hunter.lua"
+    hunter_text=hunter_path.read_text(encoding="utf-8")
+    mark_anchor='local markAll = OptOn("markEveryMob", false)'
+    if hunter_text.count(mark_anchor)!=1 or hunter_text.count("C.debuffMissing(sp.HuntersMark)")!=2:
+        raise RuntimeError("Hunter Mark priority source changed; patch needs review")
+    hunter_text=hunter_text.replace(mark_anchor,mark_anchor+"\n"+"-- In Forever the aura can be hidden. A recent Mark cast on ANOTHER mob\n-- must never suppress Mark on this new mob. The generic lastCast timestamp\n-- is global, so use Auras' existing target-epoch/nameplate identity instead.\nlocal function MarkMissingOnCurrentTarget()\n    local remaining = S.Atoms.Auras.DebuffRemaining(\"target\", sp.HuntersMark)\n    if remaining ~= nil then return remaining <= 0 end\n    local thisTarget = S.Atoms.Auras.CastOnCurrentTarget(sp.HuntersMark)\n    if thisTarget ~= true then return true end\n    local since = S.Atoms.Spells.SinceCast(sp.HuntersMark)\n    return since == nil or since >= (sp.HuntersMark.duration or 120)\nend\n-- Trace the live class toggle and why Hunter's Mark can be rejected.\n-- Observations are diagnostic only; no change to priority / WoW casts.\nS.LazyGCoreHunterMarkDiagnostic = function()\n    local flags = 0\n    local function bit(ok, value)\n        if ok and value then flags = flags + value end\n    end\n    local function known(fn)\n        local ok, value = pcall(fn)\n        return ok and value == true\n    end\n    bit(known(function() return S.Engine.Opt(\"useHuntersMark\") end), 1)\n    bit(known(function() return S.Engine.Opt(\"markEveryMob\", false) end), 2)\n    bit(known(function() return MarkMissingOnCurrentTarget() end), 4)\n    bit(known(function() return S.Atoms.Spells.Known(sp.HuntersMark) end), 8)\n    bit(known(function() return C.questing() end), 16)\n    bit(known(function() return C.targetElite() end), 32)\n    bit(known(function() return C.targetAbove(60)() end), 64)\n    bit(known(function() return S.Settings:Get(\"enabled\") end), 128)\n    return flags\nend\r\n",1)
+    hunter_text=hunter_text.replace("C.debuffMissing(sp.HuntersMark)","MarkMissingOnCurrentTarget")
+    hunter_path.write_text(hunter_text,encoding="utf-8")
+    assert "function Auras.CastOnCurrentTarget" in auras_text
+    assert "S.LazyGCoreHunterMarkDiagnostic" in hunter_text
     toc=dest/"LazyGCore.toc"
     s=toc.read_text(encoding="utf-8")
     anchor="Core\\Atoms\\Secret.lua"
