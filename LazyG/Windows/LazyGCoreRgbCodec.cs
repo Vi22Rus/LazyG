@@ -28,6 +28,10 @@ internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
 
 internal static class LazyGCoreRgbCodec
 {
+    // Shared by bitmap scan and decoder. Do not reintroduce v1-only sync.
+    public static bool IsCandidateVersionCell(byte version,byte status) =>
+        (version==1 || version==2) && status<=3;
+
     private static ushort Crc(ReadOnlySpan<byte> bytes)
     {
         ushort crc=0xffff;
