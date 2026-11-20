@@ -15,9 +15,13 @@ internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
     public bool NativeSpellReady => Version==2 && (Gate&8)!=0;
     public bool NativeRangeReady => Version==2 && (Gate&16)!=0;
     public bool NativeUsableReady => Version==2 && (Gate&32)!=0;
-    public bool NativeInputReady => NativeUsableReady && NativeRangeReady && HasNativeBinding && NativeTargetReady &&
-        NativeGcdReady && NativeSpellReady &&
-        !OutOfRange && !Waiting && !NoPower;
+    // Prototype-only execution: the Forever cooldown APIs returned UNKNOWN
+    // for every sampled frame. Never turn that absence into 'ready' evidence.
+    // Use real positive key, target, range and spell usability evidence here;
+    // Windows enforces minimum 1.5s pacing and logs unverified GCD/cooldown.
+    public bool NativeInputReady => NativeUsableReady && NativeRangeReady &&
+        HasNativeBinding && NativeTargetReady && !OutOfRange &&
+        !Waiting && !NoPower;
     public bool HasRangeEvidence => (Flags & 8)!=0;
     public bool OutOfRange => (Flags & 1)!=0;
     public bool HasWaitingEvidence => (Flags & 16)!=0;
