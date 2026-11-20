@@ -1,6 +1,6 @@
-## 2026-11-20 — Native-only 8-cell experimental Windows mode and XML shadow logger [DEV / CI-PENDING / GAME-UNTESTED]
+## 2026-11-20 — Native-only 8-cell experimental Windows mode and XML shadow logger [DEV / CI-PASSED / GAME-UNTESTED]
 
-In experiment/lazygcore only, MainWindow no longer calls the legacy RGB combined capture in the isolated experimental program. Eight native LazyGCore pixels are the only live game input. Legacy-built GameState and auto keybinds do not enter core decisions. New Support button Record CORE / XML comparison writes CORE_XML_COMPARE trace records at ~500 ms cadence, included in existing Export diagnostic ZIP. Core SpellID is observed; XML=UNKNOWN due to insufficient game facts. Shadow candidate is labeled UNVERIFIED. Logitech HID is disabled intentionally (no sufficient trusted state in 8 cells). main unchanged. See PROJECT_CONTEXT.md for protocol limitation and rollback.
+In experiment/lazygcore only, MainWindow no longer calls the legacy RGB combined capture in the isolated experimental program. Eight native LazyGCore pixels are the only live game input. Legacy-built GameState and auto keybinds do not enter core decisions. New Support button Record CORE / XML comparison writes CORE_XML_COMPARE trace records at ~500 ms cadence, included in existing Export diagnostic ZIP. Core SpellID is observed; XML=UNKNOWN due to insufficient game facts. Shadow candidate is labeled UNVERIFIED. Logitech HID is disabled intentionally (no sufficient trusted state in 8 cells). main unchanged. GitHub Actions CI PASS https://github.com/Vi22Rus/LazyG/actions/runs/44684581219 (Windows artifact 14606240773; code dabf41732761b3de0e9901ee5f266e5924b276e8). GAME-UNTESTED. See PROJECT_CONTEXT.md for protocol limitation and rollback.
 
 ---
 
