@@ -98,8 +98,26 @@ GameState TargetAuraAt(DateTimeOffset at,int epoch,bool? markPresent)
     };
 }
 var pendingState=TargetAuraAt(now,5,null);
+// Sonah-like advice is distinct from the strict XML executor: absent/unknown
+// target Mark must remain on-screen, even when its input cannot be authorized.
+Check(HunterDebuffAdvice.SuggestMark(pendingState,now,true)?.SpellId==1130,
+    "unknown aura keeps Hunter Mark visible as display-only advice");
+Check(HunterDebuffAdvice.SuggestMark(TargetAuraAt(now,5,false),now,true)?
+    .RuleId=="markMissing","known-absent Mark still advised");
+Check(HunterDebuffAdvice.SuggestMark(TargetAuraAt(now,5,true),now,true)
+    is null,"positively observed Mark suppresses advice");
+Check(HunterDebuffAdvice.SuggestMark(pendingState,now,false) is null,
+    "disabled XML Mark option never produces sticky advice");
+Check(HunterDebuffAdvice.SuggestMark(pendingState,now.AddSeconds(2),true)
+    is null,"stale RGB cannot keep a false recommendation");
+Check(HunterDebuffAdvice.SuggestMark(pendingState with {
+    TargetExists=Observed<bool>.Missing()},now,true) is null,
+    "no verified target means no sticky Mark icon");
+
 Check(confirm.MarkSent(markRec,pendingState,now),
     "valid mark HID delivery must await actual aura evidence");
+Check(confirm.PendingSpellId==1130 && confirm.PendingRuleId=="markMissing",
+    "pending mark icon remains available independently of XML input");
 Check(!confirm.MaySend(shotRec,pendingState,now.AddMilliseconds(450),
         out var markBlocked) && markBlocked.Contains("UNCONFIRMED"),
     "unknown aura cannot authorize moving to unrelated shot");
