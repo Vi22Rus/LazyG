@@ -1309,7 +1309,10 @@ public sealed class MainWindow : Window
                     " bind="+lazyGCorePacket.HasNativeBinding+
                     " target="+lazyGCorePacket.NativeTargetReady+
                     " gcd="+lazyGCorePacket.NativeGcdReady+
-                    " ready="+lazyGCorePacket.NativeSpellReady+
+                    " spellCooldown="+lazyGCorePacket.NativeSpellReady+
+                    " rangeApi="+lazyGCorePacket.NativeRangeReady+
+                    " usableApi="+lazyGCorePacket.NativeUsableReady+
+                    " hidAllowed="+lazyGCorePacket.NativeInputReady+
                     " markDiag="+lazyGCorePacket.HunterMarkDiagnostics+
                     " markEnabled="+((lazyGCorePacket.HunterMarkDiagnostics&1)!=0)+
                     " markEveryMob="+((lazyGCorePacket.HunterMarkDiagnostics&2)!=0)+
