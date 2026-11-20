@@ -769,6 +769,10 @@ public sealed class MainWindow : Window
         }
         try
         {
+            // Check G HUB itself on EVERY Start; the virtual bus alone can
+            // exist after G HUB was closed. A failed check leaves us stopped.
+            if(!GHubRuntime.IsRunning())
+                throw new InvalidOperationException(GHubRuntime.NotRunningMessage);
             if(sourceManager.Snapshot(DateTimeOffset.UtcNow).Confirmed is
                 RotationSourceId.Hekili or RotationSourceId.JustAC)
                 throw new InvalidOperationException("External rotation source selected");
@@ -810,7 +814,8 @@ public sealed class MainWindow : Window
             StopGhub("START FAILED");
             RuntimeDiagnostics.Add("ROTATION","Start rejected: "+ex.GetType().Name+" · "+ex.Message);
             var notice=new Window {
-                Title="LazyG · Logitech Start unavailable",
+                Title=!GHubRuntime.IsRunning()?"LazyG · Logitech G HUB required":
+                    "LazyG · Logitech Start unavailable",
                 Width=490,Height=180,CanResize=false,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
                 Background=Palette.Surface,Foreground=Palette.White
