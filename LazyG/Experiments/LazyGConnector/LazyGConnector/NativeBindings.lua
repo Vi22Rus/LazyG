@@ -225,5 +225,41 @@ function M.Find(spell)
   end
   return nil
 end
+-- Hekili may publish a base SpellID (e.g. Hunter's Mark 1130) while the
+-- player's action bar has a learned higher rank. Resolve by *verified name*
+-- only, and only when the action bar yields a single unambiguous HID binding.
+-- JustAC continues to call M.Find unchanged.
+local function SpellName(id)
+  if type(id)~="number" then return nil end
+  local name=PlainCall(function()
+    if C_Spell and type(C_Spell.GetSpellInfo)=="function" then
+      local info=C_Spell.GetSpellInfo(id)
+      return type(info)=="table" and info.name or nil
+    end
+  end)
+  if type(name)~="string" or name=="" then
+    name=PlainCall(function()
+      if type(GetSpellInfo)=="function" then return GetSpellInfo(id) end
+    end)
+  end
+  return type(name)=="string" and name~="" and name or nil
+end
+function M.FindBySpellName(spell)
+  local requested=SpellName(spell)
+  if not requested then return nil end
+  -- Find refreshes the action-bar cache using exactly the existing scanner.
+  M.Find(spell)
+  local mod,key,matched=nil,nil,false
+  for _,entry in ipairs(entries) do
+    if entry.spell~=spell and SpellName(entry.spell)==requested then
+      if matched and (entry.modifier~=mod or entry.key~=key) then
+        return nil -- ambiguous direct binding: block instead of guessing
+      end
+      mod,key,matched=entry.modifier,entry.key,true
+    end
+  end
+  if matched then return mod,key end
+  return nil
+end
 LazyGConnectorNativeBindings=M
 return M
