@@ -2,12 +2,13 @@ name: Build LazyG Windows EXE
 
 on:
   push:
-    branches: [main]
+    branches: [main, experiment/lazygcore]
     paths:
       - 'LazyG/Windows/**'
       - 'LazyG/Avalonia/**'
       - 'LazyG/AddonTemplate/**'
       - 'LazyG/Tests/**'
+      - 'LazyG/Experiments/LazyGCore/**'
       - 'LazyG/Diagnostics/LazyGForeverProbe/**'
       - '.github/workflows/build-windows.yml'
   workflow_dispatch:
