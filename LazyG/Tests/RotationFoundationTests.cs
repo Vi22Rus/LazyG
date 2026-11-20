@@ -487,6 +487,47 @@ var hunterState=state with {
             Observed<bool>.Known(true,now),Observed<int>.Missing(),Observed<int>.Missing())
     }
 };
+// The same-target cast estimate enables Sonah-style XML fallback when
+// the target aura is protected. Without event evidence the target debuff
+// condition remains Unknown, and a HID tap alone cannot synthesize it.
+var estimatedHunterSpells=KnownHunter((1130,1130),(1978,1978),
+    (3044,3044),(75,75),(1293241,1293241));
+var markAuraList=new Dictionary<AuraKey,AuraState>();
+foreach(int id in HunterSpellFamilies.Ranks(1130))
+    markAuraList[new AuraKey("target-epoch-7",id,true)]=new AuraState(
+        Observed<bool>.Known(id==1130,now),
+        Observed<int>.Missing(),Observed<int>.Missing());
+var estimatedHunterState=hunterState with {
+    Spells=estimatedHunterSpells,Auras=markAuraList,
+    PowerBand=Observed<HealthBand>.Known(new HealthBand(75,79),now),
+    TargetDebuffCastHints=new Dictionary<int,Observed<bool>> {
+        [1978]=Observed<bool>.Known(true,now)
+    }
+};
+var inferredXml=RotationXmlV2.Evaluate(hunter,estimatedHunterState,
+    selectHawk,now,"PvE");
+Check(inferredXml.Trace.Single(x=>x.RuleId=="stingMissing").Reason
+    .Contains("CAST_ESTIMATE") &&
+    inferredXml.Recommendation?.SpellId==1293241,
+    "WoW player cast hint skips unknown Sting condition and selects Hawk");
+var noEventXml=RotationXmlV2.Evaluate(hunter,estimatedHunterState with {
+    TargetDebuffCastHints=new Dictionary<int,Observed<bool>>()
+},selectHawk,now,"PvE");
+Check(!noEventXml.Trace.Single(x=>x.RuleId=="stingMissing").Reason
+    .Contains("CAST_ESTIMATE"),
+    "no event implies no inferred Sting effect");
+var observedAbsentList=new Dictionary<AuraKey,AuraState>(markAuraList);
+foreach(int id in HunterSpellFamilies.Ranks(1978))
+    observedAbsentList[new AuraKey("target-epoch-7",id,true)]=new AuraState(
+        Observed<bool>.Known(false,now),
+        Observed<int>.Missing(),Observed<int>.Missing());
+var absentWins=RotationXmlV2.Evaluate(hunter,estimatedHunterState with {
+    Auras=observedAbsentList
+},selectHawk,now,"PvE");
+Check(absentWins.Recommendation?.RuleId=="stingMissing" &&
+    !absentWins.Trace.Single(x=>x.RuleId=="stingMissing").Reason
+        .Contains("CAST_ESTIMATE"),
+    "positive known absence beats event-derived Sting estimate");
 // Universal command planning is explicitly disarmed until a verified SRC
 // transport and a separately approved input driver exist.
 // CRC v3 auto-bind extension: decode native HID, no user-entered mapping.
