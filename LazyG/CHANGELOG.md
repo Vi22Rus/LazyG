@@ -1,3 +1,5 @@
+Native v2 gate extension (final): bit 16 = independent C_Spell.IsSpellInRange true, bit 32 = independent C_Spell.IsSpellUsable true and explicit no-power=false. Windows requires all six bits (0..5), plus correct v2 CRC, frame freshness and foreground. This avoids interpreting engine default outOfRange=false as positive range evidence. Windows CI PASS: https://github.com/Vi22Rus/LazyG/actions/runs/44686585170 (source SHA a6ff5449ac992ded8d4d8aaad961c5e6b72eef4f; Windows artifact 14607125462). Generated Lua source and templates have matching Git blob hashes. Full fork CI PASS for source v2: https://github.com/Vi22Rus/LazyG/actions/runs/44686858863. Packaging workflow now stages one root LazyGCore directory; its next run must still be checked. No gameplay testing has occurred; reports must distinguish blocked input from actual WoW casts.
+
 ## 2026-11-20 — NATIVE LazyGCore v2 RGB HID AUTO-BINDINGS [0.1.1-dev / CI-VERIFYING / GAME-UNTESTED]
 
 User explicitly requested: native-only experiment must discover existing WoW keybinds and send via Logitech G HUB, never fallback to old RGB. Only experiment/lazygcore; main untouched.
