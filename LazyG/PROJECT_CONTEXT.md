@@ -1,3 +1,15 @@
+## ACTIVE 2026-11-20 HANDOFF — SELF BUFF / AOE>=2 / RGB-vs-XML SOURCE PROVENANCE [DEV]
+
+**Read first, then chronological CHANGELOG at 2026-11-20 07:32–07:50 UTC.** Active branch experiment/lazygcore; main application untouched. Original diagnostic LazyG-Diagnostic-20261120-073438-175.zip has **Lua** CORE_RECOMMENDED 14323 at 07:32:16.606 UTC (not XML), corresponding native G HUB HID completion. XML_RECOMMENDED=0; XML priority candidate is not executable XML advice. Lua Multi-Shot 2643 at 07:32:20 and 07:32:28 while XML priority candidate was Summon Hawk. No proof of successful in-game spell cast or which primary game icon was actually displayed. The Display UI receives the same RECOMMENDATION event as RGB Publish but visibility settings can hide it.
+
+**Verified source defect fixed:** original Hunter Multi-Shot used questing/low-level OR enemies(2), allowing single-target Multi-Shot even with AoE toggle; other rules also lacked compulsory two-target gate. All nine Hunter Multi-Shot priority rules now require enableAoe AND C.enemies(2) explicitly. Both checked source and build_fork.py regenerated Lua source are updated. Original Sonah.zip source ALSO has the old one-target-allowing OR clause; that does not establish the currently installed original addon's settings/behavior.
+
+**Separate self-buff path:** Lua v2 RGB bit 64 explicitly classifies player buffs/aspects including Aspect Hawk 14319 from known class spell metadata and player-target recommendations. Windows allows such spells with positive keybinding/usable and foreground WITHOUT hostile target/range, including out of combat; attacks still require hostile target and range. GCD/cooldown unsupported in current Forever API, so 1500ms pacing remains prototype-only, not proof of readiness. No legacy RGB reinstated. Lua and C# regression tests added and run in CI; real WoW test pending. Do not change main Windows UI. Last previously tested binary before these changes is NOT proof of buff execution.
+
+**Next test:** matched Windows + regenerated Lua addons from latest successful CI runs; out of combat Aspect Hawk should produce SELF_BUFF HID when recommended, and single-target Hunter Multi-Shot must NOT be recommended. Examine Lua-vs-visible-display mismatches independently of XML shadow; report actual cast observed by user. Record any test ZIP with absolute timestamp in CHANGELOG and update this header. Rollback is prior experiment dev e037728f35b51c69a1190b0557186dc729689e64 (still has known AoE and buff defects).
+
+---
+
 ## 2026-11-20 — LATEST TESTING HANDOFF (ACTIVE / DEV / GAME-UNTESTED)
 
 Source of truth: experiment/lazygcore. Do not touch main code or reintroduce legacy RGB. User ZIP LazyG-Diagnostic-20261120-070558-222.zip confirms native RGB v2 decodes and direct HID key mapping arrives, but G HUB never sent keys because Forever GCD/cooldown probes returned false. User reports that the long native RGB status in the top titlebar displaced Maximize/Close. Separately, the in-game Lua addon visually showed Hawks while native Core RGB sometimes reported Mark; do not conflate UI, RGB, XML and actual casts.
