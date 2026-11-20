@@ -1,3 +1,18 @@
+## 2026-11-20 — Hunter Mark persistent Sonah-style advice FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
+
+**[CI SUCCESS]** [Actions 44669128851](https://github.com/Vi22Rus/LazyG/actions/runs/44669128851), tested implementation code SHA `df6a092ea934acc15df1233c3ab3338ddb2a1e7a`. Windows C# tests, self-contained single-EXE publish and Windows startup smoke, and Lua 5.1 diagnostics passed. Windows artifact **LazyG-Windows-x64 14598234682**, optional probe addon **LazyGForeverProbe-0.4.0-dev 14598443871**. Later documentation-only commits do not alter tested program.
+
+**Root cause:** previous overlay explicitly hid an icon whenever the Hunter Mark/Sting gate had `HasPending`, even while the debuff had not been confirmed, diverging from Sonah's `C.debuffMissing` recommendation. New display-only advice keeps Hunter Mark visible on a verified target when its aura is known absent or unknown, until positively observed; pending Mark/Sting has priority over unrelated XML icons. This does NOT bypass existing strict input authorization (GCD, fresh RGB, keybinds) or assert an HID press equals a cast. Full Sonah cast-history/target-nameplate fallback is not yet ported. No fixed 1.5 sec GCD.
+
+**Test next:** Hunter BM on live Forever, no Mark macro (automatic macro-bind still excluded), monitor Mark icon continuity during failed press and its disappearance only after positive aura; capture Support ZIP. A missing icon after stale RGB/lost target/disabled XML setting is expected. The optional probe is unchanged.
+
+**Rollback:** [Actions 44495871536](https://github.com/Vi22Rus/LazyG/actions/runs/44495871536). PowerShell single EXE:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-20 — Sonah-style Hunter's Mark persistent advisory / overlay fix [0.4.0-dev / GAME-UNTESTED]
 
 **User evidence:** `LazyG-Diagnostic-20261120-033127-954.zip`: 44 HID attempts, 44 driver IO completed, 0 LGE player cast events. Mark rank 14323 was recommended and sent multiple times; 7 DEBUFF_PENDING events; pending switched from known absent to Unknown and new target without positive Mark confirmation in the trace. RGB Compact switched `auraFlags=13` to `auraFlags=0`. Previous `MainWindow.UpdateRotationPreview` explicitly passed **null** icon whenever `debuffConfirmation.HasPending`, causing disappearance of the Mark recommendation in overlay despite the aura remaining unconfirmed. The audit and driver return do NOT prove a spell applied.
