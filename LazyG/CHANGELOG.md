@@ -1,3 +1,15 @@
+## 2026-11-20 — G HUB tray-only process detection FIX FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
+
+**[CI SUCCESS]** [GitHub Actions 44671050225](https://github.com/Vi22Rus/LazyG/actions/runs/44671050225), code SHA `a8240543fac9a79c8d4a9cdddd25634463ae48fd`. Windows C# tests, single EXE win-x64 self-contained publish, Windows startup smoke, and Lua 5.1 regressions all passed. Windows **LazyG-Windows-x64** artifact **14599727635**, diagnostic Lua addon artifact **14600890394**. Subsequent docs-only commits do not affect code.
+
+This fixes the user's actual counterexample: Logitech G HUB running in system tray while the prior `lghub.exe`-only check denied Start. Both `lghub.exe` and `lghub_system_tray.exe` are now valid; `lghub_agent`, updater alone and merely installed bus remain insufficient. On every Start the process check repeats; detection result is captured to show a correct English modal title; process names are logged. A successful process check still requires an actual `GHubDriver.Connect()` to the virtual bus. CI cannot prove detection of user's installed G HUB runtime; retest user desktop. **No change to RGB, XML, GCD or hunter abilities.** Rollback [Actions 44669128851](https://github.com/Vi22Rus/LazyG/actions/runs/44669128851) if necessary (this predates both G HUB guards); later failed guard [Actions 44670088782](https://github.com/Vi22Rus/LazyG/actions/runs/44670088782) should NOT be used as recommended rollback.
+
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-20 — Logitech G HUB tray-only startup false-negative fix [0.4.0-dev / GAME-UNTESTED]
 
 **User live feedback:** G HUB is visibly running in the system tray but the prior DEV build refused Start with `Logitech G HUB required`. Root cause is the overly narrow `Process.GetProcessesByName("lghub")` check. Recent Logitech G HUB has a distinct `lghub_system_tray.exe` process, including when the desktop UI is closed/minimized. The previous guard falsely denied these sessions even if the virtual bus was installed and available.
