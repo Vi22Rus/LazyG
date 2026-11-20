@@ -1,3 +1,9 @@
+## 2026-11-20 — Native-only 8-cell experimental Windows mode and XML shadow logger [DEV / CI-PENDING / GAME-UNTESTED]
+
+In experiment/lazygcore only, MainWindow no longer calls the legacy RGB combined capture in the isolated experimental program. Eight native LazyGCore pixels are the only live game input. Legacy-built GameState and auto keybinds do not enter core decisions. New Support button Record CORE / XML comparison writes CORE_XML_COMPARE trace records at ~500 ms cadence, included in existing Export diagnostic ZIP. Core SpellID is observed; XML=UNKNOWN due to insufficient game facts. Shadow candidate is labeled UNVERIFIED. Logitech HID is disabled intentionally (no sufficient trusted state in 8 cells). main unchanged. See PROJECT_CONTEXT.md for protocol limitation and rollback.
+
+---
+
 ## 2026-11-20 — WORKING CI TEST BUNDLE: LazyGCore native RGB + Windows decoder [0.1.0-dev + 0.4.0-dev / CI-PASSED / GAME-UNTESTED]
 
 **User explicitly requested:** an immediately downloadable installable Lua core and Windows EXE to test together, with real Windows RGB decoding and the existing Logitech G HUB executor, all isolated from main.
