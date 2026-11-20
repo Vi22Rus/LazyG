@@ -767,12 +767,20 @@ public sealed class MainWindow : Window
             if(view=="classes")ShowClasses();
             return;
         }
+        bool ghubMissingOnStart=false;
         try
         {
-            // Check G HUB itself on EVERY Start; the virtual bus alone can
-            // exist after G HUB was closed. A failed check leaves us stopped.
+            // A tray-only Logitech G HUB session is valid. A virtual bus
+            // or lghub_agent/updater without the app/tray is not enough.
             if(!GHubRuntime.IsRunning())
+            {
+                ghubMissingOnStart=true;
+                RuntimeDiagnostics.Add("GHUB","Start blocked: no G HUB app/tray process. Detected: "+
+                    GHubRuntime.DescribeRunningProcesses());
                 throw new InvalidOperationException(GHubRuntime.NotRunningMessage);
+            }
+            RuntimeDiagnostics.Add("GHUB","Start process check PASS: "+
+                GHubRuntime.DescribeRunningProcesses());
             if(sourceManager.Snapshot(DateTimeOffset.UtcNow).Confirmed is
                 RotationSourceId.Hekili or RotationSourceId.JustAC)
                 throw new InvalidOperationException("External rotation source selected");
@@ -814,7 +822,7 @@ public sealed class MainWindow : Window
             StopGhub("START FAILED");
             RuntimeDiagnostics.Add("ROTATION","Start rejected: "+ex.GetType().Name+" · "+ex.Message);
             var notice=new Window {
-                Title=!GHubRuntime.IsRunning()?"LazyG · Logitech G HUB required":
+                Title=ghubMissingOnStart?"LazyG · Logitech G HUB required":
                     "LazyG · Logitech Start unavailable",
                 Width=490,Height=180,CanResize=false,
                 WindowStartupLocation=WindowStartupLocation.CenterOwner,
