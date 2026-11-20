@@ -1276,23 +1276,23 @@ public sealed class MainWindow : Window
         {
             if(NativeOnlyExperiment)
             {
-                // Critical isolation: never call TryReadCombined, including diagnostics,
-                // because it would silently restore the old addon as a data source.
+                // Only source-tagged LGC v3 cells from standalone LazyGConnector.
+                // No reading older Lua strips, XML/GameState, GCD or auras.
                 var native=await Task.Run(() => {
-                    bool ok=WowRgbBridge.TryReadLazyGCore(out var packet,
-                        out var nativeDetail);
-                    return (ok,packet,nativeDetail,at:DateTimeOffset.UtcNow);
+                    bool ok=WowRgbBridge.TryReadLazyGConnector(out var packet,
+                        out var detail);
+                    return (ok,packet,detail,at:DateTimeOffset.UtcNow);
                 });
                 if(finished)return;
                 if(native.ok && native.packet is not null)
                 {
-                    var pkt=native.packet;
-                    lazyGCorePacket=pkt;
+                    lazyGCorePacket=native.packet;
+                    byte sequence=native.packet.Sequence;
                     if(lastLazyGCoreSequence is not byte prev)
-                        lastLazyGCoreSequence=pkt.Sequence;
-                    else if(prev!=pkt.Sequence)
+                        lastLazyGCoreSequence=sequence;
+                    else if(prev!=sequence)
                     {
-                        lastLazyGCoreSequence=pkt.Sequence;
+                        lastLazyGCoreSequence=sequence;
                         lastLazyGCoreSequenceAt=native.at;
                         lazyGCoreSequenceEstablished=true;
                     }
@@ -1304,39 +1304,22 @@ public sealed class MainWindow : Window
                     lastLazyGCoreSequenceAt=default;
                     lazyGCoreSequenceEstablished=false;
                 }
-                latestGameState=GameState.Empty(native.at);
-                autoBindings.Reset();
-                string nativeStatus=lazyGCorePacket is null?
-                    "CORE RGB NOT FOUND: "+native.nativeDetail:
-                    "CORE RGB CRC OK spell="+lazyGCorePacket.SpellId+
-                    " status="+lazyGCorePacket.Status+
-                    " version="+lazyGCorePacket.Version+
-                    " bind="+lazyGCorePacket.HasNativeBinding+
-                    " target="+lazyGCorePacket.NativeTargetReady+
-                    " gcd="+lazyGCorePacket.NativeGcdReady+
-                    " spellCooldown="+lazyGCorePacket.NativeSpellReady+
-                    " rangeApi="+lazyGCorePacket.NativeRangeReady+
-                    " usableApi="+lazyGCorePacket.NativeUsableReady+
-                    " hidAllowed="+lazyGCorePacket.NativeInputReady+
-                    " markDiag="+lazyGCorePacket.HunterMarkDiagnostics+
-                    " markEnabled="+((lazyGCorePacket.HunterMarkDiagnostics&1)!=0)+
-                    " markEveryMob="+((lazyGCorePacket.HunterMarkDiagnostics&2)!=0)+
-                    " markMissing="+((lazyGCorePacket.HunterMarkDiagnostics&4)!=0)+
-                    " markLearned="+((lazyGCorePacket.HunterMarkDiagnostics&8)!=0)+
-                    " questing="+((lazyGCorePacket.HunterMarkDiagnostics&16)!=0)+
-                    " sequence="+lazyGCorePacket.Sequence+
-                    " stream="+(lazyGCoreSequenceEstablished?"LIVE":"BASELINE");
-                // Never place long native diagnostics into the main window titlebar:
-                // they pushed out Maximize and Close buttons on narrow windows.
-                statusText.Text=native.ok?"CORE ●":"CORE —";
-                if(nativeStatus!=lastLazyGCoreDiagnostic)
+                var p=lazyGCorePacket;
+                var provider=p?.ProviderId switch {1=>"JustAC",2=>"Hekili",_=>"NONE"};
+                statusText.Text=native.ok ? (provider=="JustAC"?"JAC ●":"HEK ●"):"RGB —";
+                string diag=p is null?
+                    "Connector not found: "+native.detail:
+                    "Connector RGB v3 CRC OK provider="+provider+
+                    " spell="+p.SpellId+" status="+p.Status+
+                    " bind="+p.HasNativeBinding+" modifier="+p.HidModifier+
+                    " usage="+p.HidUsage+" sequence="+p.Sequence;
+                if(diag!=lastLazyGCoreDiagnostic)
                 {
-                    RuntimeDiagnostics.Add("LAZYGCORE",nativeStatus);
-                    lastLazyGCoreDiagnostic=nativeStatus;
+                    RuntimeDiagnostics.Add("CONNECTOR",diag);
+                    lastLazyGCoreDiagnostic=diag;
                 }
-                UpdateRotationPreview(native.at);
-                overlay?.SetConnection(lazyGCoreSequenceEstablished,true,false,false,
-                    null,null);
+                UpdateConnectorPreview(native.at);
+                overlay?.SetConnection(lazyGCoreSequenceEstablished,true,false,false,null,null);
                 RefreshDiagnosticsView();
                 return;
             }
