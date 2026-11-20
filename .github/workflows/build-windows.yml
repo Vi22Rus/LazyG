@@ -133,6 +133,9 @@ jobs:
       - name: Verify opt-in Forever LGE player-cast event protocol
         run: lua5.1 LazyG/Tests/forever_cast_event_rgb_test.lua
 
+      - name: Verify all Hunter Multi-Shot rules require AoE toggle and two enemies
+        run: lua5.1 LazyG/Tests/lazygcore_hunter_aoe_test.lua
+
       - name: Verify native self-buff key and target independence
         run: lua5.1 LazyG/Tests/lazygcore_native_buff_test.lua
 
