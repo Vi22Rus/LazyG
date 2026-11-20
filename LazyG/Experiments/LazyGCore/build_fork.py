@@ -70,11 +70,13 @@ def main(source,dest):
     rgb=Path(__file__).with_name("RgbWire.lua").read_bytes()
     rgb_path=dest/"Core/Atoms/RgbWire.lua"
     rgb_path.write_bytes(rgb)
+    binding=Path(__file__).with_name("NativeBindings.lua").read_bytes()
+    (dest/"Core/Atoms/NativeBindings.lua").write_bytes(binding)
     toc=dest/"LazyGCore.toc"
     s=toc.read_text(encoding="utf-8")
     anchor="Core\\Atoms\\Secret.lua"
     if s.count(anchor)!=1:raise RuntimeError("toc foundation load order changed")
-    s=s.replace(anchor,anchor+"\nCore\\Atoms\\RgbWire.lua",1)
+    s=s.replace(anchor,anchor+"\nCore\\Atoms\\NativeBindings.lua\nCore\\Atoms\\RgbWire.lua",1)
     toc.write_text(s,encoding="utf-8")
     for line in s.splitlines():
         if line.strip() and not line.startswith("#") and not (dest/line.strip().replace("\\","/")).is_file():
