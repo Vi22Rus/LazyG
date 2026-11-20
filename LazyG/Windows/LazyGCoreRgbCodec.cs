@@ -7,9 +7,9 @@ namespace LazyGPrototype;
 internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
     byte Flags,byte HidModifier=0,byte HidUsage=0,byte Gate=0,byte Version=1,
     byte HunterMarkDiagnostics=0,byte SerpentAura=0,byte ManaPercent=255,
-    byte MarkAura=0)
+    byte MarkAura=0,byte ProviderId=0)
 {
-    public bool HasNativeBinding => Version==2 && (Gate&1)!=0 &&
+    public bool HasNativeBinding => (Version==2 || Version==3) && (Gate&1)!=0 &&
         HidModifier<=15 && HidUsage>=4 && HidUsage<=115;
     public bool NativeTargetReady => Version==2 && (Gate&2)!=0;
     public bool NativeGcdReady => Version==2 && (Gate&4)!=0;
@@ -23,7 +23,9 @@ internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
     public bool NativeSelfBuff => Version==2 && (Gate&64)!=0;
     // Explicitly classified player buffs are executable out of combat and
     // without an enemy. Attack rules must STILL prove target + range.
-    public bool NativeInputReady => HasNativeBinding && NativeUsableReady &&
+    public bool NativeInputReady => Version==3 ?
+        ProviderId is 1 or 2 && Status==1 && HasNativeBinding :
+        HasNativeBinding && NativeUsableReady &&
         (NativeSelfBuff || (NativeTargetReady && NativeRangeReady)) &&
         !Waiting && !NoPower && (NativeSelfBuff || !OutOfRange);
     public bool HasRangeEvidence => (Flags & 8)!=0;
@@ -38,7 +40,7 @@ internal static class LazyGCoreRgbCodec
 {
     // Shared by bitmap scan and decoder. Do not reintroduce v1-only sync.
     public static bool IsCandidateVersionCell(byte version,byte status) =>
-        (version==1 || version==2) && status<=3;
+        (version==1 || version==2 || version==3) && status<=3;
 
     private static ushort Crc(ReadOnlySpan<byte> bytes)
     {
@@ -57,15 +59,15 @@ internal static class LazyGCoreRgbCodec
     {
         packet=null;
         if(bytes.Length!=24 || bytes[0]!=76 || bytes[1]!=71 || bytes[2]!=67 ||
-           (bytes[3]!=1 && bytes[3]!=2) || bytes[5]>3 || bytes[23]!=8 ||
-           (bytes[9]&~63)!=0 || bytes[10]!=0)
+           (bytes[3]!=1 && bytes[3]!=2 && bytes[3]!=3) || bytes[5]>3 || bytes[23]!=8 ||
+           (bytes[9]&~63)!=0 || (bytes[3]!=3 && bytes[10]!=0))
             return false;
         if(bytes[3]==1)
         {
             for(int i=11;i<=20;i++)
                 if(bytes[i]!=0)return false;
         }
-        else
+        else if(bytes[3]==2)
         {
             for(int i=18;i<=20;i++)
                 if(bytes[i]!=0)return false;
@@ -77,18 +79,29 @@ internal static class LazyGCoreRgbCodec
                ((bytes[13]&1)==0 && (bytes[11]!=0 || bytes[12]!=0)))
                 return false;
         }
+        else // v3: source-identified external addon recommendation, no game calculations
+        {
+            if(bytes[10] is not (1 or 2) || bytes[9]!=0 ||
+               bytes[11]>15 || (bytes[13]&~1)!=0 ||
+               (bytes[13]==1 && (bytes[12]<4 || bytes[12]>115)) ||
+               (bytes[13]==0 && (bytes[11]!=0 || bytes[12]!=0)))
+                return false;
+            for(int i=14;i<=20;i++)
+                if(bytes[i]!=0)return false;
+        }
         if(Crc(bytes[..21])!=((bytes[21]<<8)|bytes[22]))return false;
         int id=(bytes[6]<<16)|(bytes[7]<<8)|bytes[8];
         if((bytes[5]==1 && id==0) || (bytes[5]!=1 && id!=0))
             return false;
         packet=new(bytes[4],bytes[5],id,bytes[9],
-            bytes[3]==2?bytes[11]:(byte)0,
-            bytes[3]==2?bytes[12]:(byte)0,
-            bytes[3]==2?bytes[13]:(byte)0,bytes[3],
+            bytes[3]>=2?bytes[11]:(byte)0,
+            bytes[3]>=2?bytes[12]:(byte)0,
+            bytes[3]>=2?bytes[13]:(byte)0,bytes[3],
             bytes[3]==2?bytes[14]:(byte)0,
             bytes[3]==2?bytes[15]:(byte)0,
             bytes[3]==2?bytes[16]:(byte)255,
-            bytes[3]==2?bytes[17]:(byte)0);
+            bytes[3]==2?bytes[17]:(byte)0,
+            bytes[3]==3?bytes[10]:(byte)0);
         return true;
     }
 }
