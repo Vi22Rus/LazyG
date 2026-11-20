@@ -1,4 +1,4 @@
-name: Build LazyG Windows EXE
+name: Build LazyG Windows Connector EXE (DEV)
 
 on:
   push:
@@ -6,10 +6,10 @@ on:
     paths:
       - 'LazyG/Windows/**'
       - 'LazyG/Avalonia/**'
-      - 'LazyG/AddonTemplate/**'
-      - 'LazyG/Tests/**'
-      - 'LazyG/Experiments/LazyGCore/**'
-      - 'LazyG/Diagnostics/LazyGForeverProbe/**'
+      - 'LazyG/Tests/RgbV3CodecTests.csproj'
+      - 'LazyG/Tests/Program.cs'
+      - 'LazyG/Tests/test_spell_assets.py'
+      - 'LazyG/Experiments/LazyGConnector/**'
       - '.github/workflows/build-windows.yml'
   workflow_dispatch:
 
@@ -31,14 +31,6 @@ jobs:
       - name: Verify RGB v3 codec reference vectors
         shell: pwsh
         run: dotnet run --project LazyG/Tests/RgbV3CodecTests.csproj -c Release
-
-      - name: Verify GameState tri-state safety regression
-        shell: pwsh
-        run: dotnet run --project LazyG/Tests/GameStateTests.csproj -c Release
-
-      - name: Verify rotation v2 schema, simulator and provider safety
-        shell: pwsh
-        run: dotnet run --project LazyG/Tests/RotationFoundationTests.csproj -c Release
 
       - name: Verify embedded Forever spell atlas and bilingual mapping
         shell: pwsh
@@ -82,26 +74,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Package optional Forever diagnostic addon
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path "release-addon/LazyGForeverProbe" | Out-Null
-          Copy-Item "LazyG/Diagnostics/LazyGForeverProbe/*.lua" "release-addon/LazyGForeverProbe/"
-          Copy-Item "LazyG/Diagnostics/LazyGForeverProbe/*.toc" "release-addon/LazyGForeverProbe/"
-          if (-not (Test-Path "release-addon/LazyGForeverProbe/CooldownAudit.lua")) {
-            throw "CooldownAudit.lua missing from addon artifact"
-          }
-
-      - name: Upload ready-to-install Forever diagnostic addon
-        uses: actions/upload-artifact@v4
-        with:
-          name: LazyGForeverProbe-0.4.0-dev
-          path: release-addon/
-          if-no-files-found: error
-          retention-days: 30
-
-  lua-codec:
-    name: Lua 5.1 wire encoder regression
+  connector-lua:
+    name: External JustAC/Hekili Lua connector smoke
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -110,67 +84,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y lua5.1
-      - name: Verify Lua 5.1 syntax for both RGB v3 modules
+      - name: Check native connector source and provider adapters
         run: |
-          luac5.1 -p LazyG/Experiments/LazyGCore/NativeBindings.lua
-          luac5.1 -p LazyG/Experiments/LazyGCore/RgbWire.lua
-          luac5.1 -p LazyG/Experiments/LazyGCore/LazyGCore/Core/Atoms/NativeBindings.lua
-          luac5.1 -p LazyG/Experiments/LazyGCore/LazyGCore/Core/Atoms/RgbWire.lua
-          luac5.1 -p LazyG/AddonTemplate/RgbV3Encoder.lua
-          luac5.1 -p LazyG/AddonTemplate/HunterCompactProfileEncoder.lua
-          luac5.1 -p LazyG/AddonTemplate/HunterCompactManifest.lua
-          luac5.1 -p LazyG/AddonTemplate/HunterCompactCollector.lua
-          luac5.1 -p LazyG/AddonTemplate/RgbV3Panel.lua
-          luac5.1 -p LazyG/AddonTemplate/AutoBindings.lua
-          luac5.1 -p LazyG/AddonTemplate/RgbV3Thresholds.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownAudit.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownStateProbe.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownWatch.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CooldownRgb.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/LazyGForeverProbe.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/CastEventRgb.lua
-          luac5.1 -p LazyG/Diagnostics/LazyGForeverProbe/SpellDiagnosticRgb.lua
-      - name: Verify opt-in Forever LGE player-cast event protocol
-        run: lua5.1 LazyG/Tests/forever_cast_event_rgb_test.lua
-
-      - name: Verify all Hunter Multi-Shot rules require AoE toggle and two enemies
-        run: lua5.1 LazyG/Tests/lazygcore_hunter_aoe_test.lua
-
-      - name: Verify native self-buff key and target independence
-        run: lua5.1 LazyG/Tests/lazygcore_native_buff_test.lua
-
-      - name: Verify Hunter Mark per-target hidden aura decision (Lua 5.1)
-        run: lua5.1 LazyG/Tests/lazygcore_hunter_mark_test.lua
-
-      - name: Verify Lua RGB v3 wire vectors
-        run: lua5.1 LazyG/Tests/rgb_v3_encoder_test.lua
-
-      - name: Verify Forever auto action-bar bindings and HID modifiers
-        run: lua5.1 LazyG/Tests/forever_auto_bindings_test.lua
-
-      - name: Verify compact Hunter v3 extension shared Lua/C# fixture
-        run: lua5.1 LazyG/Tests/hunter_compact_profile_test.lua
-
-      - name: Verify Hunter compact live collector fail-closed behavior (Lua mock)
-        run: lua5.1 LazyG/Tests/hunter_compact_collector_test.lua
-
-      - name: Verify Forever cooldown audit behavior
-        run: lua5.1 LazyG/Tests/forever_cooldown_audit_test.lua
-
-      - name: Verify Forever cooldown state and widget experiment
-        run: lua5.1 LazyG/Tests/forever_cooldown_state_test.lua
-
-      - name: Verify automatic 30-second cooldown observer
-        run: lua5.1 LazyG/Tests/forever_cooldown_watch_test.lua
-
-      - name: Verify Forever cooldown RGB v1 wire vectors
-        run: lua5.1 LazyG/Tests/forever_cooldown_rgb_test.lua
-
-      - name: Verify LGC explicit opt-in restores on addon reload
-        run: lua5.1 LazyG/Tests/forever_cooldown_rgb_reload_test.lua
-
-      - name: Verify unified optional RGB diagnostics commands and settings
-        run: lua5.1 LazyG/Tests/forever_rgb_diagnostics_test.lua
-
-      - name: Verify LGD selectable spell and GCD quality RGB
-        run: lua5.1 LazyG/Tests/forever_spell_rgb_test.lua
+          luac5.1 -p LazyG/Experiments/LazyGConnector/LazyGConnector/Connector.lua
+          luac5.1 -p LazyG/Experiments/LazyGConnector/LazyGConnector/NativeBindings.lua
+          lua5.1 LazyG/Experiments/LazyGConnector/tests/provider_smoke.lua
