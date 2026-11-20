@@ -62,6 +62,10 @@ public sealed class MainWindow : Window
     private bool ghubArmed;
     // Isolated experiment: direct LazyGCore-native recommendations.
     private bool lazyGCoreMode;
+    // Isolated fork: never sample the legacy RGB transport in this build.
+    private const bool NativeOnlyExperiment = true;
+    private bool coreComparisonRecording;
+    private DateTimeOffset lastCoreComparisonAt;
     private LazyGCoreRgbPacket? lazyGCorePacket;
     private byte? lastLazyGCoreSequence;
     private DateTimeOffset lastLazyGCoreSequenceAt;
@@ -410,11 +414,9 @@ public sealed class MainWindow : Window
         body.Children.Add(Text("EXPERIMENTAL · Offline-only profile. Spell ranks, signals and priorities require Forever gameplay verification.",12,"#F3C48C"));
         if(cls.Id=="hunter" && spec.Id=="beast-mastery" && mode=="PvE")
         {
-            body.Children.Add(Action(rotationPreview.Running && !lazyGCoreMode?"Stop XML":"Start XML",
-                ()=>{RequestStart(cls,spec,false);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
             body.Children.Add(Action(rotationPreview.Running && lazyGCoreMode?"Stop LazyGCore":"Start LazyGCore (DEV)",
                 ()=>{RequestStart(cls,spec,true);ShowSpec(cls,spec,mode,tier,changedOnly);},true));
-            body.Children.Add(Text("LazyGCore mode reads the forked engine's native RGB (not XML priorities). It still requires the standard LazyG RGB addon for trusted GCD, spell-readiness and auto keybinds; UNKNOWN signals block HID. Install both Lua addons for this experiment.",11,"#E5C694"));
+            body.Children.Add(Text("ISOLATED DEV: reads ONLY LazyGCore's 8 RGB cells. Legacy RGB is not sampled. XML comparison is read-only and UNKNOWN when game-state evidence is missing; Logitech input remains disabled.",11,"#E5C694"));
             body.Children.Add(Text("Start connects Logitech G HUB; Lua automatically reads the WoW action bar bindings through RGB v3. Only a fresh exact SpellID match can send a key. In-game validation required.",11,"#B7A88E"));
             body.Children.Add(Action("Hunter BM — открыть диагностику XML",ShowSupport));
             body.Children.Add(Text("Для теста: Start включает XML-аудит; Support сохраняет полный диагностический ZIP. Успешное нажатие Logitech не доказывает каст WoW.",11,"#B7A88E"));
@@ -681,6 +683,16 @@ public sealed class MainWindow : Window
             }
             ShowSupport();
         }));
+        actions.Children.Add(Action(coreComparisonRecording?"Stop CORE / XML comparison":"Record CORE / XML comparison",()=>{
+            coreComparisonRecording=!coreComparisonRecording;
+            lastCoreComparisonAt=default;
+            if(coreComparisonRecording && !executionTrace.Recording)
+                executionTrace.Start(DateTimeOffset.UtcNow,"LazyGCore native vs XML (native-only evidence)");
+            RuntimeDiagnostics.Add("CORE_XML_COMPARE",coreComparisonRecording?
+                "Recording enabled: CORE=native RGB; XML=shadow from native-only evidence; missing state is UNKNOWN":
+                "Recording disabled; export diagnostic ZIP to save comparison events");
+            ShowSupport();
+        }));
         actions.Children.Add(Action("Export diagnostic ZIP",()=>{
             try
             {
@@ -778,12 +790,14 @@ public sealed class MainWindow : Window
             if(view=="classes")ShowClasses();
             return;
         }
+        // The isolated fork cannot safely drive Logitech from recommendation-only RGB.
+        useLazyGCore=true;
         bool ghubMissingOnStart=false;
         try
         {
             // A tray-only Logitech G HUB session is valid. A virtual bus
             // or lghub_agent/updater without the app/tray is not enough.
-            if(!GHubRuntime.IsRunning())
+            if(!useLazyGCore && !GHubRuntime.IsRunning())
             {
                 ghubMissingOnStart=true;
                 RuntimeDiagnostics.Add("GHUB","Start blocked: no G HUB app/tray process. Detected: "+
@@ -803,22 +817,22 @@ public sealed class MainWindow : Window
             var settings=RotationSettingsStore.Load(file,profile);
             // Bindings arrive automatically from the Forever Lua RGB tail.
             // Start may precede collection; without a matching key no input.
-            ghub.Connect();
+            if(!useLazyGCore)ghub.Connect();
             try { rotationPreview.Start(profile,settings); }
-            catch {ghub.Disconnect();throw;}
+            catch {if(!useLazyGCore)ghub.Disconnect();throw;}
             activeBindings=new System.Collections.Generic.Dictionary<int,string>();
             commandGate.Reset();
             debuffConfirmation.Reset();
             lastDebuffState=DebuffConfirmationState.Idle;
             ghubGeneration++;
-            ghubArmed=true;
+            ghubArmed=false; // Native eight-cell payload lacks verified GCD, bindings and target evidence.
             lazyGCoreMode=useLazyGCore;
             // Never inherit an old core recommendation when arming the driver.
             lazyGCorePacket=null;
             lastLazyGCoreSequence=null;
             lastLazyGCoreSequenceAt=default;
             lazyGCoreSequenceEstablished=false;
-            LastGhubStatus="CONNECTED / RUNNING";
+            LastGhubStatus="CORE RGB READ-ONLY / NO HID";
             executionTrace.Start(DateTimeOffset.UtcNow,
                 "forever/"+cls.Id+"/"+spec.Id+"/PvE");
             try {StartRotationAudit();}
@@ -826,13 +840,13 @@ public sealed class MainWindow : Window
                 hunterAuditRecording=false;
                 RuntimeDiagnostics.Add("HUNTERAUDIT","Audit unavailable: "+auditEx.GetType().Name);
             }
-            executionTrace.Add(DateTimeOffset.UtcNow,"GHUB_CONNECTED",null,
-                "Virtual bus opened; keyboard effects not yet proven");
+            executionTrace.Add(DateTimeOffset.UtcNow,"NATIVE_ONLY",null,
+                "8-cell LazyGCore RGB only; legacy RGB disabled; HID disabled until trusted state is supplied");
             lastPreviewStatus="";
             lastPreviewSpell=null;
             overlay?.SetReadOnlyRecommendation(true,null,rotationPreview.Status);
             RuntimeDiagnostics.Add("ROTATION",lazyGCoreMode?
-                "Started LazyGCore native RGB test; HID requires independent RGB readiness/range":"Started XML rotation with Logitech virtual bus · DEV game-untested");
+                "Started isolated LazyGCore native-only observation; no legacy RGB reads; HID disabled":"XML mode unavailable in this experiment");
             if(view=="classes")ShowClasses();
         }
         catch(Exception ex)
@@ -890,8 +904,23 @@ public sealed class MainWindow : Window
                 lastPreviewSpell=nativeRec?.SpellId;
             }
             overlay?.SetReadOnlyRecommendation(true,nativeRec?.SpellId,nativeStatus);
-            if(ghubArmed && nativeRec is not null)
-                QueueLogitechCommand(nativeRec,at);
+            // Shadow XML runs against UNKNOWN state, never old RGB. Its result is not
+            // an independently verified prediction until the protocol carries facts.
+            if(coreComparisonRecording && (lastCoreComparisonAt==default ||
+                at-lastCoreComparisonAt>=TimeSpan.FromMilliseconds(500)))
+            {
+                var shadowState=GameState.Empty(at);
+                var shadowRec=rotationPreview.Update(shadowState,at);
+                var xmlCandidate=shadowRec?.SpellId.ToString()??"NONE";
+                var detail="CORE="+(nativeRec?.SpellId.ToString()??"NONE")+
+                    " (status="+(c?.Status.ToString()??"NO_PACKET")+")"+
+                    "; XML=UNKNOWN (missing target, auras, GCD, bindings, cooldown state)"+
+                    "; UNVERIFIED_XML_CANDIDATE="+xmlCandidate+
+                    "; oldRGB=DISABLED; HID=DISABLED";
+                executionTrace.Add(at,"CORE_XML_COMPARE",nativeRec?.SpellId,detail);
+                RuntimeDiagnostics.Add("CORE_XML_COMPARE",detail);
+                lastCoreComparisonAt=at;
+            }
             return;
         }
         var rec=rotationPreview.Update(latestGameState,at);
@@ -973,6 +1002,7 @@ public sealed class MainWindow : Window
     }
     private void QueueLogitechCommand(RotationRecommendation? rec,DateTimeOffset frameAt)
     {
+        if(NativeOnlyExperiment)return; // Absolutely no legacy-state-backed input in fork.
         if(!ghubArmed || ghubBusy || rec is null)return;
         var now=DateTimeOffset.UtcNow;
         if(lazyGCoreMode && (!lazyGCoreSequenceEstablished ||
@@ -1158,6 +1188,54 @@ public sealed class MainWindow : Window
         scanning=true;
         try
         {
+            if(NativeOnlyExperiment)
+            {
+                // Critical isolation: never call TryReadCombined, including diagnostics,
+                // because it would silently restore the old addon as a data source.
+                var native=await Task.Run(() => {
+                    bool ok=WowRgbBridge.TryReadLazyGCore(out var packet);
+                    return (ok,packet,at:DateTimeOffset.UtcNow);
+                });
+                if(finished)return;
+                if(native.ok && native.packet is not null)
+                {
+                    var pkt=native.packet;
+                    lazyGCorePacket=pkt;
+                    if(lastLazyGCoreSequence is not byte prev)
+                        lastLazyGCoreSequence=pkt.Sequence;
+                    else if(prev!=pkt.Sequence)
+                    {
+                        lastLazyGCoreSequence=pkt.Sequence;
+                        lastLazyGCoreSequenceAt=native.at;
+                        lazyGCoreSequenceEstablished=true;
+                    }
+                }
+                else
+                {
+                    lazyGCorePacket=null;
+                    lastLazyGCoreSequence=null;
+                    lastLazyGCoreSequenceAt=default;
+                    lazyGCoreSequenceEstablished=false;
+                }
+                latestGameState=GameState.Empty(native.at);
+                autoBindings.Reset();
+                string nativeStatus=lazyGCorePacket is null?"CORE RGB NOT FOUND":
+                    "CORE RGB CRC OK spell="+lazyGCorePacket.SpellId+
+                    " status="+lazyGCorePacket.Status+
+                    " sequence="+lazyGCorePacket.Sequence+
+                    " stream="+(lazyGCoreSequenceEstablished?"LIVE":"BASELINE");
+                statusText.Text=nativeStatus;
+                if(nativeStatus!=lastLazyGCoreDiagnostic)
+                {
+                    RuntimeDiagnostics.Add("LAZYGCORE",nativeStatus);
+                    lastLazyGCoreDiagnostic=nativeStatus;
+                }
+                UpdateRotationPreview(native.at);
+                overlay?.SetConnection(lazyGCoreSequenceEstablished,true,false,false,
+                    null,null);
+                RefreshDiagnosticsView();
+                return;
+            }
             var result=await Task.Run(() => {
                 var stopwatch=System.Diagnostics.Stopwatch.StartNew();
                 bool ok=WowRgbBridge.TryReadCombined(out var state,out var packet,
