@@ -1,3 +1,28 @@
+## 2026-11-20 — WORKING CI TEST BUNDLE: LazyGCore native RGB + Windows decoder [0.1.0-dev + 0.4.0-dev / CI-PASSED / GAME-UNTESTED]
+
+**User explicitly requested:** an immediately downloadable installable Lua core and Windows EXE to test together, with real Windows RGB decoding and the existing Logitech G HUB executor, all isolated from main.
+
+**GitHub branch:** `experiment/lazygcore`. Main remains untouched. Full Lua core with 9 class rotations is derived from the externally available 1.2.6 archive and renamed into `LazyGCore`; original legal license retained. File archive verification discovered that the CDN's TOC differs from the user's uploaded ZIP although exact `Core/Init.lua` and `Core/Organisms/Engine.lua` SHA256 match. The source builder documents the discrepancy, validates 89 source files and the exact bootstrap/engine bytes, and does NOT claim byte-identical entire archive. The derived Lua source was committed to this experiment by GitHub Actions.
+
+**Core source and native RGB:** `LazyG/Experiments/LazyGCore/LazyGCore/`; native `Core/Atoms/RgbWire.lua` and one inserted `S.RGB.Publish(current)` in `Core/Organisms/Engine.lua`. RGB transport is eight cells with LGC marker/version/sequence/SpellID/range-status quality/CRC16; no new fixed 1.5s GCD is invented.
+
+**Windows:** `LazyG/Windows/LazyGCoreRgbCodec.cs` decodes CRC-checked frames. `WowRgbBridge.TryReadLazyGCore` independently captures/scans game client top-left across common UI scales/pitches. `MainWindow` adds **Start LazyGCore (DEV)** alongside **Start XML** on Hunter Beast Mastery PvE; it displays native recommendations in the existing overlay, logs CRC/range/sequence and can call the existing Logitech path only with a **fresh native RGB frame AND the existing old LazyG RGB state** confirming target/identity, real GCD, exact spell readiness, known in-range and verified auto key mapping. Any UNKNOWN or missing evidence blocks the automatic key; the native recommendation itself never authorizes HID. Existing XML path and its saved settings preserved.
+
+**Scope/known limitation:** this Windows *execution* integration is presently only exposed for Hunter BM PvE because the existing `RotationPreviewSession`, compact spell ranks and trusted binding pipeline remain limited to that profile. The Lua fork still computes all 27 specs. The game must retain the established LazyG RGB addon (for telemetry/bindings) alongside LazyGCore; disable original unmodified Sonah to avoid duplicate engines. Missing core/legacy RGB will show diagnostics and cannot cast. Actual gameplay is untested. `GCD quality` in native RGB remains unknown; 29515 verified old probe/compact gate handles input. Sonah's GCD mechanism is unchanged.
+
+**Tests:** `LazyG/Tests/Program.cs` adds native 8-cell CRC, marker/range-quality, malformed item and corrupted payload checks. `LazyG/Tests/RgbV3CodecTests.csproj` includes native codec. `build-windows.yml` runs on this experimental branch and packages the single EXE. Windows + Lua regressions and startup smoke **PASS** [Actions 44681259884](https://github.com/Vi22Rus/LazyG/actions/runs/44681259884), download [LazyG-Windows-x64 artifact 14605230125](https://github.com/Vi22Rus/LazyG/actions/runs/44681259884/artifacts/14605230125). Full generated Lua fork CI **PASS** [Actions 44680752309](https://github.com/Vi22Rus/LazyG/actions/runs/44680752309), download [LazyGCore-Forever-0.1.0-dev artifact 14603763869](https://github.com/Vi22Rus/LazyG/actions/runs/44680752309/artifacts/14603763869).
+
+**Install:** unpack LazyGCore addon archive into `World of Warcraft/Interface/AddOns/LazyGCore/` (it must contain `LazyGCore.toc` directly). Keep the standard LazyG Lua addon created by existing Setup for core readback and auto bindings; disable the original Sonah addon to avoid duplicate recommendations. `/reload`; run downloaded LazyG.exe with G HUB active and WoW foreground. On Hunter Beast Mastery PvE choose **Start LazyGCore (DEV)**. Expect RGB core row at top-left, overlay icon and diagnostic rows `LAZYGCORE NATIVE CRC OK`, input may remain blocked for UNKNOWN GCD/range/binding. Export Support ZIP after test. Existing main remains rollback if needed.
+
+**PowerShell single EXE** from repository root:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+**Next:** user validates live Forever addon load, RGB and icon recommendation fidelity, G HUB input permissions for verified abilities, exports diag ZIP. Extend universal GameState+binding execution to other class profiles only after correctness is established.
+
+---
+
 ## 2026-11-20 — Sonah cast-event aura estimate → Compact RGB v2 → XML and DEEP FOREVER API AUDIT [0.4.0-dev / CI-PASSED / GAME-UNTESTED]
 
 **User request:** reproduce Sonah's missing piece (successful spellcast fallback under protected target auras), and conduct a deep source review of every relevant Blizzard API mechanism for future client-universal LazyG. **Actual source directly inspected:** attached `Sonah.zip`, `Sonah.toc` v1.2.5 Interface 16001; modules `Core/Atoms/Secret.lua`, `Auras.lua`, `Spells.lua`, `Casts.lua`, `Units.lua`, `Curves.lua`, `Items.lua`, `Talents.lua`, `ActionSlots.lua`, `Core/Molecules/Conditions.lua`, `Core/Organisms/Engine.lua`, other organisms and `Classes/Hunter.lua`. **Full audit** under [docs/SONAH_FOREVER_API_AUDIT.md](docs/SONAH_FOREVER_API_AUDIT.md) (18 detailed sections), and user's standalone expanded 25-part report `SONAH_FOREVER_API_DEEP_AUDIT.md` (42 KB) supplied in chat. The audit clearly distinguishes SOURCE FACTS from planned and implemented LazyG capabilities. No client 3.3.5 API mixed.
