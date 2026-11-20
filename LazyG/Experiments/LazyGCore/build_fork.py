@@ -97,7 +97,9 @@ def main(source,dest):
         if "{ sp.MultiShot," not in line:
             continue
         multi_rules+=1
-        if "C.enemies(2)" in line:
+        # An enemies(2) nested inside C.any(...) is NOT an AND gate:
+        # old questing rules still allowed one-target Multi-Shot.
+        if "when = { C.enemies(2)," in line or "when = { aoeOn, C.enemies(2)" in line:
             continue
         patched+=1
         if "when = {" in line:
