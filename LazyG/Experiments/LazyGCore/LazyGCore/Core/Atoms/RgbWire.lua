@@ -158,6 +158,15 @@ function R.Encode(rec,sequence)
   b[17]=255
   if S.classToken=="HUNTER" and S.Registry and S.Registry.Class then
     local class=S.Registry.Class()
+    local mark=class and class.spells and class.spells.HuntersMark
+    if mark and S.Atoms and S.Atoms.Auras then
+      local remaining=readPlain(function()
+        return S.Atoms.Auras.DebuffRemaining("target",mark)
+      end)
+      if type(remaining)=="number" then
+        b[18]=remaining<=0 and 1 or 2
+      end
+    end
     local sting=class and class.spells and class.spells.SerpentSting
     if sting and S.Atoms and S.Atoms.Auras then
       local remaining=readPlain(function()
