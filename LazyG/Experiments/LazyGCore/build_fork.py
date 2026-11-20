@@ -99,11 +99,11 @@ def main(source,dest):
         multi_rules+=1
         # An enemies(2) nested inside C.any(...) is NOT an AND gate:
         # old questing rules still allowed one-target Multi-Shot.
-        if "when = { C.enemies(2)," in line or "when = { aoeOn, C.enemies(2)" in line:
+        if "when = { aoeOn, C.enemies(2)" in line:
             continue
         patched+=1
         if "when = {" in line:
-            hunter_lines[i]=line.replace("when = {","when = { C.enemies(2),",1)
+            hunter_lines[i]=line.replace("when = {","when = { aoeOn, C.enemies(2),",1)
         else:
             hunter_lines[i]=line.replace("sp.MultiShot,","sp.MultiShot, when = { aoeOn, C.enemies(2) },",1)
     if multi_rules<9 or patched<9:
