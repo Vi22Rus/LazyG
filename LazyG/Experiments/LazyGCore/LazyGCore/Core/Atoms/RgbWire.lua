@@ -105,7 +105,8 @@ function R.Encode(rec,sequence)
   end
   if status==1 then
     local binder=LazyGCoreNativeBindings
-    local m,k=binder and binder.Find(id)
+    local m,k
+    if binder then m,k=binder.Find(id) end
     if type(m)=="number" and m>=0 and m<=15 and
        type(k)=="number" and k>=4 and k<=115 then
       mod,key=m,k
