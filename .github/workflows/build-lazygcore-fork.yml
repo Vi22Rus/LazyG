@@ -98,11 +98,16 @@ jobs:
                   assert (root/line.strip().replace('\\','/')).is_file(),line
           print("Full fork load order and branded-names regression: PASS")
           PY
+      - name: Stage addon with one installable LazyGCore root folder
+        run: |
+          mkdir -p release-addon/LazyGCore
+          cp -a LazyG/Experiments/LazyGCore/LazyGCore/. release-addon/LazyGCore/
+          test -f release-addon/LazyGCore/LazyGCore.toc
       - name: Publish installable experimental addon
         uses: actions/upload-artifact@v4
         with:
           name: LazyGCore-Forever-0.1.0-dev
-          path: LazyG/Experiments/LazyGCore/LazyGCore/
+          path: release-addon/
           retention-days: 30
           if-no-files-found: error
       - name: Verify artifact includes native v2 binding module
