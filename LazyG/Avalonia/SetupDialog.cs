@@ -25,7 +25,7 @@ internal sealed class SetupDialog : Window
     private readonly UserSession session;
     private readonly ComboBox versions = new() { MinWidth=315 };
     private readonly TextBox addOns = new() { Watermark=".../World of Warcraft/_forever_/Interface/AddOns",MinWidth=410 };
-    private readonly TextBox addonName = new() { Text="LazyGForever",MinWidth=200 };
+    private readonly TextBox addonName = new() { Text="LazyGConnector",MinWidth=200,IsReadOnly=true };
     private readonly TextBlock status = new() { TextWrapping=TextWrapping.Wrap };
     private readonly Button install;
     private readonly Button test;
@@ -83,7 +83,7 @@ internal sealed class SetupDialog : Window
         form.Children.Add(T("The installer creates a new folder and never overwrites another addon. Disable older test LazyG addons before /reload.",12,"#9EBFCC"));
         form.Children.Add(new Border { Child=status,Background=Palette.Brush("#0B253A"),Padding=new Thickness(14),
             CornerRadius=new CornerRadius(8),MinHeight=66 });
-        status.Text="Select WoW Forever, choose its AddOns folder, and install.";
+        status.Text="Select the WoW Forever AddOns folder. Install LazyGConnector alongside JustAC or Hekili.";
         status.Foreground=Palette.Brush("#9EBBC9");
         Grid.SetRow(form,1);
         var scroller=new ScrollViewer { Content=form,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto };
@@ -107,7 +107,7 @@ internal sealed class SetupDialog : Window
         validated=false;finish.IsEnabled=false;test.IsEnabled=false;
         if(versions.SelectedIndex!=0) { Failure("That WoW client is not supported yet.");return; }
         var path=(addOns.Text??"").Trim();
-        var name=(addonName.Text??"").Trim();
+        var name="LazyGConnector";
         if(!Directory.Exists(path) || !string.Equals(Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)), "AddOns",StringComparison.OrdinalIgnoreCase))
         {Failure("Please select an existing folder named AddOns.");return;}
         if(!Regex.IsMatch(name,"^[A-Za-z][A-Za-z0-9_]{2,39}$"))
@@ -116,52 +116,68 @@ internal sealed class SetupDialog : Window
         if(banned.Contains(name,StringComparer.OrdinalIgnoreCase))
         {Failure("Choose an independent addon name.");return;}
         var target=Path.Combine(path,name);
-        if(Directory.Exists(target)) { Failure("Folder already exists. Use another addon name; existing files were not modified.");return;}
+        if(Directory.Exists(target))
+        {
+            if(File.Exists(Path.Combine(target,"LazyGConnector.toc")) &&
+               File.Exists(Path.Combine(target,"Connector.lua")) &&
+               File.Exists(Path.Combine(target,"NativeBindings.lua")))
+            {
+                installed=true;session.ForeverAddonsPath=path;session.Save();
+                status.Text="Existing LazyGConnector found. Enable it in WoW, /reload and click Test RGB.";
+                status.Foreground=Palette.Brush("#5CEFB0");test.IsEnabled=true;
+                return;
+            }
+            Failure("LazyGConnector folder already exists but is incomplete. Close WoW, rename it for backup and install again.");
+            return;
+        }
         try
         {
             Directory.CreateDirectory(target);
             try
             {
-                var toc=$"## Interface: 16001\n## Title: {name}\n## Notes: LazyG Forever RGB adapter\n## Version: 0.2.3-dev\nHunterProfile.lua\nPanel.lua\nRgbV3Encoder.lua\nHunterCompactManifest.lua\nHunterCompactProfileEncoder.lua\nHunterCompactCollector.lua\nAutoBindings.lua\nRgbV3Panel.lua\nRgbV3Thresholds.lua\n";
-                File.WriteAllText(Path.Combine(target,name+".toc"),toc,new UTF8Encoding(false));
-                foreach(var f in new[]{"HunterProfile.lua","Panel.lua","RgbV3Encoder.lua","HunterCompactManifest.lua","HunterCompactProfileEncoder.lua","HunterCompactCollector.lua","AutoBindings.lua","RgbV3Panel.lua","RgbV3Thresholds.lua"})
+                var toc="## Interface: 16001\\n## Title: LazyG Connector (JustAC / Hekili)\\n## Notes: No internal rotation\\n## Version: 0.1.0-dev\\n## SavedVariables: LazyGConnectorDB\\n## OptionalDeps: JustAC, Hekili\\n\\nNativeBindings.lua\\nConnector.lua\\n";
+                File.WriteAllText(Path.Combine(target,"LazyGConnector.toc"),toc,new UTF8Encoding(false));
+                foreach(var addonFile in new[]{"NativeBindings.lua","Connector.lua"})
                 {
-                    using var src=typeof(SetupDialog).Assembly.GetManifestResourceStream("LazyG."+f)
-                        ?? throw new FileNotFoundException("Embedded addon missing: "+f);
-                    using var dest=File.Create(Path.Combine(target,f));
+                    using var src=typeof(SetupDialog).Assembly.GetManifestResourceStream("LazyG.Connector."+addonFile)
+                        ?? throw new FileNotFoundException("Connector resource missing: "+addonFile);
+                    using var dest=File.Create(Path.Combine(target,addonFile));
                     src.CopyTo(dest);
                 }
             }
             catch { Directory.Delete(target,true);throw; }
             installed=true;session.ForeverAddonsPath=path;session.Save();
             RuntimeDiagnostics.Add("SETUP","Forever addon installed in a new directory");
-            status.Text="Addon installed: "+target+"\nEnable it in WoW, disable older test addons, then /reload and click Test RGB.";
+            status.Text="LazyGConnector installed: "+target+"\nEnable JustAC or Hekili + LazyGConnector in WoW, disable old LazyGCore, /reload, then Test RGB.";
             status.Foreground=Palette.Brush("#5CEFB0");test.IsEnabled=true;
         }
         catch(Exception ex) { Failure("Installation failed: "+ex.Message); }
     }
     private async Task TestAsync()
     {
-        test.IsEnabled=false;status.Text="Checking WoW RGB connection. Keep the game visible.";
+        test.IsEnabled=false;
+        status.Text="Checking LazyGConnector RGB v3. Keep the WoW window visible.";
         try
         {
             WowRgbBridge.ActivateGame();
             await Task.Delay(650);
-            var result=await Task.Run(()=> {
-                bool ok=WowRgbBridge.TryReadCombined(out var player,out var packet,out var detail,out var v3,out var curve);
-                return (ok,player,packet,detail,v3,curve);
+            var result=await Task.Run(()=>{
+                bool ok=WowRgbBridge.TryReadLazyGConnector(out var packet,out var detail);
+                return (ok,packet,detail);
             });
-            if(result.ok && result.player is not null)
+            if(result.ok && result.packet is { Version:3 } pkt)
             {
                 validated=true;
-                RuntimeDiagnostics.Add("SETUP","RGB test PASS · "+result.player.ClassName);
+                string provider=pkt.ProviderId switch {1=>"JustAC",2=>"Hekili",_=>"NONE"};
+                RuntimeDiagnostics.Add("SETUP","LazyGConnector RGB v3 PASS provider="+provider);
                 status.Foreground=Palette.Brush("#53E7B1");
-                status.Text="RGB PASS · "+result.player.ClassName+" / "+result.player.RaceName+
-                    " · Lv "+result.player.Level+"\n"+(result.packet is null?"RGB v3 not detected":result.v3)+
-                    (result.curve is null?" · Curve not detected":" · Curve detected");
+                status.Text="RGB v3 PASS · "+provider+
+                    " · status="+pkt.Status+" · SpellID="+pkt.SpellId+
+                    "\\nSource selection: /lgconnector justac or /lgconnector hekili";
                 finish.IsEnabled=true;
             }
-            else Failure("RGB not confirmed: "+result.detail);
+            else Failure("Connector RGB v3 not confirmed: "+result.detail+
+                ". Enable LazyGConnector; /reload; use /lgconnector justac or hekili.");
         }
         catch(Exception e){Failure("Test failed: "+e.Message);}
         finally{test.IsEnabled=installed;}
