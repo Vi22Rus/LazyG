@@ -1,3 +1,18 @@
+## 2026-11-20 — Logitech G HUB tray-only startup false-negative fix [0.4.0-dev / GAME-UNTESTED]
+
+**User live feedback:** G HUB is visibly running in the system tray but the prior DEV build refused Start with `Logitech G HUB required`. Root cause is the overly narrow `Process.GetProcessesByName("lghub")` check. Recent Logitech G HUB has a distinct `lghub_system_tray.exe` process, including when the desktop UI is closed/minimized. The previous guard falsely denied these sessions even if the virtual bus was installed and available.
+
+**Fix:** `Avalonia/Engine/GHubDriver.cs` `GHubRuntime.IsDesktopProcess` accepts either `lghub[.exe]` or `lghub_system_tray[.exe]`, case-insensitively, without admitting `lghub_agent`, `lghub_updater`, random prefix matches or merely present driver. `IsRunning` checks current Windows process names and disposes process handles. `DescribeRunningProcesses` logs observed `lghub*` names in `GHUB` diagnostics. `MainWindow.RequestStart` checks once each Start and records whether *that check* failed; the modal title is based on the captured outcome, not a racy second recheck during exception handling. Once process check passes, existing `ghub.Connect()` still tests the virtual device; no fallback to SendInput. Repeated Start attempts recheck. On a failure the standard English OK modal stays.
+
+**Regression:** `Tests/RotationFoundationTests.cs` now recognizes desktop and tray variants and excludes updater, agent and unrelated processes. This cannot reproduce the user's installed G HUB state in CI; physical/tray Windows re-test required. No Lua, XML, GCD, aura, or rotation rules changed.
+
+**Rollback:** previous [CI 44670088782](https://github.com/Vi22Rus/LazyG/actions/runs/44670088782), but note that version contains the G HUB tray false-negative. Last pre-guard [CI 44669128851](https://github.com/Vi22Rus/LazyG/actions/runs/44669128851). **CI pending** final confirmation. PowerShell single EXE:
+```powershell
+dotnet publish .\LazyG\Avalonia\LazyG.Avalonia.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\publish
+```
+
+---
+
 ## 2026-11-20 — G HUB prerequisite check FINAL CI SUCCESS [0.4.0-dev / GAME-UNTESTED]
 
 **[CI SUCCESS]** [GitHub Actions 44670088782](https://github.com/Vi22Rus/LazyG/actions/runs/44670088782), tested code commit `38298898b5dced3e58f768886326dd9ab1070f1a`. Windows build, .NET 8 tests (including process name guidance), Windows startup smoke, win-x64 single EXE publish, and Lua 5.1 regressions passed. Windows artifact **LazyG-Windows-x64 14599323917**; optional Forever Probe addon **14600090141**. Subsequent documentation-only commits do not affect source tested.
