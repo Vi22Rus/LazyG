@@ -15,6 +15,40 @@ local function plain(v)
   end
   return true
 end
+-- Source: Sonah/Core/Atoms/Spells.lua, Auras.lua (independent adaptation).
+-- ONLY UNIT_SPELLCAST_SUCCEEDED for player may create an estimate. A successful
+-- keypress, cooldown, animation, or suggested spell is NOT such an event.
+-- For Forever Hunter the matching Sonah definitions are Mark=120s, Sting=15s.
+local castHints={}
+local pendingSent={}
+local auraDuration={ [1130]=120, [1978]=15 }
+local function eventTime()
+  if type(GetTime)~="function" then return nil end
+  local ok,value=pcall(GetTime)
+  if ok and plain(value) and type(value)=="number" and value>=0 then
+    return value
+  end
+  return nil
+end
+local function castFamily(id)
+  if type(id)~="number" then return nil end
+  for _,family in ipairs(manifest.auras) do
+    for _,rank in ipairs(family.ranks) do
+      if rank==id then return family.ranks[1] end
+    end
+  end
+  return nil
+end
+local function snapshotCastHints()
+  local result={}
+  local now=eventTime()
+  if not now then return result end
+  for base,rec in pairs(castHints) do
+    if rec.epoch==targetEpoch and rec.untilAt>now then result[base]=true
+    elseif rec.untilAt<=now then castHints[base]=nil end
+  end
+  return result
+end
 local function safeBool(fn,...)
   if type(fn)~="function" then return nil end
   local ok,v=pcall(fn,...)
@@ -207,7 +241,7 @@ function collector.Build()
   local snapshot={
     epoch=targetEpoch,epochQuality="known",
     gcd=cooldownActive(29515),
-    spells=known,auras=scanDebuffs()
+    spells=known,auras=scanDebuffs(),castHints=snapshotCastHints()
   }
   return packer.Build(manifest,snapshot)
 end
@@ -225,7 +259,42 @@ SlashCmdList.LAZYG_COMPACT=function(message)
 end
 local events=CreateFrame("Frame")
 events:RegisterEvent("PLAYER_TARGET_CHANGED")
-events:SetScript("OnEvent",function()
-  targetEpoch=(targetEpoch%65535)+1
+events:RegisterEvent("UNIT_SPELLCAST_SENT")
+events:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+events:RegisterEvent("PLAYER_REGEN_ENABLED")
+events:SetScript("OnEvent",function(_,event,...)
+  if event=="PLAYER_TARGET_CHANGED" then
+    targetEpoch=(targetEpoch%65535)+1
+    pendingSent={}
+    -- Per-target epochs cannot be equated after tabbing away and back.
+    castHints={}
+  elseif event=="PLAYER_REGEN_ENABLED" then
+    pendingSent={}
+    castHints={}
+  elseif event=="UNIT_SPELLCAST_SENT" then
+    local unit,targetName,guid,id=...
+    if unit~="player" or not plain(id) then return end
+    local base=castFamily(id)
+    if not base then return end
+    local now=eventTime()
+    if not now or safeBool(UnitExists,"target")~=true then return end
+    -- SENT target text may be restricted. Do NOT pretend it proves target
+    -- identity: record current epoch and require that it remains unchanged.
+    pendingSent[id]={epoch=targetEpoch,time=now,guid=plain(guid) and guid or nil}
+  elseif event=="UNIT_SPELLCAST_SUCCEEDED" then
+    local unit,guid,id=...
+    if unit~="player" or not plain(id) then return end
+    local base=castFamily(id)
+    if not base then return end
+    local sent=pendingSent[id]
+    pendingSent[id]=nil
+    local now=eventTime()
+    if not sent or not now or now-sent.time>15 or
+       now<sent.time or sent.epoch~=targetEpoch or
+       (sent.guid and plain(guid) and guid and sent.guid~=guid) or
+       safeBool(UnitExists,"target")~=true then return end
+    local duration=auraDuration[base]
+    if duration then castHints[base]={epoch=targetEpoch,untilAt=now+duration} end
+  end
 end)
 LazyGHunterCompactCollector=collector
