@@ -1,3 +1,27 @@
+## 2026-11-20 10:23–10:26 UTC — FIX HEKILI VISIBLE ICON / RANK BINDING (DEV; USER GAME TEST PENDING)
+
+**User instruction:** "Продолжай делать" after confirming JustAC controls actual WoW character successfully and Hekili's visible first icon (snake shot) differed from Windows overlay Hunter's Mark; no confirmed automatic Hekili casts. Preserve JustAC, Windows UI, original RGB v3 protocol and no internal XML/GCD.
+
+**Verified source from uploaded `Hekili_Forever.zip`:**
+- `Hekili/Engine/Output.lua` lines 64–90: `Engine.Output` has separate Primary/AOE/Cooldowns/Defensives display queues; this is engine published data, NOT necessarily visible main button.
+- `Hekili/UI/UI.lua` lines 895–915, 1077–1115, 1129–1139, 1145–1177: `Hekili.DisplayPool` holds real display frames; UI resolves and styles the display on its tick; hidden displays unsubscribe.
+- `Hekili/UI/Styles/Classic.lua` lines 603–643, 721–729: visible button `d.Buttons[1]` receives `Ability`, `Action`, `ExactTime` from published display after style filtering.
+- `Hekili/UI/Styles/Timeline.lua` lines 549–619, 673–682: `d.styleFrames.timeline.press` controls which actual timeline cell is the press cell; it can be cell 2, not necessarily raw `recs[1]`. Hence the previous hard-coded `Output.Primary.recs[1].actionID` was NOT a reliable match for the visible icon and could explain user-observed UI divergence.
+- `Hekili/Engine/Sim/Core.lua` lines 1891–1895: `exact_time` is based on game `GetTime()`, unlike `time` (simulation relative offset). We must not cast a future icon as immediately ready.
+
+**Source changes (experimental branch only, UTC commits):**
+- 10:23:36 `ca58d48ebc355ee609330b06b86ec23cae7c6fe5`: `LazyGConnector/Connector.lua` Hekili-specific adapter reads the actual visible `Hekili.DisplayPool` Classic button or Timeline press cell (Primary by default, AOE if Primary hidden), not raw engine output. Stops on Hekili Pause; no action from hidden/no-button/not-ready frames; requires displayed `ExactTime <= GetTime()+0.05`. Optional `/lgconnector hekili-primary` and `hekili-aoe` explicitly select a visible Hekili display. JustAC `externalJustAC()` unchanged. Lua wire bytes, .toc, Windows codec and Windows UI unchanged.
+- 10:23:57 `38d267c9dcc53f73317c040922e3c52b32fef28b`: `NativeBindings.lua` adds Hekili-only `FindBySpellName` fallback when direct action bar SpellID not bound. Fetches game spell name through `C_Spell.GetSpellInfo` or `GetSpellInfo`, compares scanned DIRECT nonmacro bar spell names, allows a unique HID binding; if multiple ranks with different keys or unknown/secret names => block. JustAC continues strict exact `Find` mapping unchanged; never maps by unverifiable ID guesses.
+- 10:24:30 `1533f3c46d0c08fc4e75d6f6c52ec746a184e8bf`: updated provider Lua smoke; simulates stale engine 1130 Mark vs visible 13551 Serpent Sting. Verifies visible Classic, timeline `press=2` and `press=1`, hidden Primary, fallback AOE, future `ExactTime` and no-action fail-closed.
+- 10:25:34 `100eaeb0673899c7104cff0439a4d379196ea7b3`: new `tests/hekili_rank_binding.lua` simulates 1130 Mark as recommended while direct bar has 14323 Mark at F, and ambiguous second rank on another key; checks exact JustAC binding remains available.
+- 10:25:48 `b77cc39920108aa9224c2b4604eeabddda2b41c8` and 10:25:52 `7d245adafde43553a9df6664a4eb2982b1acc04e`: both addon and Windows CI run all native Hekili adapter/rank regression tests.
+
+**CI history:** first two Hekili addon CI runs 44718848073 and 44718899266 failed due to original old mock expecting raw `Engine.Output` behavior; test was updated in 1533f3c46, Lua CI 44718977304 passed. New Lua addon CI 44719162355 passed after new rank tests; Windows CI 44719169425 pending at documentation time, verify and append exact artifact results. A successful Lua mock cannot guarantee actual WoW GUI/casts. No code changes in main.
+
+**Rollback and handoff:** user-confirmed JustAC baseline remains Windows [44711593971](https://github.com/Vi22Rus/LazyG/actions/runs/44711593971/artifacts/14617243850), original Lua addon [44709553568](https://github.com/Vi22Rus/LazyG/actions/runs/44709553568/artifacts/14616238200); last pre-Hekili-fix branch SHA `1bd394064fdb86f766bddbd7014131d37bbb1ab3`. Current Hekili patch changes only native Lua connector and tests, not Windows. NEXT IN-GAME TEST: keep JustAC untouched, try Hekili with new addon, explicit `/lgconnector hekili`, compare Hekili visible first icon with Windows overlay, verify actual key/cast; export diagnostic zip if mismatch persists. Hekili game operation remains UNVERIFIED until user tests.
+
+---
+
 ## 2026-11-20 — USER IN-GAME RESULT CLARIFICATION: JUSTAC WORKS; HEKILI DISPLAY MISMATCH [NO CODE CHANGE]
 
 **User's direct game-test report (received after 2026-11-20 09:54–10:03 UTC diagnostic archives; message timestamp not established):** With JustAC, the user **did not press buttons**, yet the LazyG app automatically sent keys, abilities were actually used in WoW, and mobs died. This is the FIRST USER-CONFIRMED in-game working pipeline for **JustAC → LazyGConnector v3 → Windows → G HUB → WoW**. Preserve this behavior and do not touch the working JustAC path without explicit approval. The large sequence of varied JustAC recommendations within the GCD was observed by user; possible native JustAC timing/queue behavior, but user does not know root cause. 41 driver messages for Serpent Sting must not be confused with 41 distinct successful in-game casts; no per-cast confirmation in diagnostic ZIP.
