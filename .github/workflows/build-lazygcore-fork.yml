@@ -1,0 +1,100 @@
+name: Build isolated LazyGCore source fork
+
+on:
+  push:
+    branches: [experiment/lazygcore]
+    paths:
+      - 'LazyG/Experiments/LazyGCore/build_fork.py'
+      - 'LazyG/Experiments/LazyGCore/RgbWire.lua'
+      - 'LazyG/Experiments/LazyGCore/README.md'
+      - '.github/workflows/build-lazygcore-fork.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-fork:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout experimental branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua5.1
+      - name: Download exact verified original version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/core-source"
+          OUT="$RUNNER_TEMP/core-source/source.zip"
+          for url in \
+            "https://mediafilez.forgecdn.net/files/9690/841/Sonah-Forever-1.2.6.zip" \
+            "https://edge.forgecdn.net/files/9690/841/Sonah-Forever-1.2.6.zip" \
+            "https://www.curseforge.com/api/v1/mods/1744297/files/9690841/download"; do
+            if curl -fL --retry 2 --connect-timeout 12 --max-time 60 "$url" -o "$OUT"; then
+              if echo "4bc89bf98c95c8559845b8e4abb009db0740285f514d7e9c0e15d2e7cb63341c  $OUT" | sha256sum --check --status; then
+                echo "Verified exact source archive"
+                exit 0
+              fi
+              echo "::warning::Download differs from user-supplied source SHA256"
+            fi
+          done
+          echo "::error::Exact archive unavailable; do not silently fork different source."
+          exit 1
+      - name: Rebuild full source fork and insert native RGB in Engine
+        run: |
+          python3 LazyG/Experiments/LazyGCore/build_fork.py \
+            "$RUNNER_TEMP/core-source/source.zip" \
+            LazyG/Experiments/LazyGCore/LazyGCore
+      - name: Verify Lua modules and all nine class sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="LazyG/Experiments/LazyGCore/LazyGCore"
+          test -f "$ROOT/LazyGCore.toc"
+          test -f "$ROOT/Classes/Hunter.lua"
+          test -f "$ROOT/Classes/Paladin.lua"
+          test -f "$ROOT/Classes/Warrior.lua"
+          test -f "$ROOT/Classes/Rogue.lua"
+          test -f "$ROOT/Classes/Priest.lua"
+          test -f "$ROOT/Classes/Shaman.lua"
+          test -f "$ROOT/Classes/Mage.lua"
+          test -f "$ROOT/Classes/Warlock.lua"
+          test -f "$ROOT/Classes/Druid.lua"
+          find "$ROOT" -type f -name '*.lua' -print0 | xargs -0 -n 1 luac5.1 -p
+          grep -Fq 'S.RGB.Publish(current)' "$ROOT/Core/Organisms/Engine.lua"
+          ! grep -RniE 'Sonah|SONAH|sonah' "$ROOT" --include='*.lua' --include='*.xml' --include='*.toc'
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('LazyG/Experiments/LazyGCore/LazyGCore')
+          t=(root/'LazyGCore.toc').read_text()
+          assert t.count('Core\\Atoms\\RgbWire.lua')==1
+          for line in t.splitlines():
+              if line.strip() and not line.startswith('#'):
+                  assert (root/line.strip().replace('\\','/')).is_file(),line
+          print("Full fork load order and branded-names regression: PASS")
+          PY
+      - name: Publish installable experimental addon
+        uses: actions/upload-artifact@v4
+        with:
+          name: LazyGCore-Forever-0.1.0-dev
+          path: LazyG/Experiments/LazyGCore/LazyGCore/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Commit complete derived source to experimental branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add LazyG/Experiments/LazyGCore/LazyGCore
+          if git diff --cached --quiet; then
+            echo "Full source already synchronized"
+          else
+            git commit -m "feat(experiment): import complete renamed LazyGCore source from verified archive"
+            git push origin HEAD:experiment/lazygcore
+          fi
