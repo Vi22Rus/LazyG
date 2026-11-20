@@ -33,10 +33,15 @@ internal static class CrashReportService
             try {emergencyStop?.Invoke();}catch { /* never block fatal path */ }
             var directory=Path.Combine(Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),"LazyG","reports");
-            RotationSupportArchive.Create(directory,
-                new RotationSupportArchive.SafeState("0.4.0-dev",null,
-                    "AwaitingTransport","UnhandledException","forever",null,0,0,0,0),
-                "UnhandledException",fatal,DateTimeOffset.UtcNow,exception?.GetType().Name);
+            Directory.CreateDirectory(directory);
+            var path=Path.Combine(directory,
+                "LazyGConnector-Crash-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff")+".txt");
+            File.WriteAllText(path,
+                "LazyG Connector 0.1.0-dev"+Environment.NewLine+
+                "UTC="+DateTimeOffset.UtcNow.ToString("O")+Environment.NewLine+
+                "Fatal="+fatal+Environment.NewLine+
+                "Exception="+exception?.GetType().Name+Environment.NewLine+
+                "Message="+exception?.Message);
         }
         catch { /* out-of-space, ACL, shutdown: best-effort only */ }
         finally { Interlocked.Exchange(ref reporting,0); }
