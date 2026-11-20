@@ -90,8 +90,8 @@ internal static class WowRgbBridge
                     // Pixel 1=magic LGC, pixel 2=(version,sequence,status).
                     // Native v2 adds trusted HID/gate information while keeping
                     // the same eight cells. Do not reject v2 before CRC validation.
-                    if(second.R!=1 && second.R!=2)continue;
-                    if(second.B>3)continue;
+                    if(!LazyGCoreRgbCodec.IsCandidateVersionCell(
+                        second.R,second.B))continue;
                     versionCount++;
                     Span<byte> frame=stackalloc byte[24];
                     for(int i=0;i<8;i++)
