@@ -356,6 +356,18 @@ internal static class RotationXmlV2
                                 : Truth.Unknown);
                         }
                         absent=TruthLogic.And(rankResults.ToArray());
+                        // Sonah-style successful-cast estimate: only use when
+                        // direct aura status is Unknown. A complete observed
+                        // absent/present list wins over inferred effects.
+                        // This is advisory for selecting the next XML rule,
+                        // never proof of a debuff hit or an HID authorization.
+                        if(absent==Truth.Unknown && ids.Length>0 &&
+                           fresh.TargetDebuffCastHints.TryGetValue(ids[0],out var hint) &&
+                           hint.Is(x=>x)==Truth.True)
+                        {
+                            absent=Truth.False;
+                            details.Add("CAST_ESTIMATE (SPELLCAST_SUCCEEDED, not observed aura)");
+                        }
                     }
                     result=TruthLogic.And(result,absent);
                     details.Add("TargetDebuffAbsent ranks="+string.Join(",",ids)+
