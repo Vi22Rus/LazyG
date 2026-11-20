@@ -392,12 +392,10 @@ var extensionV2=(byte[])extension.Clone();
 extensionV2[2]=2;
 extensionV2[17]=1; // mark cast estimate bit, distinct from aura flags
 Check(RgbV3Codec.TryDecode(BuildProfileFrame(extensionV2),8,0x4c47,
-    out var eventFrame,out wireError) &&
-    HunterCompactProfileWire.TryDecode(eventFrame,compactManifest,now,
+    out var eventFrame,out wireError),"new v2 CRC envelope is valid");
+Check(HunterCompactProfileWire.TryDecode(eventFrame,compactManifest,now,
         out var eventCompact) && eventCompact is not null,
     "new v2 event-hint bit accepted without changing RGB cell count");
-Check(HunterCompactProfileWire.TryDecode(eventFrame,compactManifest,now, out eventCompact) &&
-    eventCompact is not null,"v2 decoded object exists");
 var mappedHint=HunterCompactProfileWire.ToGameState(compactBase,eventCompact!);
 Check(mappedHint.TargetDebuffCastHints.TryGetValue(1130,out var markHint) &&
     markHint.Is(x=>x)==Truth.True &&
