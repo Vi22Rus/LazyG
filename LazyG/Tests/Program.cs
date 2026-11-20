@@ -203,6 +203,29 @@ using(var image=new System.Drawing.Bitmap(450,50))
     Check.That(!RgbV3PanelDetector.FindProfilePanel(image,9,out _,out _),
         "wrong extension count never reinterprets profile layout");
 }
+// Native LazyGCore Engine.Publish: independent 8-cell recommendation protocol.
+var native=new byte[24] {76,71,67,1,9,1,0x13,0xbc,0x79,8,0,0,0,0,0,0,0,0,0,0,0,0,0,8};
+ushort nativeCrc=RgbV3Codec.Crc16(native.AsSpan(0,21));
+native[21]=(byte)(nativeCrc>>8);native[22]=(byte)nativeCrc;
+Check.That(LazyGCoreRgbCodec.TryDecode(native,out var core) &&
+    core is not null && core.SpellId==0x13bc79 && core.Sequence==9 &&
+    core.HasRangeEvidence && !core.OutOfRange,
+    "native LazyGCore recommendation CRC and per-field range quality");
+native[6]^=1;
+Check.That(!LazyGCoreRgbCodec.TryDecode(native,out _),"native bad CRC rejected");
+native[6]^=1;
+native[9]=1; // outOfRange true but no known-range quality bit
+nativeCrc=RgbV3Codec.Crc16(native.AsSpan(0,21));
+native[21]=(byte)(nativeCrc>>8);native[22]=(byte)nativeCrc;
+Check.That(LazyGCoreRgbCodec.TryDecode(native,out core) &&
+    core is not null && core.OutOfRange && !core.HasRangeEvidence,
+    "native range observation quality is not invented");
+native[5]=2; // item cannot carry spellId
+nativeCrc=RgbV3Codec.Crc16(native.AsSpan(0,21));
+native[21]=(byte)(nativeCrc>>8);native[22]=(byte)nativeCrc;
+Check.That(!LazyGCoreRgbCodec.TryDecode(native,out _),
+    "native item status cannot authorize a spell key");
+Console.WriteLine("LazyGCore native RGB CRC / range evidence regression: PASS");
 Console.WriteLine("Hunter compact v3 pixel detector regression: PASS");
 Console.WriteLine("RGB v3 codec regression: PASS (CRC, direct8, stepped4, markers, profile and corruption)");
     }
