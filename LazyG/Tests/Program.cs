@@ -243,11 +243,17 @@ nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
 Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
     v2 is not null && v2.NativeInputReady && v2.HunterMarkDiagnostics==15,
     "native Mark diagnostics survive CRC without altering HID gates");
-nativeV2[13]=55; // missing spell ready
+nativeV2[13]=51; // no GCD/spell-ready evidence, but key/target/range/usable true
 crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
 nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
 Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
-    v2 is not null && !v2.NativeInputReady,"v2 missing evidence cannot send key");
+    v2 is not null && v2.NativeInputReady && !v2.NativeGcdReady &&
+    !v2.NativeSpellReady,"prototype accepts verified action with unknown cooldown (paced by Windows)");
+nativeV2[13]=35; // missing independent range
+crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
+nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
+Check.That(LazyGCoreRgbCodec.TryDecode(nativeV2,out v2) &&
+    v2 is not null && !v2.NativeInputReady,"prototype never sends without positive range");
 nativeV2[13]=63;nativeV2[12]=0;
 crc2=RgbV3Codec.Crc16(nativeV2.AsSpan(0,21));
 nativeV2[21]=(byte)(crc2>>8);nativeV2[22]=(byte)crc2;
