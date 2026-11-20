@@ -858,10 +858,23 @@ public sealed class MainWindow : Window
             lastPreviewStatus=status;
             lastPreviewSpell=rec?.SpellId;
         }
-        // A lower-priority XML candidate is not a confirmed actionable cast
-        // while a previous mandatory debuff awaits same-target evidence.
-        overlay?.SetReadOnlyRecommendation(true,
-            debuffConfirmation.HasPending?null:rec?.SpellId,status);
+        // Sonah-like ADVICE, independent of Logitech execution:
+        // never hide the outstanding Mark/Sting icon simply because HID
+        // completed or auras became unreadable. A pending same-target debuff
+        // takes visual precedence over later lower-priority XML candidates.
+        var markAdvice=HunterDebuffAdvice.SuggestMark(latestGameState,at,
+            rotationPreview.IsSettingEnabled("useHuntersMark"));
+        int? displaySpell=debuffConfirmation.PendingSpellId ??
+            markAdvice?.SpellId ?? rec?.SpellId;
+        bool adviceOnly=debuffConfirmation.HasPending ||
+            (markAdvice is not null && markAdvice.SpellId!=rec?.SpellId);
+        string displayStatus=status;
+        if(adviceOnly)
+            displayStatus+=" · "+(debuffConfirmation.HasPending?
+                "PENDING DEBUFF (not yet observed)":
+                markAdvice?.Reason ?? "Advisory only");
+        overlay?.SetReadOnlyRecommendation(true,displaySpell,displayStatus,
+            adviceOnly);
         if(ghubArmed)
             QueueLogitechCommand(rec,at);
     }
