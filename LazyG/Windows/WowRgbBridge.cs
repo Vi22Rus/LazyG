@@ -60,7 +60,7 @@ internal static class WowRgbBridge
         SetForegroundWindow(game.MainWindowHandle);
     }
 
-    public static bool TryReadLazyGConnector(out LazyGCoreRgbPacket? packet,
+    public static bool TryReadLazyGConnector(out LazyGConnectorRgbPacket? packet,
         out string detail)
     {
         packet=null;
@@ -104,7 +104,7 @@ internal static class WowRgbBridge
                         buffer[3*i+1]=rgb.G;
                         buffer[3*i+2]=rgb.B;
                     }
-                    if(LazyGCoreRgbCodec.TryDecode(buffer,out packet) &&
+                    if(LazyGConnectorRgbCodec.TryDecode(buffer,out packet) &&
                        packet is { Version:3 })
                     {
                         detail="CONNECTOR CRC OK v3 x="+x+" y="+y+
