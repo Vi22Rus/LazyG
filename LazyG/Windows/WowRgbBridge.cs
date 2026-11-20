@@ -44,6 +44,35 @@ internal static class WowRgbBridge
         return null;
     }
 
+    // Native LazyGCore recommendation row is at WoW CLIENT x=0..38,y=54..57.
+    // Independently captured: a missing old v2 addon cannot be mistaken for a
+    // valid game state, and the read-only frame cannot authorize input by itself.
+    public static bool TryReadLazyGCore(out LazyGCoreRgbPacket? packet)
+    {
+        packet=null;
+        using var game=FindGame();
+        if(game is null || GetForegroundWindow()!=game.MainWindowHandle ||
+           !GetClientRect(game.MainWindowHandle,out var client) ||
+           client.Right-client.Left<45 || client.Bottom-client.Top<65)
+            return false;
+        var topLeft=new Point();
+        if(!ClientToScreen(game.MainWindowHandle,ref topLeft))return false;
+        try
+        {
+            using var bitmap=new Bitmap(42,62);
+            using(var graphics=Graphics.FromImage(bitmap))
+                graphics.CopyFromScreen(topLeft.X,topLeft.Y,0,0,new Size(42,62));
+            Span<byte> frame=stackalloc byte[24];
+            for(int i=0;i<8;i++)
+            {
+                var color=bitmap.GetPixel(2+5*i,56);
+                frame[i*3]=color.R;frame[i*3+1]=color.G;frame[i*3+2]=color.B;
+            }
+            return LazyGCoreRgbCodec.TryDecode(frame,out packet);
+        }
+        catch(Exception) {return false;}
+    }
+
     public static bool GameRunning()
     {
         using var process = FindGame();
