@@ -1,9 +1,9 @@
--- Experimental LazyG Forever Hunter compact extension (profile v1).
+-- Experimental LazyG Forever Hunter compact extension (profile v2).
 -- Output is v3 extraCells, NOT another Frame/strip or an independent RGB
 -- protocol. Caller must supply manifest layoutHash and every profile rank.
 -- Never attempt to unsecret Blizzard protected values in this module.
 local M={}
-M.VERSION=1
+M.VERSION=2
 local floor=math.floor
 local function check(v,msg) if not v then error("Hunter compact profile: "..msg) end end
 local function number(n,min,max)
@@ -54,7 +54,15 @@ function M.Build(manifest,snapshot)
       auraCodes[#auraCodes+1]=status((snapshot.auras or {})[id])
     end
   end
-  check(rankCount<=255 and auraCount<=255,"rank/aura bounds")
+  check(rankCount<=255 and auraCount<=255 and #auraFamilies<=8,"rank/aura bounds")
+  -- This byte is a per-family EVENT-derived estimate bitmask; actual aura
+  -- flags remain separate observations. Never pass an HID attempt as a cast.
+  local hintMask=0
+  for i,family in ipairs(auraFamilies) do
+    if (snapshot.castHints or {})[family.ranks[1]]==true then
+      hintMask=hintMask+2^(i-1)
+    end
+  end
   local epochQuality=snapshot.epochQuality=="known" and 1
       or snapshot.epochQuality=="protected" and 2 or 0
   local epoch=epochQuality==1 and snapshot.epoch or 0
@@ -67,7 +75,7 @@ function M.Build(manifest,snapshot)
     floor(hash/256)%256,hash%256,
     manifest.classId,manifest.specIndex,mode,
     ehi,elo,epochQuality,status(snapshot.gcd),
-    #spellFamilies,auraCount,rankCount,0
+    #spellFamilies,auraCount,rankCount,hintMask
   }
   for _,code in ipairs(familyStatus) do bytes[#bytes+1]=code end
   local function packed(codes)
