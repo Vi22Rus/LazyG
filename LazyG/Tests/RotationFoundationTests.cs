@@ -5,6 +5,18 @@ using System.Linq;
 using LazyG.Desktop.Engine;
 using LazyGPrototype;
 static void Check(bool value,string message) {if(!value)throw new Exception("Foundation regression: "+message);}
+// A loaded virtual bus / lghub_agent does NOT prove desktop G HUB is running.
+Check(GHubRuntime.IsDesktopProcess("lghub") &&
+    GHubRuntime.IsDesktopProcess("LGHUB.EXE"),
+    "Logitech G HUB executable name recognized");
+Check(!GHubRuntime.IsDesktopProcess("lghub_agent") &&
+    !GHubRuntime.IsDesktopProcess("lghub_updater") &&
+    !GHubRuntime.IsDesktopProcess("Wow") &&
+    !GHubRuntime.IsDesktopProcess(null),
+    "background agent, updater and WoW are not G HUB desktop");
+Check(GHubRuntime.NotRunningMessage.Contains("Please launch Logitech G HUB") &&
+    GHubRuntime.NotRunningMessage.Contains("click Start again"),
+    "clear English guidance for blocked Start");
 // Structured XML -> Logitech HID -> WoW observational comparison log.
 var execution=new RotationExecutionTrace(32);
 execution.Start(DateTimeOffset.UtcNow,"forever/hunter/beast-mastery/PvE");
