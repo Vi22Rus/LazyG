@@ -31,7 +31,7 @@ local function spellId(v)
     return nil
 end
 local function externalJustAC()
-    if type(LibStub)~="function" then return nil,"ABSENT" end
+    if type(LibStub)~="function" and type(LibStub)~="table" then return nil,"ABSENT" end
     local ok,queue=pcall(function()
         local lib=LibStub("JustAC-SpellQueue",true)
         if not lib or type(lib.GetCurrentSpellQueue)~="function" then return nil end
@@ -76,13 +76,21 @@ local function selected()
     local spell,status=externalHekili()
     return 2,spell,status
 end
+local function bxor(a,b)
+    local r,p=0,1
+    while a>0 or b>0 do
+        if (a%2)~=(b%2) then r=r+p end
+        a=floor(a/2);b=floor(b/2);p=p*2
+    end
+    return r
+end
 local function crc(bytes)
     local c=65535
     for i=1,21 do
-        c=bit.bxor(c,bytes[i]*256)
+        c=bxor(c,bytes[i]*256)
         for _=1,8 do
             c=c*2
-            if c>=65536 then c=bit.bxor(c%65536,4129) end
+            if c>=65536 then c=bxor(c%65536,4129) end
         end
     end
     return c
