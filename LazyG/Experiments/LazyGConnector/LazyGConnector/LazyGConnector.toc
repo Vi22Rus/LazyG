@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: LazyG Connector (JustAC / Hekili)
+## Notes: Bridges already-published external recommendations to eight RGB cells. No rotation engine.
+## Version: 0.1.0-dev
+## SavedVariables: LazyGConnectorDB
+## OptionalDeps: JustAC, Hekili
+
+NativeBindings.lua
+Connector.lua
