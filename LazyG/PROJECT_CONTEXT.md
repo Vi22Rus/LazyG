@@ -1,3 +1,11 @@
+## FIRST USER IN-GAME TEST — 2026-11-20 09:54–10:03 UTC (READ FIRST)
+
+**Diagnostic sources:** `LazyG-Diagnostic-JustAC.zip`, `LazyG-Diagnostic-Hekilli.zip` (2026-11-20 user uploads). Exact count, SpellIDs and UTC event times preserved in top CHANGELOG entry for these two archives. Confirmed **CRC-valid RGB v3 and Logitech successful driver I/O** on BOTH JustAC and Hekili; NO confirmed actual WoW casts or visible addon icon equivalence.
+
+JustAC: 61 external recommendation transitions, 60 HID attempts/completed, 0 driver failures, 65 blocks. SpellID 13551 Serpent Sting sent **41 times** (not 41 independently verified recommendations/casts; intervals ~1.5s), SpellID 75 Auto Shot recommended but blocked due missing direct binding. Hekili: 9 recommendation transitions, 2 completed HID calls for 3045 Rapid Fire, eight Hunter's Mark 1130 recommendation transitions with direct binding unavailable (probable mismatch to assigned higher-rank Mark 14323, hypothesis only). No user request to change code yet. Next priority: investigate provider rank IDs/direct binding handling, Auto Shot 75, repeated unchanged recommendations, and obtain game cast observation without reintroducing own XML/GCD/rotation. Preserve all UI and source isolation.
+
+---
+
 # CURRENT STATE / START HERE — 2026-11-20 — EXTERNAL JUSTAC / HEKILI CONNECTOR
 
 **DECISION:** The user explicitly abandoned LazyG's internal XML rotations, class-specific decision logic, original LazyGCore/Sonah-derived fork, GCD, aura, target/range readiness and all legacy RGB protocols. LazyG now has exactly two runtime components: a standalone **LazyGConnector** Lua addon reads an installed **JustAC** or **Hekili Forever** addon's ready primary recommendation; the single Windows/Avalonia app reads source-identified 8-pixel **LGC RGB v3**, shows its SpellID/overlay and sends the direct WoW action-bar HID key using Logitech G HUB. The Windows program is a recommendation connector, **not an internal rotation engine**. This new requirement supersedes every contrary architecture plan below. Do not reintroduce XML/Sonah/LazyGCore, old RGB or own GCD checks, and do not infer the user's gameplay from CI.
