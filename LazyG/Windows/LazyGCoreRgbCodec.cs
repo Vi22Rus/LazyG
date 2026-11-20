@@ -20,9 +20,12 @@ internal sealed record LazyGCoreRgbPacket(byte Sequence,byte Status,int SpellId,
     // for every sampled frame. Never turn that absence into 'ready' evidence.
     // Use real positive key, target, range and spell usability evidence here;
     // Windows enforces minimum 1.5s pacing and logs unverified GCD/cooldown.
-    public bool NativeInputReady => NativeUsableReady && NativeRangeReady &&
-        HasNativeBinding && NativeTargetReady && !OutOfRange &&
-        !Waiting && !NoPower;
+    public bool NativeSelfBuff => Version==2 && (Gate&64)!=0;
+    // Explicitly classified player buffs are executable out of combat and
+    // without an enemy. Attack rules must STILL prove target + range.
+    public bool NativeInputReady => HasNativeBinding && NativeUsableReady &&
+        (NativeSelfBuff || (NativeTargetReady && NativeRangeReady)) &&
+        !Waiting && !NoPower && (NativeSelfBuff || !OutOfRange);
     public bool HasRangeEvidence => (Flags & 8)!=0;
     public bool OutOfRange => (Flags & 1)!=0;
     public bool HasWaitingEvidence => (Flags & 16)!=0;
@@ -69,7 +72,7 @@ internal static class LazyGCoreRgbCodec
             if(bytes[15]>2 || (bytes[16]>100 && bytes[16]!=255) ||
                bytes[17]>2)
                 return false;
-            if((bytes[13]&~63)!=0 || bytes[11]>15 ||
+            if((bytes[13]&~127)!=0 || bytes[11]>15 ||
                ((bytes[13]&1)!=0 && (bytes[12]<4 || bytes[12]>115)) ||
                ((bytes[13]&1)==0 && (bytes[11]!=0 || bytes[12]!=0)))
                 return false;
