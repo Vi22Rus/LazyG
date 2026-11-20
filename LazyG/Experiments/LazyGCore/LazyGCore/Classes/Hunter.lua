@@ -188,6 +188,27 @@ local defensive = {
 local exposePrey = C.talent("Expose Prey")
 -- "Mark every mob" (off by default): the player wants the Mark on everything, sim or not
 local markAll = OptOn("markEveryMob", false)
+-- Trace the live class toggle and why Hunter's Mark can be rejected.
+-- Observations are diagnostic only; no change to priority / WoW casts.
+S.LazyGCoreHunterMarkDiagnostic = function()
+    local flags = 0
+    local function bit(ok, value)
+        if ok and value then flags = flags + value end
+    end
+    local function known(fn)
+        local ok, value = pcall(fn)
+        return ok and value == true
+    end
+    bit(known(function() return S.Engine.Opt("useHuntersMark") end), 1)
+    bit(known(function() return S.Engine.Opt("markEveryMob", false) end), 2)
+    bit(known(function() return C.debuffMissing(sp.HuntersMark)() end), 4)
+    bit(known(function() return S.Atoms.Spells.Known(sp.HuntersMark) end), 8)
+    bit(known(function() return C.questing() end), 16)
+    bit(known(function() return C.targetElite() end), 32)
+    bit(known(function() return C.targetAbove(60)() end), 64)
+    bit(known(function() return S.Settings:Get("enabled") end), 128)
+    return flags
+end
 local function MarkRule(melee)
     local worth = melee and C.any(markAll, C.targetElite, C.groupContent, vsPlayer, C.all(C.inCombat, atRange, C.standing, C.targetAbove(60)),
             C.all(exposePrey, C.targetAbove(60)))
