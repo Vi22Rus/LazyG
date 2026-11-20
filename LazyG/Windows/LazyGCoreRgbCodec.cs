@@ -55,7 +55,7 @@ internal static class LazyGCoreRgbCodec
         {
             for(int i=14;i<=20;i++)
                 if(bytes[i]!=0)return false;
-            if((bytes[13]&~15)!=0 || bytes[11]!=0 ||
+            if((bytes[13]&~15)!=0 || bytes[11]>15 ||
                ((bytes[13]&1)!=0 && (bytes[12]<4 || bytes[12]>115)) ||
                ((bytes[13]&1)==0 && (bytes[11]!=0 || bytes[12]!=0)))
                 return false;
