@@ -1,3 +1,25 @@
+# Обязательный стандарт ведения истории LazyG и передачи контекста между чатами
+
+**Это правило для ВСЕХ веток и ВСЕХ будущих чатов проекта.** Главный источник истины: GitHub, ветка main, файлы LazyG/PROJECT_CONTEXT.md и LazyG/CHANGELOG.md. Для экспериментальной ветки читай также её собственные версии этих файлов. Никогда не восстанавливай конкретные исходники, версии, результаты или выводы из памяти. Сверяй SHA последнего коммита, ветку и актуальные файлы GitHub. При конфликте документов фиксируй конфликт, не выбирай удобный вариант молча.
+
+Каждый сеанс и каждая существенная операция записываются в CHANGELOG.md **в хронологическом порядке с абсолютным временем UTC** в формате YYYY-MM-DD HH:MM:SS UTC (время берётся из GitHub commit timestamp или другого проверяемого источника). Если точная метка времени неизвестна, пишется «время не установлено», а не выдуманное время. Разработчик документирует полный цикл проблемы, а не только итог:
+
+1. **Заявка пользователя:** точные требования и ожидаемое поведение, название клиента WoW, ветка.
+2. **Исходное состояние:** SHA, версия, последние подтверждённые пользователем функции и точный URL последней успешной сборки/отката.
+3. **Свидетельства теста:** названия архивов и файлов, точные диагностические строки/счётчики/времена; отдельно факты и гипотезы.
+4. **Причина:** где ошибка, подтверждена ли исходным кодом, данными или остаётся предположением.
+5. **Изменение:** пути каждого изменённого файла, механизм изменения, что специально не трогали; commit SHA.
+6. **Автоматическая проверка:** точный GitHub Actions run URL, SHA сборки, success/failure, какие именно тесты прошли/не прошли.
+7. **Передача пользователю:** точные ссылки на артефакты Windows EXE и Lua-аддон, версии и совместимость, инструкция установки, PowerShell single-EXE; если не выдано — пишется «не выдано».
+8. **Проверка пользователем:** его наблюдения с датой, лог/скриншот/ошибка, что подтверждено в игре, что НЕ подтверждено.
+9. **Следующий шаг и откат:** конкретная незакрытая проблема, безопасное действие, rollback SHA/Actions; без расплывчатых «продолжить работу».
+
+В PROJECT_CONTEXT.md всегда обновляй вверху **CURRENT STATE / START HERE**: активная рабочая ветка и её SHA, стабильный код, текущий dev, совместимый комплект Windows+Lua, открытые ошибки, реальные результаты пользовательского теста, точные следующие шаги, ограничения лицензий и безопасности. Если эксперимент несовместим с main, явно указывай это. Никогда не называй CI PASS подтверждением работы в игре. Не объявляй релиз без согласия пользователя. Не смешивай API разных версий WoW.
+
+После каждого изменения запись добавляется до передачи пользователю; по результатам следующего теста добавляется НОВАЯ датированная запись (прошлую историю не переписывать). В конце сеанса оставь короткий «HANDOFF FOR NEXT CHAT» с указанием трёх файлов/ветки/SHA, текущей проблемы, уже отвергнутых гипотез и одной следующей проверяемой задачи. Это обязательная процедура, а не рекомендация.
+
+---
+
 ## 2026-11-20 — Sonah cast-event aura estimate → Compact RGB v2 → XML and DEEP FOREVER API AUDIT [0.4.0-dev / CI-PASSED / GAME-UNTESTED]
 
 **User request:** reproduce Sonah's missing piece (successful spellcast fallback under protected target auras), and conduct a deep source review of every relevant Blizzard API mechanism for future client-universal LazyG. **Actual source directly inspected:** attached `Sonah.zip`, `Sonah.toc` v1.2.5 Interface 16001; modules `Core/Atoms/Secret.lua`, `Auras.lua`, `Spells.lua`, `Casts.lua`, `Units.lua`, `Curves.lua`, `Items.lua`, `Talents.lua`, `ActionSlots.lua`, `Core/Molecules/Conditions.lua`, `Core/Organisms/Engine.lua`, other organisms and `Classes/Hunter.lua`. **Full audit** under [docs/SONAH_FOREVER_API_AUDIT.md](docs/SONAH_FOREVER_API_AUDIT.md) (18 detailed sections), and user's standalone expanded 25-part report `SONAH_FOREVER_API_DEEP_AUDIT.md` (42 KB) supplied in chat. The audit clearly distinguishes SOURCE FACTS from planned and implemented LazyG capabilities. No client 3.3.5 API mixed.
